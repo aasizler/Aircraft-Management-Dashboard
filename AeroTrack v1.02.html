@@ -643,6 +643,28 @@ body.light .ac-tile-top{background:linear-gradient(135deg,#dce8f4,#ccdaec)}
   </div>
   <div style="padding:0 28px 40px;max-width:640px">
 
+    <div style="margin-bottom:8px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-family:var(--mono)">Appearance</div>
+    <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);overflow:hidden;margin-bottom:28px">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;border-bottom:1px solid var(--border2)">
+        <button class="theme-btn" id="theme-dark" onclick="setTheme('dark')"><div class="theme-preview" style="background:#0f0f0f;border:1px solid #2a2a2a"><div style="width:60%;height:6px;background:#2a2a2a;border-radius:2px;margin-bottom:5px"></div><div style="width:80%;height:4px;background:#333;border-radius:2px;margin-bottom:3px"></div><div style="width:50%;height:4px;background:#333;border-radius:2px"></div></div><span class="theme-label">Dark</span></button>
+        <button class="theme-btn" id="theme-light" onclick="setTheme('light')" style="border-left:1px solid var(--border2);border-right:1px solid var(--border2)"><div class="theme-preview" style="background:#f8f8f8;border:1px solid #e0e0e0"><div style="width:60%;height:6px;background:#e0e0e0;border-radius:2px;margin-bottom:5px"></div><div style="width:80%;height:4px;background:#ccc;border-radius:2px;margin-bottom:3px"></div><div style="width:50%;height:4px;background:#ccc;border-radius:2px"></div></div><span class="theme-label">Light</span></button>
+        <button class="theme-btn" id="theme-system" onclick="setTheme('system')"><div class="theme-preview" style="background:linear-gradient(135deg,#0f0f0f 50%,#f8f8f8 50%);border:1px solid #888"><div style="width:60%;height:6px;background:rgba(255,255,255,.15);border-radius:2px;margin-bottom:5px"></div><div style="width:80%;height:4px;background:rgba(255,255,255,.1);border-radius:2px;margin-bottom:3px"></div><div style="width:50%;height:4px;background:rgba(255,255,255,.1);border-radius:2px"></div></div><span class="theme-label">System</span></button>
+      </div>
+      <div style="padding:16px 20px">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:12px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.06em">Accent Color</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <div class="accent-swatch" id="accent-blue"   onclick="setAccent('blue')"   style="--sw:#4a9eff;background:var(--sw)" title="Blue"></div>
+          <div class="accent-swatch" id="accent-cyan"   onclick="setAccent('cyan')"   style="--sw:#06b6d4;background:var(--sw)" title="Cyan"></div>
+          <div class="accent-swatch" id="accent-green"  onclick="setAccent('green')"  style="--sw:#22c55e;background:var(--sw)" title="Green"></div>
+          <div class="accent-swatch" id="accent-teal"   onclick="setAccent('teal')"   style="--sw:#14b8a6;background:var(--sw)" title="Teal"></div>
+          <div class="accent-swatch" id="accent-violet" onclick="setAccent('violet')" style="--sw:#8b5cf6;background:var(--sw)" title="Violet"></div>
+          <div class="accent-swatch" id="accent-rose"   onclick="setAccent('rose')"   style="--sw:#f43f5e;background:var(--sw)" title="Rose"></div>
+          <div class="accent-swatch" id="accent-amber"  onclick="setAccent('amber')"  style="--sw:#f59e0b;background:var(--sw)" title="Amber"></div>
+          <div class="accent-swatch" id="accent-slate"  onclick="setAccent('slate')"  style="--sw:#94a3b8;background:var(--sw)" title="Slate"></div>
+        </div>
+      </div>
+    </div>
+
     <div style="margin-bottom:8px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-family:var(--mono)">AI Receipt Scanning</div>
     <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);overflow:hidden;margin-bottom:28px">
       <div style="padding:16px 20px;border-bottom:1px solid var(--border2)">
@@ -1251,13 +1273,13 @@ function showSettings(pushState=true){
   const btn=document.getElementById('reset-confirm-btn');
   if(inp){inp.value='';inp.style.borderColor='var(--border2)';}
   if(btn){btn.disabled=true;btn.style.opacity='0.4';}
-  applyTheme(localStorage.getItem('at_theme')||'dark',false);
-  applyAccent(localStorage.getItem('at_accent')||'blue',false);
   const hasKey=!!localStorage.getItem('at_api_key');
   const ks=document.getElementById('api-key-status');
   const ki=document.getElementById('api-key-input');
   if(ks){ks.textContent=hasKey?'✓ API key saved — receipt scanning enabled':'No key saved — receipt scanning disabled';ks.style.color=hasKey?'var(--ok)':'var(--muted)';}
   if(ki)ki.value='';
+  applyTheme(localStorage.getItem('at_theme')||'dark',false);
+  applyAccent(localStorage.getItem('at_accent')||'blue',false);
 }
 
 window.addEventListener('popstate',e=>{
@@ -2608,22 +2630,6 @@ const ACCENTS={
   amber: {hex:'#f59e0b',rgb:'245,158,11'},
   slate: {hex:'#94a3b8',rgb:'148,163,184'},
 };
-
-function showSettings(){
-  ['view-hangar','view-detail','view-settings'].forEach((id,i)=>
-    document.getElementById(id).style.display=i===2?'block':'none');
-  try{
-    const kb=Math.round(Object.keys(localStorage).filter(k=>k===LS_KEY||k.startsWith('atd_')).reduce((s,k)=>s+(localStorage.getItem(k)||'').length,0)/1024);
-    document.getElementById('settings-storage-msg').textContent=kb+'KB used of ~5MB available';
-    document.getElementById('settings-storage-dot').style.background=kb>3000?'var(--warn)':'var(--ok)';
-  }catch(e){}
-  const inp=document.getElementById('reset-confirm-input');
-  const btn=document.getElementById('reset-confirm-btn');
-  if(inp){inp.value='';inp.style.borderColor='var(--border2)';}
-  if(btn){btn.disabled=true;btn.style.opacity='0.4';}
-  applyTheme(localStorage.getItem('at_theme')||'dark',false);
-  applyAccent(localStorage.getItem('at_accent')||'blue',false);
-}
 
 function setTheme(theme){applyTheme(theme,true);}
 function applyTheme(theme,save){
