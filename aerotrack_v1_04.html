@@ -803,7 +803,7 @@ function initSupabase(){
   CLOUD_ENABLED = SUPABASE_URL!==''&&SUPABASE_ANON_KEY!=='';
   if(!CLOUD_ENABLED) return;
   try{
-    _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {auth:{persistSession:false,autoRefreshToken:false}});
+    _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     _supabase.auth.onAuthStateChange((event, session)=>{
       _authUser = session?.user || null;
       onAuthChange(event, session);
