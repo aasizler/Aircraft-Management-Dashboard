@@ -1380,6 +1380,7 @@ function updateAuthUI(user){
 
 // ─── SYNC STATUS ───────────────────────────────────────────────────────────────
 function setSyncStatus(status){
+  if(status==='syncing') console.trace('[AeroTrack] setSyncStatus syncing called from:');
   _syncStatus = status;
   const labels={synced:'Synced',syncing:'Syncing...',offline:'Local only',error:'Sync error'};
   const label = labels[status]||status;
