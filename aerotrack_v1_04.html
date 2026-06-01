@@ -378,6 +378,7 @@ body.light .ac-tile-top{background:linear-gradient(135deg,#dce8f4,#ccdaec)}
 .nav-user:hover{border-color:var(--accent)}
 .nav-avatar{width:22px;height:22px;border-radius:50%;background:var(--accent-dim);border:1px solid rgba(74,158,255,.3);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--accent);font-weight:700;font-family:var(--mono);flex-shrink:0}
 .nav-user-email{font-size:11px;color:var(--muted2);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@keyframes spin{to{transform:rotate(360deg)}}
 @media(max-width:700px){.two-col,.stat-row{grid-template-columns:1fr}}
 </style>
 </head>
@@ -1104,7 +1105,6 @@ body.light .ac-tile-top{background:linear-gradient(135deg,#dce8f4,#ccdaec)}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
 // ─── AIRPORT DB ───────────────────────────────────────────────────────────────
 const AP={KPIE:{a:27.9102,o:-82.6874,n:"St Pete-Clearwater"},KTPA:{a:27.9755,o:-82.5332,n:"Tampa Intl"},KVDF:{a:28.0146,o:-82.3342,n:"Tampa Executive"},KCGC:{a:28.4589,o:-82.5085,n:"Crystal River"},KZPH:{a:28.2283,o:-82.1559,n:"Zephyrhills"},KPCM:{a:27.8493,o:-82.3021,n:"Plant City"},FA40:{a:27.7539,o:-82.3963,n:"Cross Creek Ranch"},KSEF:{a:27.3954,o:-81.3423,n:"Sebring"},KOBE:{a:28.2832,o:-81.8483,n:"Okeechobee"},KOCF:{a:29.1726,o:-82.2238,n:"Ocala"},KGNV:{a:29.69,o:-82.2718,n:"Gainesville"},KTLH:{a:30.3965,o:-84.3503,n:"Tallahassee"},KPNS:{a:30.4734,o:-87.1866,n:"Pensacola"},KECP:{a:30.3581,o:-85.7955,n:"NW FL Beaches"},KFMY:{a:26.5866,o:-81.8633,n:"Ft Myers"},KRSW:{a:26.5362,o:-81.7551,n:"SW FL Intl"},KMIA:{a:25.7959,o:-80.287,n:"Miami Intl"},KFLL:{a:26.0726,o:-80.1527,n:"Ft Lauderdale"},KPBI:{a:26.6832,o:-80.0956,n:"Palm Beach"},KORL:{a:28.5455,o:-81.3329,n:"Orlando Exec"},KMCO:{a:28.4294,o:-81.3089,n:"Orlando Intl"},KSFB:{a:28.7776,o:-81.2375,n:"Orlando Sanford"},KDAB:{a:29.1799,o:-81.0581,n:"Daytona Beach"},KJAX:{a:30.4941,o:-81.6879,n:"Jacksonville Intl"},KCRG:{a:30.3363,o:-81.5144,n:"Jacksonville Exec"},KSRQ:{a:27.3954,o:-82.5544,n:"Sarasota"},KSPG:{a:27.9151,o:-82.6869,n:"Albert Whitted"},KBOW:{a:27.9434,o:-81.7834,n:"Bartow"},KLAL:{a:27.9889,o:-82.0183,n:"Lakeland"},KPGD:{a:26.9202,o:-81.9905,n:"Punta Gorda"},KVNC:{a:27.0716,o:-82.4402,n:"Venice"},KAPF:{a:26.1526,o:-81.7752,n:"Naples"},KFPR:{a:27.4951,o:-80.3683,n:"Treasure Coast"},KDED:{a:29.0675,o:-81.2838,n:"Deland"},KGIF:{a:28.0609,o:-81.7534,n:"Winter Haven"},KEVB:{a:28.9659,o:-80.9487,n:"New Smyrna"},KISM:{a:28.2897,o:-81.4371,n:"Kissimmee"},KCLW:{a:27.9768,o:-82.7569,n:"Clearwater Airpark"},KPMP:{a:26.2471,o:-80.1107,n:"Pompano Beach"},KHWO:{a:26.0012,o:-80.2407,n:"North Perry"},KOPF:{a:25.9076,o:-80.2783,n:"Opa-Locka"},KTMB:{a:25.6479,o:-80.4328,n:"Tamiami"},KEYW:{a:24.5561,o:-81.7596,n:"Key West"},
@@ -1305,7 +1305,7 @@ async function authSubmit(){
     if(_authMode==='login'){
       result=await _supabase.auth.signInWithPassword({email,password});
     } else {
-      result=await _supabase.auth.signUp({email,password,options:{emailRedirectTo:'https://aasizler.github.io/Aircraft-Management-Dashboard/aerotrack_v1_04.html',data:{name:document.getElementById('auth-name').value.trim()||null}}});
+      result=await _supabase.auth.signUp({email,password,options:{emailRedirectTo:window.location.origin+window.location.pathname,data:{name:document.getElementById('auth-name').value.trim()||null}}});
     }
     if(result.error) throw result.error;
     if(_authMode==='signup'&&!result.data.session){
@@ -1491,8 +1491,20 @@ function init(){
 }
 
 function _completeInit(){
-  if(!loadLS()||!fleet.length){fleet=JSON.parse(JSON.stringify(SEED));saveLS();}
-  _migrateFleet();
+  if(CLOUD_ENABLED){
+    // Cloud is on — don't flash local/seed data, just show loading until cloudPull completes
+    fleet=[];sid=null;
+    setView('hangar',false);
+    document.getElementById('hangar-cards').innerHTML=`
+      <div style="grid-column:1/-1;padding:48px 24px;text-align:center;color:var(--muted2)">
+        <div style="font-size:13px;font-family:var(--mono);margin-bottom:8px">Loading your hangar...</div>
+        <div style="width:32px;height:32px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto"></div>
+      </div>`;
+  } else {
+    if(!loadLS()||!fleet.length){fleet=JSON.parse(JSON.stringify(SEED));saveLS();}
+    _migrateFleet();
+    renderHangar(false);
+  }
   const ds=new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   document.getElementById('hangar-date').textContent='Today is '+ds;
   document.getElementById('detail-date').textContent='Today is '+ds;
@@ -1500,7 +1512,6 @@ function _completeInit(){
   applyAccent(localStorage.getItem('at_accent')||'blue',false);
   updStorage();
   history.replaceState({view:'hangar',sid,ctab},'');
-  renderHangar(false);
 }
 
 
