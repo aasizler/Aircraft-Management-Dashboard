@@ -1252,18 +1252,19 @@ function initSupabase(){
       _authUser = session?.user || null;
       onAuthChange(event, session);
     });
-    _supabase.auth.getSession().then(({data:{session}})=>{
-      _authUser = session?.user || null;
-      if(_authUser) onSignedIn(_authUser);
-    });
   }catch(e){ console.warn('[AeroTrack] Supabase init failed:', e); }
 }
 
 // ─── AUTH STATE ────────────────────────────────────────────────────────────────
 function onAuthChange(event, session){
-  if(event === 'SIGNED_IN'){
-    _authUser = session.user;
-    onSignedIn(session.user);
+  if(event === 'SIGNED_IN' || event === 'INITIAL_SESSION'){
+    if(session?.user){
+      _authUser = session.user;
+      onSignedIn(session.user);
+    } else {
+      // No session — stay on login screen
+      showAuthScreen();
+    }
   } else if(event === 'SIGNED_OUT'){
     _authUser = null;
     onSignedOut();
