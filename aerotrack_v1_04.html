@@ -1461,8 +1461,9 @@ async function cloudPull(){
     sid = fleet[0]?.id || 'ac_default';
     _migrateFleet();
     _suppressCloudSync=true;
-    saveLS(); // save locally without triggering a push back up
+    saveLS();
     _suppressCloudSync=false;
+    setSyncStatus('synced');
     renderHangar(false);
   } else {
     // No cloud data yet — only push if we have real local data to seed with
