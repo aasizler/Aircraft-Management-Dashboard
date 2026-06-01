@@ -1621,6 +1621,7 @@ function openTileMenu(e,id){
     document.body.appendChild(menu);
   }
   menu.innerHTML=`
+    <button class="row-dot-item" onclick="openTileSettings()">Aircraft Settings</button>
     ${fleet.length>1?'<button class="row-dot-item danger-item" onclick="doDeleteFromMenu()">Delete Aircraft</button>':'<button class="row-dot-item" style="opacity:.4;cursor:default">Only one aircraft</button>'}`;
   menu.classList.add('open');
   const r=e.currentTarget.getBoundingClientRect();
