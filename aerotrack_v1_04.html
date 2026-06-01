@@ -1252,35 +1252,38 @@ function initSupabase(){
       _authUser = session?.user || null;
       onAuthChange(event, session);
     });
-    _supabase.auth.getSession().then(({data:{session}})=>{
-      _authUser = session?.user || null;
-      if(_authUser) onSignedIn(_authUser);
-    });
   }catch(e){ console.warn('[AeroTrack] Supabase init failed:', e); }
 }
 
 // ─── AUTH STATE ────────────────────────────────────────────────────────────────
 function onAuthChange(event, session){
-  if(event === 'SIGNED_IN'){
-    _authUser = session.user;
-    onSignedIn(session.user);
+  if(event === 'SIGNED_IN' || event === 'INITIAL_SESSION'){
+    if(session?.user){
+      _authUser = session.user;
+      onSignedIn(session.user);
+    } else {
+      // No session — stay on login screen
+      showAuthScreen();
+    }
   } else if(event === 'SIGNED_OUT'){
     _authUser = null;
     onSignedOut();
   }
 }
 
+let _initDone=false;
+
 async function onSignedIn(user){
+  if(_initDone)return; // prevent duplicate calls from onAuthStateChange firing multiple times
+  _initDone=true;
   updateAuthUI(user);
   setSyncStatus('syncing');
-  // Complete init first so fleet/UI exists before cloud operations
   _completeInit();
   await cloudPull();
-  setSyncStatus('synced');
-  updateAuthUI(user);
 }
 
 function onSignedOut(){
+  _initDone=false;
   updateAuthUI(null);
   setSyncStatus('offline');
 }
@@ -1372,24 +1375,6 @@ function updateAuthUI(user){
   if(authBtn)authBtn.style.display=signedIn?'none':'inline-flex';
   const signoutBtn=document.getElementById('settings-signout-btn');
   if(signoutBtn)signoutBtn.style.display=signedIn?'inline-flex':'none';
-
-  // Hide auth screen if signed in
-  if(signedIn){
-    const authView=document.getElementById('view-auth');
-    if(authView&&authView.style.display!=='none'){
-      authView.style.display='none';
-      // First sign-in — start from seed if no data
-      if(!fleet||!fleet.length){fleet=JSON.parse(JSON.stringify(SEED));sid='ac_default';}
-      _migrateFleet();
-      const ds=new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
-      document.getElementById('hangar-date').textContent='Today is '+ds;
-      document.getElementById('detail-date').textContent='Today is '+ds;
-      applyTheme(localStorage.getItem('at_theme')||'dark',false);
-      applyAccent(localStorage.getItem('at_accent')||'blue',false);
-      history.replaceState({view:'hangar',sid,ctab},'');
-      renderHangar(false);
-    }
-  }
 }
 
 
@@ -1438,23 +1423,18 @@ async function cloudPush(){
   if(!CLOUD_ENABLED||!_supabase||!_authUser||!fleet) return;
   if(_suppressCloudSync) return;
   setSyncStatus('syncing');
+  // Safety net — if push hangs for 10s, show error rather than spinning forever
+  const timeout=setTimeout(()=>setSyncStatus('error'),10000);
   try{
-    const payload={
-      user_id: _authUser.id,
-      data: fleet,
-      updated_at: new Date().toISOString()
-    };
-    // First try upsert, fall back to insert+update if constraint missing
-    const {data:existing}=await _supabase.from('fleet').select('id').eq('user_id',_authUser.id).single();
-    let error;
-    if(existing){
-      ({error}=await _supabase.from('fleet').update({data:fleet,updated_at:payload.updated_at}).eq('user_id',_authUser.id));
-    } else {
-      ({error}=await _supabase.from('fleet').insert(payload));
-    }
+    const {error}=await _supabase.from('fleet').upsert(
+      {user_id:_authUser.id, data:fleet, updated_at:new Date().toISOString()},
+      {onConflict:'user_id'}
+    );
+    clearTimeout(timeout);
     if(error) throw error;
     setSyncStatus('synced');
   }catch(e){
+    clearTimeout(timeout);
     console.warn('[AeroTrack] Cloud push failed:', e.message, e.code);
     setSyncStatus('error');
   }
@@ -1463,7 +1443,7 @@ async function cloudPush(){
 async function cloudLoad(table, filter){
   if(!CLOUD_ENABLED||!_supabase||!_authUser) return null;
   try{
-    const {data,error}=await _supabase.from(table).select('*').eq('user_id',_authUser.id).single();
+    const {data,error}=await _supabase.from(table).select('*').eq('user_id',_authUser.id).maybeSingle();
     if(error) throw error;
     return data;
   }catch(e){
@@ -1481,9 +1461,10 @@ async function cloudPull(){
     sid = fleet[0]?.id || 'ac_default';
     _migrateFleet();
     _suppressCloudSync=true;
-    saveLS(); // save locally without triggering a push back up
+    saveLS();
     _suppressCloudSync=false;
     renderHangar(false);
+    setTimeout(()=>setSyncStatus('synced'),2000);
   } else {
     // No cloud data yet — only push if we have real local data to seed with
     const localFleet = loadLS() ? fleet : [];
