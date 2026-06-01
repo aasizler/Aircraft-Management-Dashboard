@@ -1423,14 +1423,18 @@ async function cloudPush(){
   if(!CLOUD_ENABLED||!_supabase||!_authUser||!fleet) return;
   if(_suppressCloudSync) return;
   setSyncStatus('syncing');
+  // Safety net — if push hangs for 10s, show error rather than spinning forever
+  const timeout=setTimeout(()=>setSyncStatus('error'),10000);
   try{
     const {error}=await _supabase.from('fleet').upsert(
       {user_id:_authUser.id, data:fleet, updated_at:new Date().toISOString()},
       {onConflict:'user_id'}
     );
+    clearTimeout(timeout);
     if(error) throw error;
     setSyncStatus('synced');
   }catch(e){
+    clearTimeout(timeout);
     console.warn('[AeroTrack] Cloud push failed:', e.message, e.code);
     setSyncStatus('error');
   }
