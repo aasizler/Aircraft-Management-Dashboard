@@ -1423,19 +1423,10 @@ async function cloudPush(){
   if(_suppressCloudSync) return;
   setSyncStatus('syncing');
   try{
-    const payload={
-      user_id: _authUser.id,
-      data: fleet,
-      updated_at: new Date().toISOString()
-    };
-    // First try upsert, fall back to insert+update if constraint missing
-    const {data:existing}=await _supabase.from('fleet').select('id').eq('user_id',_authUser.id).single();
-    let error;
-    if(existing){
-      ({error}=await _supabase.from('fleet').update({data:fleet,updated_at:payload.updated_at}).eq('user_id',_authUser.id));
-    } else {
-      ({error}=await _supabase.from('fleet').insert(payload));
-    }
+    const {error}=await _supabase.from('fleet').upsert(
+      {user_id:_authUser.id, data:fleet, updated_at:new Date().toISOString()},
+      {onConflict:'user_id'}
+    );
     if(error) throw error;
     setSyncStatus('synced');
   }catch(e){
@@ -1447,7 +1438,7 @@ async function cloudPush(){
 async function cloudLoad(table, filter){
   if(!CLOUD_ENABLED||!_supabase||!_authUser) return null;
   try{
-    const {data,error}=await _supabase.from(table).select('*').eq('user_id',_authUser.id).single();
+    const {data,error}=await _supabase.from(table).select('*').eq('user_id',_authUser.id).maybeSingle();
     if(error) throw error;
     return data;
   }catch(e){
