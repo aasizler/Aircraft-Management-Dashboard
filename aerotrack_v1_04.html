@@ -327,8 +327,10 @@ body.light .ac-tile-top{background:linear-gradient(135deg,#dce8f4,#ccdaec)}
 .receipt-drop{border:2px dashed var(--border2);border-radius:var(--r);padding:20px;text-align:center;cursor:pointer;transition:all .2s;background:var(--bg2);position:relative}
 .receipt-drop:hover,.receipt-drop.drag{border-color:var(--accent);background:var(--accent-dim)}
 .receipt-preview{width:100%;max-height:220px;object-fit:contain;border-radius:6px;margin-top:10px;display:none;border:1px solid var(--border2)}
-.receipt-scanning{display:none;padding:12px;text-align:center;color:var(--muted2);font-size:12px;font-family:var(--mono)}
-.receipt-scanning.active{display:block}
+.receipt-scanning{display:none;position:absolute;inset:0;background:rgba(22,22,22,.92);border-radius:var(--r);align-items:center;justify-content:center;flex-direction:column;gap:14px;z-index:10}
+.receipt-scanning.active{display:flex}
+.receipt-spinner{width:44px;height:44px;border:3px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+.receipt-scanning-label{font-size:12px;color:var(--muted2);font-family:var(--mono)}
 .receipt-result{background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:12px 14px;margin-top:10px;display:none;font-size:12px}
 .receipt-result.show{display:block}
 .receipt-result-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
@@ -741,7 +743,7 @@ body.light .ac-tile-top{background:linear-gradient(135deg,#dce8f4,#ccdaec)}
 <!-- RECEIPT SCAN MODAL -->
 <div class="modal-overlay" id="modal-receipt">
   <div class="modal" style="max-width:540px"><h3>Scan Receipt</h3>
-    <div class="receipt-drop" id="receipt-drop"
+    <div class="receipt-drop" id="receipt-drop" style="position:relative"
       onclick="document.getElementById('receipt-file').click()"
       ondragover="event.preventDefault();this.classList.add('drag')"
       ondragleave="this.classList.remove('drag')"
@@ -750,6 +752,10 @@ body.light .ac-tile-top{background:linear-gradient(135deg,#dce8f4,#ccdaec)}
       <div style="font-size:13px;font-weight:600;margin-bottom:3px">Drop a photo or click to browse</div>
       <div style="font-size:11px;color:var(--muted2)">Fuel receipts, maintenance invoices, parts — JPG, PNG, HEIC, PDF</div>
       <input type="file" id="receipt-file" accept="image/*,.pdf,.heic,.HEIC" style="display:none" onchange="handleReceiptFile(this.files[0])">
+      <div class="receipt-scanning" id="receipt-scanning">
+        <div class="receipt-spinner"></div>
+        <div class="receipt-scanning-label" id="receipt-scanning-label">Reading receipt...</div>
+      </div>
       <img id="receipt-preview" class="receipt-preview">
     </div>
     <div class="receipt-scanning" id="receipt-scanning">
@@ -923,6 +929,18 @@ body.light .ac-tile-top{background:linear-gradient(135deg,#dce8f4,#ccdaec)}
       <div style="padding:10px 20px;border-top:1px solid var(--border2);display:flex;align-items:center;gap:10px" id="settings-sync-row">
         <span id="settings-sync-badge" class="sync-badge offline"><span class="sync-dot"></span><span id="settings-sync-label">Local only</span></span>
         <span style="font-size:11px;color:var(--muted)">Data saved locally. Sign in to sync across devices.</span>
+      </div>
+    </div>
+    <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);overflow:hidden;margin-bottom:28px">
+      <div style="padding:14px 20px;display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-size:13px;font-weight:600;font-family:var(--display)">Always show login screen</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">When on, you must log in every time. Useful for testing multiple accounts.</div>
+        </div>
+        <label style="position:relative;display:inline-block;width:40px;height:22px;flex-shrink:0">
+          <input type="checkbox" id="always-login-toggle" onchange="toggleAlwaysLogin()" style="opacity:0;width:0;height:0">
+          <span class="toggle-slider"></span>
+        </label>
       </div>
     </div>
     <div style="margin-bottom:8px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-family:var(--mono)">Data Management</div>
@@ -1247,7 +1265,8 @@ function initSupabase(){
   CLOUD_ENABLED = SUPABASE_URL!==''&&SUPABASE_ANON_KEY!=='';
   if(!CLOUD_ENABLED) return;
   try{
-    _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const _alwaysLogin=localStorage.getItem('at_always_login')==='true';
+    _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {auth:{persistSession:!_alwaysLogin,autoRefreshToken:!_alwaysLogin}});
     _supabase.auth.onAuthStateChange((event, session)=>{
       _authUser = session?.user || null;
       onAuthChange(event, session);
@@ -1380,7 +1399,6 @@ function updateAuthUI(user){
 
 // ─── SYNC STATUS ───────────────────────────────────────────────────────────────
 function setSyncStatus(status){
-  if(status==='syncing') console.trace('[AeroTrack] setSyncStatus syncing called from:');
   _syncStatus = status;
   const labels={synced:'Synced',syncing:'Syncing...',offline:'Local only',error:'Sync error'};
   const label = labels[status]||status;
@@ -1831,6 +1849,8 @@ function showSettings(pushState=true){
   const ki=document.getElementById('api-key-input');
   if(ks){ks.textContent=hasKey?'✓ API key saved — receipt scanning enabled':'No key saved — receipt scanning disabled';ks.style.color=hasKey?'var(--ok)':'var(--muted)';}
   if(ki)ki.value='';
+  const alwaysLoginToggle=document.getElementById('always-login-toggle');
+  if(alwaysLoginToggle)alwaysLoginToggle.checked=localStorage.getItem('at_always_login')==='true';
   applyTheme(localStorage.getItem('at_theme')||'dark',false);
   applyAccent(localStorage.getItem('at_accent')||'blue',false);
 }
@@ -2259,10 +2279,10 @@ function handleReceiptFile(file){
   if(isHeic){
     // Show converting status
     document.getElementById('receipt-scanning').classList.add('active');
-    document.getElementById('receipt-scanning').innerHTML='<div style="margin-bottom:6px">Converting HEIC image...</div><div style="font-size:10px;color:var(--muted)">iPhone photos are converted to JPEG automatically</div>';
+    document.getElementById('receipt-scanning-label').textContent='Converting HEIC image...';
     heic2any({blob:file,toType:'image/jpeg',quality:0.85})
       .then(convertedBlob=>{
-        document.getElementById('receipt-scanning').innerHTML='<div style="margin-bottom:6px">🔍 Reading receipt with AI...</div><div style="font-size:10px;color:var(--muted)">Extracting amount, vendor, date, and category</div>';
+        document.getElementById('receipt-scanning-label').textContent='Reading receipt with AI...';
         const convertedFile=new File([convertedBlob],file.name.replace(/\.heic$/i,'.jpg'),{type:'image/jpeg'});
         const url=URL.createObjectURL(convertedFile);
         const prev=document.getElementById('receipt-preview');prev.src=url;prev.style.display='block';
@@ -2281,9 +2301,32 @@ function handleReceiptFile(file){
   reader.onload=e=>{_receiptData={name:file.name,type:file.type,b64:e.target.result.split(',')[1]};scanReceiptWithAI(_receiptData,file.type);};
   reader.readAsDataURL(file);
 }
+
+async function compressReceiptImage(b64, mimeType){
+  // Compress image to max 1200px on longest side, 80% quality
+  return new Promise((resolve)=>{
+    const img=new Image();
+    img.onload=()=>{
+      const MAX=1200;
+      let w=img.width,h=img.height;
+      if(w>MAX||h>MAX){
+        if(w>h){h=Math.round(h*MAX/w);w=MAX;}
+        else{w=Math.round(w*MAX/h);h=MAX;}
+      }
+      const canvas=document.createElement('canvas');
+      canvas.width=w;canvas.height=h;
+      const ctx=canvas.getContext('2d');
+      ctx.drawImage(img,0,0,w,h);
+      const compressed=canvas.toDataURL('image/jpeg',0.8).split(',')[1];
+      resolve(compressed);
+    };
+    img.onerror=()=>resolve(b64); // fallback to original if compression fails
+    img.src=`data:${mimeType};base64,${b64}`;
+  });
+}
 async function scanReceiptWithAI(data,mimeType){
   document.getElementById('receipt-scanning').classList.add('active');
-  document.getElementById('receipt-scanning').innerHTML='<div style="margin-bottom:6px">🔍 Reading receipt with AI...</div><div style="font-size:10px;color:var(--muted)">Extracting amount, vendor, date, and category</div>';
+  document.getElementById('receipt-scanning-label').textContent='Reading receipt with AI...';
   document.getElementById('receipt-result').classList.remove('show');
   document.getElementById('receipt-save-btn').disabled=true;
   hideReceiptWarning();
@@ -2298,9 +2341,12 @@ async function scanReceiptWithAI(data,mimeType){
     return;
   }
 
+  // Compress image before sending to reduce cost and improve speed
+  let b64=data.b64;
+  if(mimeType.startsWith('image/'))b64=await compressReceiptImage(data.b64,mimeType);
   const isImg=mimeType.startsWith('image/');
   const contentBlock=isImg
-    ?{type:'image',source:{type:'base64',media_type:mimeType,data:data.b64}}
+    ?{type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}}
     :{type:'document',source:{type:'base64',media_type:'application/pdf',data:data.b64}};
 
   try{
@@ -2351,6 +2397,12 @@ function showReceiptWarning(msg,color){
 function hideReceiptWarning(){const w=document.getElementById('receipt-warning');if(w)w.style.display='none';}
 
 
+function toggleAlwaysLogin(){
+  const current=localStorage.getItem('at_always_login')==='true';
+  localStorage.setItem('at_always_login',(!current).toString());
+  const el=document.getElementById('always-login-toggle');
+  if(el)el.checked=!current;
+}
 function saveApiKey(){
   const val=document.getElementById('api-key-input').value.trim();
   if(!val){document.getElementById('api-key-status').textContent='Enter a key first.';return;}
