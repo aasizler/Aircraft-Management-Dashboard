@@ -1436,6 +1436,7 @@ async function cloudSave(table, data){
 
 async function cloudPush(){
   if(!CLOUD_ENABLED||!_supabase||!_authUser||!fleet) return;
+  if(_suppressCloudSync) return;
   setSyncStatus('syncing');
   try{
     const payload={
@@ -1443,11 +1444,18 @@ async function cloudPush(){
       data: fleet,
       updated_at: new Date().toISOString()
     };
-    const {error}=await _supabase.from('fleet').upsert(payload,{onConflict:'user_id'});
+    // First try upsert, fall back to insert+update if constraint missing
+    const {data:existing}=await _supabase.from('fleet').select('id').eq('user_id',_authUser.id).single();
+    let error;
+    if(existing){
+      ({error}=await _supabase.from('fleet').update({data:fleet,updated_at:payload.updated_at}).eq('user_id',_authUser.id));
+    } else {
+      ({error}=await _supabase.from('fleet').insert(payload));
+    }
     if(error) throw error;
     setSyncStatus('synced');
   }catch(e){
-    console.warn('[AeroTrack] Cloud push failed:', e.message);
+    console.warn('[AeroTrack] Cloud push failed:', e.message, e.code);
     setSyncStatus('error');
   }
 }
