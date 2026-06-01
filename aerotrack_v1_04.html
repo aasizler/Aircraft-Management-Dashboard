@@ -1270,17 +1270,19 @@ function onAuthChange(event, session){
   }
 }
 
+let _initDone=false;
+
 async function onSignedIn(user){
+  if(_initDone)return; // prevent duplicate calls from onAuthStateChange firing multiple times
+  _initDone=true;
   updateAuthUI(user);
   setSyncStatus('syncing');
-  // Complete init first so fleet/UI exists before cloud operations
   _completeInit();
   await cloudPull();
-  setSyncStatus('synced');
-  updateAuthUI(user);
 }
 
 function onSignedOut(){
+  _initDone=false;
   updateAuthUI(null);
   setSyncStatus('offline');
 }
@@ -1372,24 +1374,6 @@ function updateAuthUI(user){
   if(authBtn)authBtn.style.display=signedIn?'none':'inline-flex';
   const signoutBtn=document.getElementById('settings-signout-btn');
   if(signoutBtn)signoutBtn.style.display=signedIn?'inline-flex':'none';
-
-  // Hide auth screen if signed in
-  if(signedIn){
-    const authView=document.getElementById('view-auth');
-    if(authView&&authView.style.display!=='none'){
-      authView.style.display='none';
-      // First sign-in — start from seed if no data
-      if(!fleet||!fleet.length){fleet=JSON.parse(JSON.stringify(SEED));sid='ac_default';}
-      _migrateFleet();
-      const ds=new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
-      document.getElementById('hangar-date').textContent='Today is '+ds;
-      document.getElementById('detail-date').textContent='Today is '+ds;
-      applyTheme(localStorage.getItem('at_theme')||'dark',false);
-      applyAccent(localStorage.getItem('at_accent')||'blue',false);
-      history.replaceState({view:'hangar',sid,ctab},'');
-      renderHangar(false);
-    }
-  }
 }
 
 
