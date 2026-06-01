@@ -1463,8 +1463,8 @@ async function cloudPull(){
     _suppressCloudSync=true;
     saveLS();
     _suppressCloudSync=false;
-    setSyncStatus('synced');
     renderHangar(false);
+    setTimeout(()=>setSyncStatus('synced'),2000);
   } else {
     // No cloud data yet — only push if we have real local data to seed with
     const localFleet = loadLS() ? fleet : [];
