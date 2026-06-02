@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AeroTrack v1.05</title>
+<title>AeroTrack v1.05.1</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='11' fill='none' stroke='%23a3e635' stroke-width='4'/></svg>">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -498,7 +498,7 @@ body.light .ac-tile-top{background:linear-gradient(135deg,#dce8f4,#ccdaec)}
     <div class="tab" onclick="showTab('squawks',this)">Squawks</div>
     <div class="tab" onclick="showTab('utilization',this)">Utilization</div>
     <div class="tab" onclick="showTab('documents',this)">Documents</div>
-    <div class="tab" onclick="showTab('insurance',this)">Insurance</div>
+    <div class="tab" id="tab-btn-insurance" onclick="showTab('insurance',this)">Insurance</div>
     <div class="tab" onclick="showTab('schedule',this)">Schedule</div>
   </div>
 
@@ -559,13 +559,15 @@ body.light .ac-tile-top{background:linear-gradient(135deg,#dce8f4,#ccdaec)}
       <div class="panel"><div class="panel-title">Monthly Flight Hours</div><canvas id="util-canvas" class="chart"></canvas></div>
       <div class="panel"><div class="panel-title">TBO and Overhaul Progress</div><div id="util-bars" style="margin-top:6px"></div></div>
     </div>
+    <!-- Financial sections — hidden for Mechanic/Viewer -->
+    <div id="util-financial-section">
     <!-- Maintenance Cost Tracker -->
     <div style="margin-top:20px;border-top:1px solid var(--border2);padding-top:16px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
         <div class="section-label">Maintenance Costs</div>
         <div style="display:flex;gap:8px">
           <button class="btn sm" onclick="exportMaintExcel()" style="margin-right:4px">Export</button><span id="maint-total-label" style="font-size:11px;color:var(--muted2);font-family:var(--mono);align-self:center"></span>
-          <button class="btn sm" onclick="openMaintModal()">Log Cost</button><button class="btn sm" onclick="openReceiptModal()">📷 Scan Receipt</button>
+          ${can('financial')?'<button class="btn sm" onclick="openMaintModal()">Log Cost</button><button class="btn sm" onclick="openReceiptModal()">📷 Scan Receipt</button>':''}
         </div>
       </div>
       <div id="maint-cost-list"></div>
@@ -595,6 +597,7 @@ body.light .ac-tile-top{background:linear-gradient(135deg,#dce8f4,#ccdaec)}
         </div>
       </div>
     </div>
+    </div><!-- end util-financial-section -->
     <div class="map-section">
       <div class="section-hd">
         <div class="section-label">Airport History — <span id="map-reg" style="color:var(--accent)"></span></div>
@@ -926,7 +929,7 @@ body.light .ac-tile-top{background:linear-gradient(135deg,#dce8f4,#ccdaec)}
   </div>
   <div class="page-hd" style="padding-top:20px">
     <div class="page-title">Settings</div>
-    <div style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:2px">AeroTrack v1.05</div>
+    <div style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:2px">AeroTrack v1.05.1</div>
     <div class="page-sub">App preferences and data management</div>
   </div>
   <div style="padding:0 28px 40px;max-width:640px">
@@ -1416,10 +1419,12 @@ async function authSubmit(){
 async function signOut(){
   if(!_supabase||!_authUser) return;
   await _supabase.auth.signOut();
-  fleet=JSON.parse(JSON.stringify(SEED));
-  sid='ac_default';
-  saveLS();
-  showAuthScreen(); // Go back to login, keeping Supabase config intact
+  localStorage.removeItem('at_api_key');
+  localStorage.removeItem(LS_KEY);
+  fleet=[];sid=null;
+  const ef=document.getElementById('auth-email');const pf=document.getElementById('auth-password');
+  if(ef)ef.value='';if(pf)pf.value='';
+  showAuthScreen();
 }
 
 function updateAuthUI(user){
@@ -2023,6 +2028,9 @@ function refreshStatus(){
 
 // ─── TABS ─────────────────────────────────────────────────────────────────────
 function showTab(name,el,skip){
+  // Gate insurance tab for non-financial roles
+  const insBtnEl=document.getElementById('tab-btn-insurance');
+  if(insBtnEl)insBtnEl.style.display=can('financial')?'':'none';
   ctab=name;
   document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
@@ -2034,7 +2042,7 @@ function showTab(name,el,skip){
   if(name==='oil'){renderOilStats();renderOilLog();setTimeout(()=>bChart('oil-canvas',MONTHS,ac().oilByMonth,'#4a9eff'),40);}
   if(name==='squawks')renderSq();
   if(name==='utilization'){renderUtil();setTimeout(()=>{bChart('util-canvas',MONTHS,ac().monthlyHours,'#4a9eff');initMap();renderExpenseCharts();},80);}
-  if(name==='insurance')renderInsurance();
+  if(name==='insurance'){if(can('financial'))renderInsurance();else{setView('detail',false);showTab('dashboard',null,true);alert('Financial data is not available for your access level.');}}
   if(name==='schedule')renderSchedule();
   if(name==='documents')renderDocs();
 }
@@ -2173,8 +2181,9 @@ function renderUtil(){
     const c=p>85?'var(--danger)':p>65?'var(--warn)':'var(--accent)';
     return`<div class="progress-row"><div class="progress-label"><span>${b.label}</span><span>${b.val}/${b.max} ${b.unit}</span></div><div class="progress-track"><div class="progress-fill" style="width:${p}%;background:${c}"></div></div></div>`;
   }).join('');
+  const finSection=document.getElementById('util-financial-section');
+  if(finSection)finSection.style.display=can('financial')?'block':'none';
   if(can('financial'))renderMaint();
-  else{const el=document.getElementById('maint-cost-list');if(el)el.innerHTML='<div style="padding:14px 0;text-align:center;color:var(--muted2);font-size:12px">Financial data not available for your access level.</div>';}
   setTimeout(()=>{if(can('financial'))renderExpenseCharts();},50);
 }
 // \u2500\u2500\u2500 MAINTENANCE COST \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
@@ -2882,7 +2891,19 @@ async function openPendingInvitesModal(){
   if(!_supabase||!_authUser){el.innerHTML='Not connected.';return;}
   const {data:pending}=await _supabase.from('aircraft_shares').select('*').eq('shared_user_id',_authUser.id).eq('accepted',false);
   if(!pending||!pending.length){el.innerHTML='<div style="color:var(--muted2);font-size:13px">No pending invitations.</div>';return;}
-  el.innerHTML=pending.map(inv=>'<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:14px;margin-bottom:10px"><div style="font-size:13px;font-weight:600;margin-bottom:4px">Aircraft invitation</div><div style="font-size:11px;color:var(--muted2);font-family:var(--mono);margin-bottom:10px">Role: <b style="color:'+ROLE_COLORS[inv.role]+'">'+ROLE_LABELS[inv.role]+'</b></div><div style="display:flex;gap:8px"><button class="btn sm primary" onclick="acceptInvite(\''+inv.id+'\');closeModal(\'pending-invites\')">Accept</button><button class="btn sm" onclick="declineInvite(\''+inv.id+'\');this.closest(\'div\').parentElement.remove()">Decline</button></div></div>').join('');
+  // Fetch aircraft details for each unique owner
+  const ownerIds=[...new Set(pending.map(i=>i.owner_user_id))];
+  const ownerFleets={};
+  for(const ownerId of ownerIds){
+    const {data:ownerRow}=await _supabase.from('fleet').select('data').eq('user_id',ownerId).maybeSingle();
+    if(ownerRow?.data)ownerFleets[ownerId]=ownerRow.data;
+  }
+  el.innerHTML=pending.map(inv=>{
+    const ownerFleet=ownerFleets[inv.owner_user_id]||[];
+    const aircraft=ownerFleet.find(a=>a.id===inv.aircraft_id);
+    const acLabel=aircraft?`${aircraft.reg} — ${aircraft.type}`:`Unknown Aircraft`;
+    return '<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:14px;margin-bottom:10px"><div style="font-size:13px;font-weight:600;margin-bottom:6px">Aircraft Invitation</div><div style="font-size:14px;color:var(--accent);font-family:var(--mono);font-weight:700;margin-bottom:6px">'+acLabel+'</div><div style="font-size:11px;color:var(--muted2);font-family:var(--mono);margin-bottom:10px">Role: <b style="color:'+ROLE_COLORS[inv.role]+'">'+ROLE_LABELS[inv.role]+'</b></div><div style="display:flex;gap:8px"><button class="btn sm primary" onclick="acceptInvite(\''+inv.id+'\');closeModal(\'pending-invites\')">Accept</button><button class="btn sm" onclick="declineInvite(\''+inv.id+'\');this.closest(\'div\').parentElement.remove()">Decline</button></div></div>';
+  }).join('');
 }
 
 let _manageAccessAircraftId=null;
@@ -2932,6 +2953,7 @@ async function changeRole(shareId,newRole){
 
 async function revokeAccess(shareId){
   if(!_supabase||!_authUser)return;
+  if(!confirm('Remove this person\'s access? They will no longer see this aircraft.'))return;
   await _supabase.from('aircraft_shares').delete().eq('id',shareId).eq('owner_user_id',_authUser.id);
   await renderSharesList(_manageAccessAircraftId);
 }
