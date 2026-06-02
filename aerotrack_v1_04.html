@@ -732,7 +732,7 @@ let mcan=null,mctx=null; // initialized in initMap()
 const ac=()=>fleet&&fleet.length?(fleet.find(f=>f.id===sid)||fleet[0]):null;
 
 // ─── CLOUD ────────────────────────────────────────────────────────────────────
-var CLOUD_ENABLED = false; // set to true in initSupabase() if credentials present
+var CLOUD_ENABLED = false; // updated below once credentials are known
 
 // ─── LOCALSTORAGE ─────────────────────────────────────────────────────────────
 let _suppressCloudSync=false;
@@ -781,6 +781,7 @@ function updStorage(){
 // ═══════════════════════════════════════════════════════════════════════════════
 const SUPABASE_URL = 'https://ggqucvfsqdvlhrfmrrcw.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_zBwC81maEoni813DAMdYkA_djiX2Q3C';
+CLOUD_ENABLED = SUPABASE_URL !== '' && SUPABASE_ANON_KEY !== '';
 
 /*
 -- SUPABASE SQL SCHEMA (run once in Supabase SQL editor)
