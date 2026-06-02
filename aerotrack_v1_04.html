@@ -508,6 +508,468 @@ body.light .ac-tile-top{background:linear-gradient(135deg,#dce8f4,#ccdaec)}
       <div class="alert-feed" id="dash-alerts"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px" id="dash-stats"></div>
       <div style="font-family:var(--display);font-size:15px;font-weight:700;margin-bottom:10px">Recent Flights</div>
+      <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);overflow:hidden">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border2)">
+          <span style="font-size:10px;color:var(--muted2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.07em">Flight Log</span>
+          <button class="btn sm" onclick="openFlightModal()">Log Flight</button>
+        </div>
+        <div style="padding:0 16px" id="dash-flights"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INSPECTIONS TAB -->
+  <div id="tab-inspections" class="tab-content">
+    <div class="tbl-toolbar"><button class="btn sm" onclick="openInspModal()">Log Inspection</button></div>
+    <div class="table-scroll"><table class="data-table"><thead><tr><th>Inspection Type</th><th>Status</th><th>Last Serviced</th><th>Next Service</th><th>Interval</th><th>Updated By</th><th>Updated On</th><th>Actions</th></tr></thead><tbody id="insp-tbody"></tbody></table></div>
+  </div>
+
+  <!-- OIL TAB -->
+  <div id="tab-oil" class="tab-content">
+    <div class="stat-row" id="oil-stats"></div>
+    <div class="two-col">
+      <div class="panel"><div class="panel-title">Monthly Oil Consumption (quarts)</div><canvas id="oil-canvas" class="chart"></canvas></div>
+      <div class="panel"><div class="panel-title">Recent Log</div><ul class="log-list" id="oil-log"></ul><button class="btn" style="margin-top:12px;width:100%" onclick="openOilModal()">Log Oil Addition</button></div>
+    </div>
+  </div>
+
+  <!-- SQUAWKS TAB -->
+  <div id="tab-squawks" class="tab-content">
+    <div class="tbl-toolbar"><button class="btn sm" onclick="openSquawkModal()">Add Squawk</button></div>
+    <div class="table-scroll"><div id="squawk-list"></div></div>
+    <div id="squawk-archive-section" style="margin-top:24px;display:none">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;cursor:pointer" onclick="toggleSquawkArchive()">
+        <div style="font-size:11px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.08em;font-family:var(--mono)">Archive</div>
+        <div style="flex:1;height:1px;background:var(--border2)"></div>
+        <span id="sq-archive-toggle-icon" style="font-size:11px;color:var(--muted);font-family:var(--mono)">&#9658; show</span>
+      </div>
+      <div id="squawk-archive-list" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- UTILIZATION TAB -->
+  <div id="tab-utilization" class="tab-content">
+    <div class="stat-row" id="util-stats"></div>
+    <div class="two-col">
+      <div class="panel"><div class="panel-title">Monthly Flight Hours</div><canvas id="util-canvas" class="chart"></canvas></div>
+      <div class="panel"><div class="panel-title">TBO and Overhaul Progress</div><div id="util-bars" style="margin-top:6px"></div></div>
+    </div>
+    <!-- Maintenance Cost Tracker -->
+    <div style="margin-top:20px;border-top:1px solid var(--border2);padding-top:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+        <div class="section-label">Maintenance Costs</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn sm" onclick="exportMaintExcel()" style="margin-right:4px">Export</button><span id="maint-total-label" style="font-size:11px;color:var(--muted2);font-family:var(--mono);align-self:center"></span>
+          <button class="btn sm" onclick="openMaintModal()">Log Cost</button><button class="btn sm" onclick="openReceiptModal()">📷 Scan Receipt</button>
+        </div>
+      </div>
+      <div id="maint-cost-list"></div>
+    </div>
+
+    <!-- Expense Charts -->
+    <div style="margin-top:20px;border-top:1px solid var(--border2);padding-top:16px">
+      <div class="section-label" style="margin-bottom:12px">Expense Analytics</div>
+      <div class="two-col" style="margin-bottom:12px">
+        <div class="panel">
+          <div class="panel-title">Monthly Spend</div>
+          <svg id="chart-monthly" width="100%" height="180"></svg>
+        </div>
+        <div class="panel">
+          <div class="panel-title">By Category</div>
+          <svg id="chart-category" width="100%" height="180"></svg>
+        </div>
+      </div>
+      <div class="two-col">
+        <div class="panel">
+          <div class="panel-title">Cost per Flight Hour</div>
+          <svg id="chart-cph" width="100%" height="180"></svg>
+        </div>
+        <div class="panel">
+          <div class="panel-title">Year-to-Date</div>
+          <div id="chart-ytd" style="padding:8px 0"></div>
+        </div>
+      </div>
+    </div>
+    <div class="map-section">
+      <div class="section-hd">
+        <div class="section-label">Airport History — <span id="map-reg" style="color:var(--accent)"></span></div>
+        <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap">
+          <span id="map-status" style="font-size:11px;color:var(--muted)"></span>
+          <span id="map-count" style="font-family:var(--mono);font-size:11px;color:var(--muted2)"></span>
+          <label class="btn sm" style="cursor:pointer">Import CSV<input type="file" id="csv-file" accept=".csv" style="display:none"></label>
+          <button class="btn sm" id="map-clear-btn" style="display:none" onclick="clearMapData()">Clear</button>
+        </div>
+      </div>
+      <div class="how-box"><b>Import from ForeFlight:</b> foreflight.com &rarr; Logbook &rarr; Export &rarr; Export CSV. Vref reads the exact ForeFlight format and maps every airport flown in <span id="map-hint" style="font-family:var(--mono);color:var(--accent);font-weight:700"></span>.</div>
+      <div id="map-canvas-wrap"><canvas id="map-canvas"></canvas></div>
+      <div style="display:flex;justify-content:space-between;margin-top:7px;flex-wrap:wrap;gap:5px">
+        <span style="font-size:11px;color:var(--muted)">Pan: drag &nbsp;|&nbsp; Zoom: Ctrl + scroll &nbsp;|&nbsp; Click chip to zoom in</span>
+        <span id="map-summary" style="font-family:var(--mono);font-size:11px;color:var(--muted2)"></span>
+      </div>
+      <div class="ap-chips" id="ap-chips"></div>
+    </div>
+  </div>
+
+  <!-- DOCUMENTS TAB -->
+
+  <!-- INSURANCE TAB -->
+  <div id="tab-insurance" class="tab-content">
+    <div class="tbl-toolbar" style="justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <div id="ins-expiry-badge"></div>
+      <button class="btn sm primary" onclick="openInsuranceModal()">Edit Policy</button>
+    </div>
+
+    <!-- Policy Summary Cards -->
+    <div class="stat-row" id="ins-stats" style="margin-bottom:18px"></div>
+
+    <!-- Two column: Policy Details + Pilots -->
+    <div class="two-col" style="margin-bottom:20px">
+      <div class="panel">
+        <div class="panel-title">Policy Details</div>
+        <div id="ins-details" style="font-size:13px"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title" style="display:flex;align-items:center;justify-content:space-between">
+          <span>Named / Approved Pilots</span>
+          <button class="btn sm" onclick="openAddPilotModal()">Add Pilot</button>
+        </div>
+        <div id="ins-pilots"></div>
+      </div>
+    </div>
+
+    <!-- Coverage Details -->
+    <div class="panel" style="margin-bottom:20px">
+      <div class="panel-title">Coverage Notes</div>
+      <div id="ins-coverage" style="font-size:13px;color:var(--muted2);line-height:1.7"></div>
+    </div>
+
+    <!-- Documents -->
+    <div class="panel">
+      <div class="panel-title" style="display:flex;align-items:center;justify-content:space-between">
+        <span>Policy Documents</span>
+        <!-- FUTURE: AI policy import via Claude Haiku
+             When implemented: upload PDF → send to claude-haiku-4-5-20251001 with
+             structured extraction prompt → auto-fill all policy fields.
+             API key stored in localStorage as 'at_api_key', never hardcoded. -->
+        <button class="btn sm" onclick="openInsPdfModal()" title="Upload policy PDF">Upload PDF</button>
+      </div>
+      <div id="ins-docs" style="font-size:12px;color:var(--muted2);padding:12px 0">No documents uploaded.</div>
+    </div>
+  </div>
+
+  <!-- SCHEDULE TAB -->
+  <div id="tab-schedule" class="tab-content">
+    <div class="tbl-toolbar" style="justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <div style="font-size:12px;color:var(--muted2)">Upcoming events for <span id="sched-reg" style="color:var(--accent);font-family:var(--mono)"></span></div>
+      <button class="btn sm primary" onclick="openScheduleModal()">Add Event</button>
+    </div>
+    <div id="schedule-calendar" style="margin-bottom:20px"></div>
+    <div id="schedule-list"></div>
+    <!-- FUTURE CLOUD SYNC NOTE:
+         Schedule events should sync in real-time across devices.
+         Suggested structure: supabase table 'schedule_events' with columns:
+         id, aircraft_id, user_id, event_type, title, start_dt, end_dt,
+         pilot_name, notes, status, conflict_flag, created_at
+         WebSocket subscription for live conflict detection. -->
+  </div>
+  <div id="tab-documents" class="tab-content">
+    <div class="doc-section">
+      <div style="margin-bottom:16px;padding-top:16px">
+        <div class="section-label" style="margin-bottom:4px">Logbooks and Documents</div>
+        <div style="font-size:11px;color:var(--muted)">Upload PDFs — logbooks, annual paperwork, 337s, STCs, maintenance records. Documents are stored locally in your browser.</div>
+      </div>
+      <div class="share-toggle-row">
+        <div>
+          <div class="toggle-info-title">Shared Storage</div>
+          <div class="toggle-info-sub" id="toggle-sub">Local only &mdash; visible on this browser only</div>
+        </div>
+        <label class="toggle-wrap">
+          <input type="checkbox" class="toggle-input" id="share-toggle" onchange="toggleSharing()">
+          <div class="toggle-slider"></div>
+        </label>
+      </div>
+      <div class="shared-notice" id="shared-notice">
+        Shared mode active &mdash; documents marked as shared are visible to all managers of this aircraft. Ideal for official logbooks, annual inspection paperwork, STCs, and 337 forms.
+      </div>
+      <div class="pdf-drop" id="pdf-drop"
+        onclick="document.getElementById('pdf-input').click()"
+        ondragover="event.preventDefault();this.classList.add('drag')"
+        ondragleave="this.classList.remove('drag')"
+        ondrop="event.preventDefault();this.classList.remove('drag');handlePDF(event.dataTransfer.files[0])">
+        <div class="pdf-drop-icon">+</div>
+        <div class="pdf-drop-title">Drop PDF here or click to browse</div>
+        <div class="pdf-drop-sub">Supports PDF files up to 4MB &mdash; logbooks, maintenance records, STCs, 337 forms</div>
+        <input type="file" id="pdf-input" accept=".pdf" style="display:none" onchange="handlePDF(this.files[0])">
+      </div>
+      <div id="pdf-status" style="font-size:11px;color:var(--muted);margin-bottom:10px;min-height:14px"></div>
+      <ul class="doc-list" id="doc-list"></ul>
+    </div>
+  </div>
+</div>
+
+<!-- REARRANGE OVERLAY -->
+<div class="rearrange-overlay" id="rearrange-overlay"></div>
+<div class="rearrange-bar" id="rearrange-bar" style="display:none">
+  <span style="font-size:13px;color:var(--muted2)">Drag tiles to reorder</span>
+  <button class="btn primary sm" onclick="exitRearrange()">Done</button>
+</div>
+
+<!-- MAINTENANCE COST MODAL -->
+<div class="modal-overlay" id="modal-maint">
+  <div class="modal"><h3 id="maint-title">Log Maintenance Cost</h3>
+    <div class="form-grid">
+      <div class="form-row"><label>Date</label><input id="maint-date" type="date"></div>
+      <div class="form-row"><label>Amount ($)</label><input id="maint-cost" type="number" step="0.01" placeholder="0.00"></div>
+    </div>
+    <div class="form-row"><label>Category</label>
+      <select id="maint-cat">
+        <option value="inspection">Inspection / Annual</option>
+        <option value="engine">Engine Work</option>
+        <option value="avionics">Avionics</option>
+        <option value="airframe">Airframe</option>
+        <option value="fuel">Fuel</option>
+        <option value="oil">Oil / Fluids</option>
+        <option value="parts">Parts</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
+    <div class="form-row"><label>Description</label><input id="maint-desc" placeholder="What was done..."></div>
+    <div class="form-row"><label>Shop / Vendor</label><input id="maint-shop" placeholder="Shop name or self"></div>
+    <div class="form-actions"><button class="btn-cancel" onclick="closeModal('maint')">Cancel</button><button class="btn-save" onclick="saveMaint()">Save</button></div>
+  </div>
+</div>
+
+
+<!-- RECEIPT SCAN MODAL -->
+<div class="modal-overlay" id="modal-receipt">
+  <div class="modal" style="max-width:540px"><h3>Scan Receipt</h3>
+    <div class="receipt-drop" id="receipt-drop" style="position:relative"
+      onclick="document.getElementById('receipt-file').click()"
+      ondragover="event.preventDefault();this.classList.add('drag')"
+      ondragleave="this.classList.remove('drag')"
+      ondrop="event.preventDefault();this.classList.remove('drag');handleReceiptFile(event.dataTransfer.files[0])">
+      <div style="font-size:24px;opacity:.3;margin-bottom:6px">📷</div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:3px">Drop a photo or click to browse</div>
+      <div style="font-size:11px;color:var(--muted2)">Fuel receipts, maintenance invoices, parts — JPG, PNG, HEIC, PDF</div>
+      <input type="file" id="receipt-file" accept="image/*,.pdf,.heic,.HEIC" style="display:none" onchange="handleReceiptFile(this.files[0])">
+      <div class="receipt-scanning" id="receipt-scanning">
+        <div class="receipt-spinner"></div>
+        <div class="receipt-scanning-label" id="receipt-scanning-label">Reading receipt...</div>
+      </div>
+      <img id="receipt-preview" class="receipt-preview">
+    </div>
+    <div class="receipt-scanning" id="receipt-scanning">
+      <div style="margin-bottom:6px">🔍 Reading receipt with AI...</div>
+      <div style="font-size:10px;color:var(--muted)">Extracting amount, vendor, date, and category</div>
+    </div>
+    <div class="receipt-result" id="receipt-result">
+      <div style="font-size:10px;color:var(--muted2);margin-bottom:8px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.06em">AI Extracted — review and adjust</div>
+      <div class="receipt-result-row"><span class="receipt-result-lbl">Amount</span><input id="r-cost" type="number" step="0.01" style="flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:5px;padding:5px 8px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none"></div>
+      <div class="receipt-result-row"><span class="receipt-result-lbl">Date</span><input id="r-date" type="date" style="flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:5px;padding:5px 8px;color:var(--text);font-size:12px;outline:none"></div>
+      <div class="receipt-result-row"><span class="receipt-result-lbl">Vendor</span><input id="r-shop" placeholder="Shop / vendor" style="flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:5px;padding:5px 8px;color:var(--text);font-size:12px;outline:none"></div>
+      <div class="receipt-result-row"><span class="receipt-result-lbl">Category</span>
+        <select id="r-cat" style="flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:5px;padding:5px 8px;color:var(--text);font-size:12px;outline:none">
+          <option value="inspection">Inspection / Annual</option>
+          <option value="engine">Engine Work</option>
+          <option value="avionics">Avionics</option>
+          <option value="airframe">Airframe</option>
+          <option value="fuel">Fuel</option>
+          <option value="oil">Oil / Fluids</option>
+          <option value="parts">Parts</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="receipt-result-row"><span class="receipt-result-lbl">Notes</span><textarea id="r-desc" rows="4" placeholder="Description..." style="flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:5px;padding:5px 8px;color:var(--text);font-size:11px;outline:none;font-family:var(--mono);resize:vertical"></textarea></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-cancel" onclick="closeModal('receipt');resetReceiptModal()">Cancel</button>
+      <button class="btn-save" id="receipt-save-btn" disabled onclick="saveFromReceipt()">Save Entry</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- INSURANCE EDIT MODAL -->
+<div class="modal-overlay" id="modal-insurance">
+  <div class="modal" style="max-width:580px"><h3>Policy Details</h3>
+    <div class="form-grid">
+      <div class="form-row"><label>Insurance Provider</label><input id="ins-provider" placeholder="AVEMCO, Global Aerospace, etc."></div>
+      <div class="form-row"><label>Policy Number</label><input id="ins-policy" placeholder="POL-00000"></div>
+    </div>
+    <div class="form-grid">
+      <div class="form-row"><label>Effective Date</label><input id="ins-effective" type="date"></div>
+      <div class="form-row"><label>Expiration Date</label><input id="ins-expiration" type="date"></div>
+    </div>
+    <div class="form-grid">
+      <div class="form-row"><label>Hull Value ($)</label><input id="ins-hull" type="number" placeholder="200000"></div>
+      <div class="form-row"><label>Liability Limits</label><input id="ins-liability" placeholder="$1M smooth / $100K per person"></div>
+    </div>
+    <div class="form-grid">
+      <div class="form-row"><label>In-Flight Deductible</label><input id="ins-deduct-flight" placeholder="$0"></div>
+      <div class="form-row"><label>Ground Deductible</label><input id="ins-deduct-ground" placeholder="$500"></div>
+    </div>
+    <div class="form-row"><label>Open Pilot Warranty / Pilot Requirements</label><textarea id="ins-pilot-reqs" rows="2" placeholder="Minimum 250TT, 50 in type, instrument rated..."></textarea></div>
+    <div class="form-row"><label>Coverage Notes</label><textarea id="ins-notes" rows="2" placeholder="Territorial limits, use limitations, endorsements..."></textarea></div>
+    <div class="form-actions"><button class="btn-cancel" onclick="closeModal('insurance')">Cancel</button><button class="btn-save" onclick="saveInsurance()">Save Policy</button></div>
+  </div>
+</div>
+
+<!-- ADD PILOT MODAL -->
+<div class="modal-overlay" id="modal-add-pilot">
+  <div class="modal"><h3>Add Named Pilot</h3>
+    <div class="form-row"><label>Full Name</label><input id="pilot-name" placeholder="John Smith"></div>
+    <div class="form-grid">
+      <div class="form-row"><label>Certificate #</label><input id="pilot-cert" placeholder="FAA Cert #"></div>
+      <div class="form-row"><label>Total Time (hrs)</label><input id="pilot-tt" type="number" placeholder="500"></div>
+    </div>
+    <div class="form-grid">
+      <div class="form-row"><label>Time in Type (hrs)</label><input id="pilot-intype" type="number" placeholder="50"></div>
+      <div class="form-row"><label>Medical Expiry</label><input id="pilot-medical" type="date"></div>
+    </div>
+    <div class="form-row"><label>Ratings</label><input id="pilot-ratings" placeholder="PPL, Instrument, Complex..."></div>
+    <div class="form-actions"><button class="btn-cancel" onclick="closeModal('add-pilot')">Cancel</button><button class="btn-save" onclick="saveInsurancePilot()">Add Pilot</button></div>
+  </div>
+</div>
+
+<!-- SCHEDULE EVENT MODAL -->
+<div class="modal-overlay" id="modal-schedule">
+  <div class="modal"><h3 id="sched-modal-title">Add Event</h3>
+    <div class="form-row"><label>Event Type</label>
+      <select id="sched-type">
+        <option value="reservation">Aircraft Reservation</option>
+        <option value="flight">Flight / Trip</option>
+        <option value="maintenance">Maintenance Downtime</option>
+        <option value="training">Flight Training</option>
+        <option value="other">Other</option>
+      </select>
+    </div>
+    <div class="form-row"><label>Title</label><input id="sched-title" placeholder="Short description"></div>
+    <div class="form-grid">
+      <div class="form-row"><label>Start Date</label><input id="sched-start" type="datetime-local"></div>
+      <div class="form-row"><label>End Date</label><input id="sched-end" type="datetime-local"></div>
+    </div>
+    <div class="form-row"><label>Assigned Pilot</label><input id="sched-pilot" placeholder="Pilot name"></div>
+    <div class="form-row"><label>Notes</label><textarea id="sched-notes" rows="2"></textarea></div>
+    <div class="form-actions"><button class="btn-cancel" onclick="closeModal('schedule')">Cancel</button><button class="btn-save" onclick="saveScheduleEvent()">Save Event</button></div>
+  </div>
+</div>
+<!-- PDF VIEWER OVERLAY -->
+<div class="pdf-overlay" id="pdf-overlay">
+  <div class="pdf-bar">
+    <div class="pdf-bar-title" id="pdf-title"></div>
+    <button class="btn sm" onclick="closePDF()">Close</button>
+  </div>
+  <div class="pdf-body">
+    <iframe id="pdf-frame" title="PDF Viewer"></iframe>
+  </div>
+</div>
+
+<!-- SETTINGS PAGE -->
+<div id="view-settings" style="display:none">
+  <div class="nav">
+    <div class="nav-brand"><div class="nav-dot"></div>AEROTRACK</div>
+    <div class="nav-right">
+      <button class="btn primary sm" onclick="showHangar()"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style="vertical-align:-1px;margin-right:4px"><path d="M8 1.5L1 7.5V14h5v-4h4v4h5V7.5L8 1.5z"/></svg>Hangar</button>
+    </div>
+  </div>
+  <div class="page-hd" style="padding-top:20px">
+    <div class="page-title">Settings</div>
+    <div class="page-sub">App preferences and data management</div>
+  </div>
+  <div style="padding:0 28px 40px;max-width:640px">
+
+    <div style="margin-bottom:8px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-family:var(--mono)">Appearance</div>
+    <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);overflow:hidden;margin-bottom:28px">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;border-bottom:1px solid var(--border2)">
+        <button class="theme-btn" id="theme-dark" onclick="setTheme('dark')"><div class="theme-preview" style="background:#0f0f0f;border:1px solid #2a2a2a"><div style="width:60%;height:6px;background:#2a2a2a;border-radius:2px;margin-bottom:5px"></div><div style="width:80%;height:4px;background:#333;border-radius:2px;margin-bottom:3px"></div><div style="width:50%;height:4px;background:#333;border-radius:2px"></div></div><span class="theme-label">Dark</span></button>
+        <button class="theme-btn" id="theme-light" onclick="setTheme('light')" style="border-left:1px solid var(--border2);border-right:1px solid var(--border2)"><div class="theme-preview" style="background:#f8f8f8;border:1px solid #e0e0e0"><div style="width:60%;height:6px;background:#e0e0e0;border-radius:2px;margin-bottom:5px"></div><div style="width:80%;height:4px;background:#ccc;border-radius:2px;margin-bottom:3px"></div><div style="width:50%;height:4px;background:#ccc;border-radius:2px"></div></div><span class="theme-label">Light</span></button>
+        <button class="theme-btn" id="theme-system" onclick="setTheme('system')"><div class="theme-preview" style="background:linear-gradient(135deg,#0f0f0f 50%,#f8f8f8 50%);border:1px solid #888"><div style="width:60%;height:6px;background:rgba(255,255,255,.15);border-radius:2px;margin-bottom:5px"></div><div style="width:80%;height:4px;background:rgba(255,255,255,.1);border-radius:2px;margin-bottom:3px"></div><div style="width:50%;height:4px;background:rgba(255,255,255,.1);border-radius:2px"></div></div><span class="theme-label">System</span></button>
+      </div>
+      <div style="padding:16px 20px">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:12px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.06em">Accent Color</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <div class="accent-swatch" id="accent-blue"   onclick="setAccent('blue')"   style="--sw:#4a9eff;background:var(--sw)" title="Blue"></div>
+          <div class="accent-swatch" id="accent-cyan"   onclick="setAccent('cyan')"   style="--sw:#06b6d4;background:var(--sw)" title="Cyan"></div>
+          <div class="accent-swatch" id="accent-green"  onclick="setAccent('green')"  style="--sw:#22c55e;background:var(--sw)" title="Green"></div>
+          <div class="accent-swatch" id="accent-teal"   onclick="setAccent('teal')"   style="--sw:#14b8a6;background:var(--sw)" title="Teal"></div>
+          <div class="accent-swatch" id="accent-violet" onclick="setAccent('violet')" style="--sw:#8b5cf6;background:var(--sw)" title="Violet"></div>
+          <div class="accent-swatch" id="accent-rose"   onclick="setAccent('rose')"   style="--sw:#f43f5e;background:var(--sw)" title="Rose"></div>
+          <div class="accent-swatch" id="accent-amber"  onclick="setAccent('amber')"  style="--sw:#f59e0b;background:var(--sw)" title="Amber"></div>
+          <div class="accent-swatch" id="accent-slate"  onclick="setAccent('slate')"  style="--sw:#94a3b8;background:var(--sw)" title="Slate"></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-bottom:8px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-family:var(--mono)">AI Receipt Scanning</div>
+    <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);overflow:hidden;margin-bottom:28px">
+      <div style="padding:16px 20px;border-bottom:1px solid var(--border2)">
+        <div style="font-size:13px;font-weight:700;font-family:var(--display);margin-bottom:3px">Anthropic API Key</div>
+        <div style="font-size:11px;color:var(--muted);line-height:1.6">Used for automatic receipt parsing. Stored only in this browser. ~$0.002 per scan. Get a key at <a href="https://console.anthropic.com" target="_blank" style="color:var(--accent)">console.anthropic.com</a>.</div>
+      </div>
+      <div style="padding:14px 20px">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <input id="api-key-input" type="password" placeholder="sk-ant-..." autocomplete="off"
+            style="flex:1;min-width:220px;background:var(--bg);border:1px solid var(--border2);border-radius:7px;padding:9px 12px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none;transition:border-color .15s"
+            oninput="this.style.borderColor=this.value.startsWith('sk-ant-')?'var(--ok)':'var(--border2)'">
+          <button onclick="saveApiKey()" class="btn sm primary">Save Key</button>
+          <button onclick="clearApiKey()" class="btn sm">Clear</button>
+        </div>
+        <div id="api-key-status" style="font-size:11px;margin-top:8px;font-family:var(--mono);color:var(--muted)"></div>
+      </div>
+    </div>
+    <div style="margin-bottom:8px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-family:var(--mono)">Account</div>
+    <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);overflow:hidden;margin-bottom:28px">
+      <div style="padding:16px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+        <div><div style="font-size:13px;font-weight:700;margin-bottom:2px;font-family:var(--display)" id="settings-user-name">Not signed in</div><div style="font-size:11px;color:var(--muted);font-family:var(--mono)" id="settings-user-email">Using local storage only</div></div>
+        <div style="display:flex;gap:8px">
+          <button class="btn sm" id="settings-auth-btn" onclick="showAuthScreen()">Sign In</button>
+          <button class="btn sm danger-btn" id="settings-signout-btn" onclick="signOut()" style="display:none">Sign Out</button>
+        </div>
+      </div>
+      <div style="padding:10px 20px;border-top:1px solid var(--border2);display:flex;align-items:center;gap:10px" id="settings-sync-row">
+        <span id="settings-sync-badge" class="sync-badge offline"><span class="sync-dot"></span><span id="settings-sync-label">Local only</span></span>
+        <span style="font-size:11px;color:var(--muted)">Data saved locally. Sign in to sync across devices.</span>
+      </div>
+    </div>
+    <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);overflow:hidden;margin-bottom:28px">
+      <div style="padding:14px 20px;display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-size:13px;font-weight:600;font-family:var(--display)">Always show login screen</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">When on, you must log in every time. Useful for testing multiple accounts.</div>
+        </div>
+        <label style="position:relative;display:inline-block;width:40px;height:22px;flex-shrink:0">
+          <input type="checkbox" id="always-login-toggle" onchange="toggleAlwaysLogin()" style="opacity:0;width:0;height:0">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+    <div style="margin-bottom:8px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-family:var(--mono)">Data Management</div>
+    <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);overflow:hidden">
+      <div style="padding:16px 20px;border-bottom:1px solid var(--border2);display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-size:13px;font-weight:600;font-family:var(--display);margin-bottom:2px">Local Storage</div>
+          <div style="font-size:11px;color:var(--muted)" id="settings-storage-msg">Calculating...</div>
+        </div>
+        <div id="settings-storage-dot" style="width:8px;height:8px;border-radius:50%;background:var(--ok);flex-shrink:0"></div>
+      </div>
+      <div style="padding:20px 20px 18px">
+        <div style="font-size:13px;font-weight:600;font-family:var(--display);margin-bottom:3px;color:var(--danger)">Delete All Personal Data</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:16px;line-height:1.7">Permanently erases all aircraft, inspections, oil logs, squawks, and documents from this browser. Cannot be undone.</div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <input id="reset-confirm-input" placeholder='Type "DELETE" to enable'
+            style="flex:1;min-width:180px;background:var(--bg);border:1px solid var(--border2);border-radius:7px;padding:9px 12px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none;transition:border-color .15s"
+            oninput="const v=this.value==='DELETE';document.getElementById('reset-confirm-btn').disabled=!v;this.style.borderColor=v?'var(--danger)':'var(--border2)'">
+          <button id="reset-confirm-btn" disabled onclick="confirmResetData()"
+            style="background:none;border:1px solid rgba(240,75,75,.4);color:var(--danger);padding:9px 18px;border-radius:7px;cursor:pointer;font-family:var(--body);font-size:12px;font-weight:600;white-space:nowrap;opacity:.4;transition:all .15s"
+            oninput="" onfocus="if(!this.disabled)this.style.opacity='1'" onmouseover="if(!this.disabled){this.style.background='var(--danger-dim)';this.style.opacity='1'}" onmouseout="if(!this.disabled){this.style.background='none'}">Delete Everything</button>
+        </div>
+        <script>document.getElementById('reset-confirm-btn').addEventListener('input',()=>{});
+        document.getElementById('reset-confirm-input').addEventListener('input',function(){const v=this.value==='DELETE';const btn=document.getElementById('reset-confirm-btn');btn.disabled=!v;btn.style.opacity=v?'1':'0.4';});</script>
+      </div>
+      <div style="padding:12px 20px;border-top:1px solid var(--border2);background:var(--bg3)">
+        <div style="font-size:11px;color:var(--muted)">Data is stored only in this browser. Nothing is sent to any server.</div>
+      </div>
+    </div>
 
   </div>
 </div>
@@ -803,7 +1265,8 @@ function initSupabase(){
   CLOUD_ENABLED = SUPABASE_URL!==''&&SUPABASE_ANON_KEY!=='';
   if(!CLOUD_ENABLED) return;
   try{
-    _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const _alwaysLogin=localStorage.getItem('at_always_login')==='true';
+    _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {auth:{persistSession:!_alwaysLogin,autoRefreshToken:!_alwaysLogin}});
     _supabase.auth.onAuthStateChange((event, session)=>{
       _authUser = session?.user || null;
       onAuthChange(event, session);
@@ -1386,6 +1849,8 @@ function showSettings(pushState=true){
   const ki=document.getElementById('api-key-input');
   if(ks){ks.textContent=hasKey?'✓ API key saved — receipt scanning enabled':'No key saved — receipt scanning disabled';ks.style.color=hasKey?'var(--ok)':'var(--muted)';}
   if(ki)ki.value='';
+  const alwaysLoginToggle=document.getElementById('always-login-toggle');
+  if(alwaysLoginToggle)alwaysLoginToggle.checked=localStorage.getItem('at_always_login')==='true';
   applyTheme(localStorage.getItem('at_theme')||'dark',false);
   applyAccent(localStorage.getItem('at_accent')||'blue',false);
 }
@@ -1932,6 +2397,12 @@ function showReceiptWarning(msg,color){
 function hideReceiptWarning(){const w=document.getElementById('receipt-warning');if(w)w.style.display='none';}
 
 
+function toggleAlwaysLogin(){
+  const current=localStorage.getItem('at_always_login')==='true';
+  localStorage.setItem('at_always_login',(!current).toString());
+  const el=document.getElementById('always-login-toggle');
+  if(el)el.checked=!current;
+}
 function saveApiKey(){
   const val=document.getElementById('api-key-input').value.trim();
   if(!val){document.getElementById('api-key-status').textContent='Enter a key first.';return;}
