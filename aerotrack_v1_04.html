@@ -461,6 +461,7 @@ body.light .ac-tile-top{background:linear-gradient(135deg,#dce8f4,#ccdaec)}
         <div class="dot-menu" id="detail-dot-menu">
           <button class="dot-menu-item" onclick="openSettingsModal();closeDotMenus()">Aircraft Settings</button>
           <button class="dot-menu-item" onclick="showSettings();closeDotMenus()">App Settings</button>
+          <button class="dot-menu-item" id="nav-dot-signout" onclick="signOut();closeDotMenus()" style="display:none;color:var(--danger)">Sign Out</button>
         </div>
       </div>
     </div>
@@ -758,10 +759,7 @@ body.light .ac-tile-top{background:linear-gradient(135deg,#dce8f4,#ccdaec)}
       </div>
       <img id="receipt-preview" class="receipt-preview">
     </div>
-    <div class="receipt-scanning" id="receipt-scanning">
-      <div style="margin-bottom:6px">🔍 Reading receipt with AI...</div>
-      <div style="font-size:10px;color:var(--muted)">Extracting amount, vendor, date, and category</div>
-    </div>
+
     <div class="receipt-result" id="receipt-result">
       <div style="font-size:10px;color:var(--muted2);margin-bottom:8px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.06em">AI Extracted — review and adjust</div>
       <div class="receipt-result-row"><span class="receipt-result-lbl">Amount</span><input id="r-cost" type="number" step="0.01" style="flex:1;background:var(--bg);border:1px solid var(--border2);border-radius:5px;padding:5px 8px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none"></div>
@@ -929,18 +927,6 @@ body.light .ac-tile-top{background:linear-gradient(135deg,#dce8f4,#ccdaec)}
       <div style="padding:10px 20px;border-top:1px solid var(--border2);display:flex;align-items:center;gap:10px" id="settings-sync-row">
         <span id="settings-sync-badge" class="sync-badge offline"><span class="sync-dot"></span><span id="settings-sync-label">Local only</span></span>
         <span style="font-size:11px;color:var(--muted)">Data saved locally. Sign in to sync across devices.</span>
-      </div>
-    </div>
-    <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);overflow:hidden;margin-bottom:28px">
-      <div style="padding:14px 20px;display:flex;align-items:center;justify-content:space-between">
-        <div>
-          <div style="font-size:13px;font-weight:600;font-family:var(--display)">Always show login screen</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:2px">When on, you must log in every time. Useful for testing multiple accounts.</div>
-        </div>
-        <label style="position:relative;display:inline-block;width:40px;height:22px;flex-shrink:0">
-          <input type="checkbox" id="always-login-toggle" onchange="toggleAlwaysLogin()" style="opacity:0;width:0;height:0">
-          <span class="toggle-slider"></span>
-        </label>
       </div>
     </div>
     <div style="margin-bottom:8px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-family:var(--mono)">Data Management</div>
@@ -1394,6 +1380,8 @@ function updateAuthUI(user){
   if(authBtn)authBtn.style.display=signedIn?'none':'inline-flex';
   const signoutBtn=document.getElementById('settings-signout-btn');
   if(signoutBtn)signoutBtn.style.display=signedIn?'inline-flex':'none';
+  const navDotSignout=document.getElementById('nav-dot-signout');
+  if(navDotSignout)navDotSignout.style.display=signedIn?'block':'none';
 }
 
 
@@ -1849,8 +1837,6 @@ function showSettings(pushState=true){
   const ki=document.getElementById('api-key-input');
   if(ks){ks.textContent=hasKey?'✓ API key saved — receipt scanning enabled':'No key saved — receipt scanning disabled';ks.style.color=hasKey?'var(--ok)':'var(--muted)';}
   if(ki)ki.value='';
-  const alwaysLoginToggle=document.getElementById('always-login-toggle');
-  if(alwaysLoginToggle)alwaysLoginToggle.checked=localStorage.getItem('at_always_login')==='true';
   applyTheme(localStorage.getItem('at_theme')||'dark',false);
   applyAccent(localStorage.getItem('at_accent')||'blue',false);
 }
@@ -2318,6 +2304,11 @@ async function compressReceiptImage(b64, mimeType){
       const ctx=canvas.getContext('2d');
       ctx.drawImage(img,0,0,w,h);
       const compressed=canvas.toDataURL('image/jpeg',0.8).split(',')[1];
+      const origKB=Math.round(b64.length*0.75/1024);
+      const compKB=Math.round(compressed.length*0.75/1024);
+      console.log(`[AeroTrack] Image compressed: ${origKB}KB → ${compKB}KB (${w}×${h}px)`);
+      const lbl=document.getElementById('receipt-scanning-label');
+      if(lbl)lbl.textContent=`Compressed: ${origKB}KB → ${compKB}KB`;
       resolve(compressed);
     };
     img.onerror=()=>resolve(b64); // fallback to original if compression fails
@@ -2397,12 +2388,6 @@ function showReceiptWarning(msg,color){
 function hideReceiptWarning(){const w=document.getElementById('receipt-warning');if(w)w.style.display='none';}
 
 
-function toggleAlwaysLogin(){
-  const current=localStorage.getItem('at_always_login')==='true';
-  localStorage.setItem('at_always_login',(!current).toString());
-  const el=document.getElementById('always-login-toggle');
-  if(el)el.checked=!current;
-}
 function saveApiKey(){
   const val=document.getElementById('api-key-input').value.trim();
   if(!val){document.getElementById('api-key-status').textContent='Enter a key first.';return;}
