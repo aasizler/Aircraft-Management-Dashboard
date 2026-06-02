@@ -728,8 +728,11 @@ const SEED=[{id:'ac_default',reg:'N137BF',serial:'E-3999',type:'Beechcraft Bonan
 // ─── STATE ────────────────────────────────────────────────────────────────────
 let fleet=[],sid='ac_default',ctab='dashboard',eOil=null,eSq=null;
 let mgeo=null,mproj=null,mpath=null,mt={x:0,y:0,k:1},mdrag=false,mlx=0,mly=0,mcodes=null;
-const mcan=document.getElementById('map-canvas'),mctx=mcan.getContext('2d');
+let mcan=null,mctx=null; // initialized in initMap()
 const ac=()=>fleet&&fleet.length?(fleet.find(f=>f.id===sid)||fleet[0]):null;
+
+// ─── CLOUD ────────────────────────────────────────────────────────────────────
+var CLOUD_ENABLED = false; // set to true in initSupabase() if credentials present
 
 // ─── LOCALSTORAGE ─────────────────────────────────────────────────────────────
 let _suppressCloudSync=false;
@@ -796,12 +799,10 @@ create index fleet_user_id_idx on public.fleet(user_id);
 let _supabase = null;
 let _authUser = null;
 let _syncTimer = null;
-let _syncStatus = 'offline'; // offline | syncing | synced | error
-let CLOUD_ENABLED = SUPABASE_URL !== '' && SUPABASE_ANON_KEY !== '';
+let _syncStatus = 'offline';
 
 function initSupabase(){
   CLOUD_ENABLED = SUPABASE_URL!==''&&SUPABASE_ANON_KEY!=='';
-  if(!CLOUD_ENABLED) return;
   try{
     _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     _supabase.auth.onAuthStateChange((event, session)=>{
@@ -2088,40 +2089,31 @@ function saveScheduleEvent(){
 
 
 // ─── MAP ──────────────────────────────────────────────────────────────────────
-function initMap(){const a=ac();document.getElementById('map-reg').textContent=a.reg;document.getElementById('map-hint').textContent=a.reg;sizeMap();if(!mgeo)loadGeo();else drawMap();if(a.airportData){mcodes=a.airportData;renderChips();updMeta();}else{mcodes=null;renderChips();['map-count','map-summary'].forEach(id=>document.getElementById(id).textContent='');}}
+function initMap(){
+  const a=ac();
+  // Initialize canvas refs here, not at script load time
+  if(!mcan){
+    mcan=document.getElementById('map-canvas');
+    if(!mcan) return;
+    mctx=mcan.getContext('2d');
+    // Attach event listeners once
+    mcan.addEventListener('mousedown',e=>{mdrag=true;mlx=e.clientX;mly=e.clientY;mcan.style.cursor='grabbing';});
+    mcan.addEventListener('wheel',e=>{e.preventDefault();const rc=mcan.getBoundingClientRect();const px=e.clientX-rc.left,py=e.clientY-rc.top;const f=e.deltaY<0?1.15:0.87;const nk=Math.max(0.5,Math.min(20,mt.k*f));mt.x=px-(px-mt.x)*(nk/mt.k);mt.y=py-(py-mt.y)*(nk/mt.k);mt.k=nk;drawMap();},{passive:false});
+    mcan.addEventListener('touchstart',e=>{if(e.touches.length===1){mdrag=true;mlx=e.touches[0].clientX;mly=e.touches[0].clientY;}if(e.touches.length===2){const dx=e.touches[0].clientX-e.touches[1].clientX,dy=e.touches[0].clientY-e.touches[1].clientY;ltd=Math.hypot(dx,dy);}e.preventDefault();},{passive:false});
+    mcan.addEventListener('touchend',()=>{mdrag=false;ltd=null;});
+    mcan.addEventListener('touchmove',e=>{if(e.touches.length===1&&mdrag){mt.x+=e.touches[0].clientX-mlx;mt.y+=e.touches[0].clientY-mly;mlx=e.touches[0].clientX;mly=e.touches[0].clientY;drawMap();}if(e.touches.length===2){const dx=e.touches[0].clientX-e.touches[1].clientX,dy=e.touches[0].clientY-e.touches[1].clientY;const d=Math.hypot(dx,dy);if(ltd){const f=d/ltd;const mx2=(e.touches[0].clientX+e.touches[1].clientX)/2,my2=(e.touches[0].clientY+e.touches[1].clientY)/2;const rc=mcan.getBoundingClientRect();const cx=mx2-rc.left,cy=my2-rc.top;const nk=Math.max(0.5,Math.min(20,mt.k*f));mt.x=cx-(cx-mt.x)*(nk/mt.k);mt.y=cy-(cy-mt.y)*(nk/mt.k);mt.k=nk;drawMap();}ltd=d;}e.preventDefault();},{passive:false});
+    mcan.addEventListener('mousemove',e=>{if(!mcodes||!mproj||mdrag)return;const rc=mcan.getBoundingClientRect();const px=(e.clientX-rc.left-mt.x)/mt.k,py=(e.clientY-rc.top-mt.y)/mt.k;let hit=null,md2=999;Object.entries(mcodes).forEach(([code,v])=>{const ap=AP[code];if(!ap)return;const pt=mproj([ap.o,ap.a]);if(!pt)return;const r=Math.max(5,Math.min(16,5+v*2))/mt.k;const d=Math.hypot(pt[0]-px,pt[1]-py);if(d<r+6&&d<md2){md2=d;hit={code,ap,v};}});mcan.title=hit?`${hit.code} — ${hit.ap.n} (${hit.v} op${hit.v!==1?'s':''})`:'';});
+  }
+  document.getElementById('map-reg').textContent=a.reg;
+  document.getElementById('map-hint').textContent=a.reg;
+  sizeMap();
+  if(!mgeo)loadGeo();else drawMap();
+  if(a.airportData){mcodes=a.airportData;renderChips();updMeta();}
+  else{mcodes=null;renderChips();['map-count','map-summary'].forEach(id=>document.getElementById(id).textContent='');}
+}
 function sizeMap(){const dpr=window.devicePixelRatio||1;const wrap=document.getElementById('map-canvas-wrap');const W=wrap.clientWidth||640,H=Math.round(W*0.58);wrap.style.height=H+'px';mcan.style.width=W+'px';mcan.style.height=H+'px';mcan.width=W*dpr;mcan.height=H*dpr;mctx.setTransform(1,0,0,1,0,0);mctx.scale(dpr,dpr);mproj=d3.geoAlbersUsa().scale(W*1.1).translate([W/2,H/2]);mpath=d3.geoPath(mproj,mctx);}
 async function loadGeo(){try{const r=await fetch('https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json');const t=await r.json();mgeo={states:topojson.feature(t,t.objects.states),nation:topojson.feature(t,t.objects.nation)};drawMap();}catch(e){document.getElementById('map-status').textContent='Map data failed to load.';}}
 function drawMap(){if(!mgeo||!mproj)return;const wrap=document.getElementById('map-canvas-wrap');const W=wrap.clientWidth||640,H=Math.round(W*0.58);mctx.save();mctx.clearRect(0,0,W,H);mctx.translate(mt.x,mt.y);mctx.scale(mt.k,mt.k);mctx.fillStyle='#080e14';mctx.fillRect(-W*2,-H*2,W*6,H*6);mctx.beginPath();mpath(mgeo.nation);mctx.fillStyle='#111a10';mctx.fill();mctx.beginPath();mpath(mgeo.states);mctx.strokeStyle='rgba(255,255,255,0.06)';mctx.lineWidth=0.5/mt.k;mctx.stroke();mctx.beginPath();mpath(mgeo.nation);mctx.strokeStyle='rgba(255,255,255,0.15)';mctx.lineWidth=1/mt.k;mctx.stroke();if(mcodes)Object.entries(mcodes).forEach(([code,v])=>{const ap=AP[code];if(!ap)return;const pt=mproj([ap.o,ap.a]);if(!pt)return;const r=Math.max(5,Math.min(16,5+v*2))/mt.k;mctx.beginPath();mctx.arc(pt[0],pt[1],r,0,Math.PI*2);mctx.fillStyle='#4a9eff';mctx.globalAlpha=.85;mctx.fill();mctx.globalAlpha=1;mctx.strokeStyle='rgba(255,255,255,.4)';mctx.lineWidth=1.5/mt.k;mctx.stroke();if(mt.k>2.5){mctx.font=`${10/mt.k}px Inter,sans-serif`;mctx.fillStyle='#fff';mctx.globalAlpha=.9;mctx.fillText(code,pt[0]+r+2/mt.k,pt[1]+3/mt.k);mctx.globalAlpha=1;}});mctx.restore();}
-mcan.addEventListener('mousedown',e=>{mdrag=true;mlx=e.clientX;mly=e.clientY;mcan.style.cursor='grabbing';});
-window.addEventListener('mouseup',()=>{mdrag=false;mcan.style.cursor='grab';});
-window.addEventListener('mousemove',e=>{if(!mdrag)return;mt.x+=e.clientX-mlx;mt.y+=e.clientY-mly;mlx=e.clientX;mly=e.clientY;drawMap();});
-let mapHintTimer=null;
-function showMapHint(){
-  let h=document.getElementById('map-scroll-hint');
-  if(!h){
-    document.getElementById('map-canvas-wrap').style.position='relative';
-    h=document.createElement('div');h.id='map-scroll-hint';
-    h.style.cssText='position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:opacity .2s;z-index:10';
-    h.innerHTML='<div style="background:rgba(0,0,0,.75);color:#fff;font-size:12px;font-family:var(--mono);padding:8px 16px;border-radius:8px;border:1px solid rgba(255,255,255,.15)">Use <b>Ctrl + scroll</b> to zoom &nbsp;·&nbsp; drag to pan</div>';
-    document.getElementById('map-canvas-wrap').appendChild(h);
-  }
-  h.style.opacity='1';
-  clearTimeout(mapHintTimer);
-  mapHintTimer=setTimeout(()=>{h.style.opacity='0';},1500);
-}
-mcan.addEventListener('wheel',e=>{
-  if(!e.ctrlKey&&!e.metaKey){showMapHint();return;}
-  e.preventDefault();
-  const rc=mcan.getBoundingClientRect();const px=e.clientX-rc.left,py=e.clientY-rc.top;
-  const f=e.deltaY<0?1.15:0.87,nk=Math.max(0.5,Math.min(20,mt.k*f));
-  mt.x=px-(px-mt.x)*(nk/mt.k);mt.y=py-(py-mt.y)*(nk/mt.k);mt.k=nk;drawMap();
-},{passive:true});
-let ltd=null;
-mcan.addEventListener('touchstart',e=>{if(e.touches.length===1){mdrag=true;mlx=e.touches[0].clientX;mly=e.touches[0].clientY;}if(e.touches.length===2){const dx=e.touches[0].clientX-e.touches[1].clientX,dy=e.touches[0].clientY-e.touches[1].clientY;ltd=Math.hypot(dx,dy);}e.preventDefault();},{passive:false});
-mcan.addEventListener('touchend',()=>{mdrag=false;ltd=null;});
-mcan.addEventListener('touchmove',e=>{if(e.touches.length===1&&mdrag){mt.x+=e.touches[0].clientX-mlx;mt.y+=e.touches[0].clientY-mly;mlx=e.touches[0].clientX;mly=e.touches[0].clientY;drawMap();}if(e.touches.length===2){const dx=e.touches[0].clientX-e.touches[1].clientX,dy=e.touches[0].clientY-e.touches[1].clientY;const d=Math.hypot(dx,dy);if(ltd){const f=d/ltd;const mx2=(e.touches[0].clientX+e.touches[1].clientX)/2,my2=(e.touches[0].clientY+e.touches[1].clientY)/2;const rc=mcan.getBoundingClientRect();const cx=mx2-rc.left,cy=my2-rc.top;const nk=Math.max(0.5,Math.min(20,mt.k*f));mt.x=cx-(cx-mt.x)*(nk/mt.k);mt.y=cy-(cy-mt.y)*(nk/mt.k);mt.k=nk;drawMap();}ltd=d;}e.preventDefault();},{passive:false});
-mcan.addEventListener('mousemove',e=>{if(!mcodes||!mproj||mdrag)return;const rc=mcan.getBoundingClientRect();const px=(e.clientX-rc.left-mt.x)/mt.k,py=(e.clientY-rc.top-mt.y)/mt.k;let hit=null,md2=999;Object.entries(mcodes).forEach(([code,v])=>{const ap=AP[code];if(!ap)return;const pt=mproj([ap.o,ap.a]);if(!pt)return;const r=Math.max(5,Math.min(16,5+v*2))/mt.k;const d=Math.hypot(pt[0]-px,pt[1]-py);if(d<r+6&&d<md2){md2=d;hit={code,ap,v};}});mcan.title=hit?`${hit.code} — ${hit.ap.n} (${hit.v} op${hit.v!==1?'s':''})`:'';});
-function parseFF(text,reg){
   const lines=text.split(/\r?\n/);let hdr=-1;
   for(let i=0;i<lines.length;i++){if(lines[i].includes('AircraftID')&&lines[i].includes('From')&&lines[i].includes('To')){hdr=i;break;}}
   if(hdr<0)return{error:'Flights Table header not found. Is this a ForeFlight export?'};
