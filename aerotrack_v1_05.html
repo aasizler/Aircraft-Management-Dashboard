@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AeroTrack v1.04.4</title>
+<title>AeroTrack v1.05</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='11' fill='none' stroke='%23a3e635' stroke-width='4'/></svg>">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -158,9 +158,6 @@ canvas.chart{display:block;width:100%;height:150px}
 .pdf-body{flex:1;overflow:auto;display:flex;align-items:flex-start;justify-content:center;padding:20px;background:var(--bg)}
 #pdf-frame{width:100%;max-width:900px;height:calc(100vh - 110px);border:none;border-radius:var(--r)}
 /* STORAGE BAR */
-.storage-bar{margin:0 28px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:7px 14px;display:flex;align-items:center;gap:10px;font-size:11px;color:var(--muted2);font-family:var(--mono)}
-.storage-dot{width:6px;height:6px;border-radius:50%;background:var(--ok);flex-shrink:0}
-.storage-dot.warn{background:var(--warn)}
 /* HANGAR */
 .hangar-wrap{padding:0 28px 32px}
 .section-lbl{font-family:var(--display);font-size:18px;font-weight:800;margin-bottom:4px}
@@ -411,6 +408,9 @@ body.light .ac-tile-top{background:linear-gradient(135deg,#dce8f4,#ccdaec)}
           <span id="auth-switch-link">Create one</span>
         </a>
       </div>
+      <div class="auth-switch" style="margin-top:8px">
+        <a onclick="showForgotPassword()" id="forgot-password-link">Forgot password?</a>
+      </div>
 
     </div>
   </div>
@@ -443,10 +443,6 @@ body.light .ac-tile-top{background:linear-gradient(135deg,#dce8f4,#ccdaec)}
       <div id="hangar-avatar" style="width:24px;height:24px;border-radius:50%;background:var(--accent-dim);border:1px solid rgba(74,158,255,.3);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--accent);font-weight:700;font-family:var(--mono);flex-shrink:0"></div>
       <span id="hangar-user-email" style="font-size:11px;color:var(--muted2);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
     </div>
-  </div>
-  <div class="storage-bar">
-    <div class="storage-dot" id="storage-dot"></div>
-    <span id="storage-msg">Local storage active</span>
   </div>
   <div class="hangar-wrap">
     <div class="section-lbl">Active Aircraft</div>
@@ -859,6 +855,55 @@ body.light .ac-tile-top{background:linear-gradient(135deg,#dce8f4,#ccdaec)}
     <div class="form-actions"><button class="btn-cancel" onclick="closeModal('schedule')">Cancel</button><button class="btn-save" onclick="saveScheduleEvent()">Save Event</button></div>
   </div>
 </div>
+<!-- FORGOT PASSWORD MODAL -->
+<div class="modal-overlay" id="modal-forgot">
+  <div class="modal" style="max-width:400px">
+    <h3>Reset Password</h3>
+    <div style="font-size:13px;color:var(--muted2);margin-bottom:16px;line-height:1.6">Enter your email address and we'll send you a link to reset your password.</div>
+    <div class="form-row"><label>Email Address</label><input id="forgot-email" type="email" placeholder="your@email.com" autocomplete="email"></div>
+    <div id="forgot-msg" style="font-size:12px;min-height:16px;font-family:var(--mono);margin-top:4px"></div>
+    <div class="form-actions">
+      <button class="btn-cancel" onclick="closeModal('forgot')">Cancel</button>
+      <button class="btn-save" onclick="submitForgotPassword()">Send Reset Email</button>
+    </div>
+  </div>
+</div>
+
+<!-- MANAGE ACCESS MODAL -->
+<div class="modal-overlay" id="modal-manage-access">
+  <div class="modal" style="max-width:520px">
+    <h3 id="manage-access-title">Manage Access</h3>
+    <div style="margin-bottom:16px">
+      <div style="font-size:11px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Invite Someone</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <input id="manage-access-invite-email" type="email" placeholder="their@email.com" style="flex:1;min-width:180px;background:var(--bg);border:1px solid var(--border2);border-radius:7px;padding:9px 12px;color:var(--text);font-size:13px;outline:none">
+        <select id="manage-access-invite-role" style="background:var(--bg);border:1px solid var(--border2);border-radius:7px;padding:9px 12px;color:var(--text);font-size:13px;outline:none">
+          <option value="co_owner">Co-Owner</option>
+          <option value="mechanic">Mechanic</option>
+          <option value="viewer" selected>Viewer</option>
+        </select>
+        <button class="btn sm primary" onclick="inviteUser()">Invite</button>
+      </div>
+      <div id="manage-access-msg" style="font-size:11px;font-family:var(--mono);margin-top:6px;min-height:14px"></div>
+    </div>
+    <div style="font-size:11px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Current Access</div>
+    <div id="manage-access-shares"></div>
+    <div style="font-size:10px;color:var(--muted);margin-top:16px;line-height:1.6">
+      <b>Co-Owner</b> — full access &nbsp;|&nbsp; <b>Mechanic</b> — squawks, inspections, documents &nbsp;|&nbsp; <b>Viewer</b> — read only
+    </div>
+    <div class="form-actions"><button class="btn-cancel" onclick="closeModal('manage-access')">Done</button></div>
+  </div>
+</div>
+
+<!-- PENDING INVITES MODAL -->
+<div class="modal-overlay" id="modal-pending-invites">
+  <div class="modal" style="max-width:480px">
+    <h3>Aircraft Invitations</h3>
+    <div id="pending-invites-list" style="margin-bottom:16px"></div>
+    <div class="form-actions"><button class="btn-cancel" onclick="closeModal('pending-invites')">Close</button></div>
+  </div>
+</div>
+
 <!-- PDF VIEWER OVERLAY -->
 <div class="pdf-overlay" id="pdf-overlay">
   <div class="pdf-bar">
@@ -881,7 +926,7 @@ body.light .ac-tile-top{background:linear-gradient(135deg,#dce8f4,#ccdaec)}
   </div>
   <div class="page-hd" style="padding-top:20px">
     <div class="page-title">Settings</div>
-    <div style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:2px">AeroTrack v1.04.4</div>
+    <div style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:2px">AeroTrack v1.05</div>
     <div class="page-sub">App preferences and data management</div>
   </div>
   <div style="padding:0 28px 40px;max-width:640px">
@@ -1189,7 +1234,7 @@ const SEED=[{id:'ac_default',reg:'N137BF',serial:'E-3999',type:'Beechcraft Bonan
 let fleet=[],sid='ac_default',ctab='dashboard',eOil=null,eSq=null;
 let mgeo=null,mproj=null,mpath=null,mt={x:0,y:0,k:1},mdrag=false,mlx=0,mly=0,mcodes=null;
 const mcan=document.getElementById('map-canvas'),mctx=mcan.getContext('2d');
-const ac=()=>fleet&&fleet.length?(fleet.find(f=>f.id===sid)||fleet[0]):null;
+const ac=()=>{if(fleet&&fleet.length){const own=fleet.find(f=>f.id===sid);if(own)return own;const shared=_sharedFleet&&_sharedFleet.find(f=>f.id===sid);if(shared)return shared;return fleet[0];}if(_sharedFleet&&_sharedFleet.length){return _sharedFleet.find(f=>f.id===sid)||_sharedFleet[0];}return null;};
 
 // ─── LOCALSTORAGE ─────────────────────────────────────────────────────────────
 let _suppressCloudSync=false;
@@ -1451,24 +1496,50 @@ async function cloudSave(table, data){
   // For fleet data, we use a single-row upsert keyed by user_id
   // All other table names are logged but routed through cloudPush
   if(table==='fleet'||table==='_auto'){
-    clearTimeout(_syncTimer);
-    _syncTimer = setTimeout(cloudPush, 1500);
+    cloudPush();
   }
 }
 
 async function cloudPush(){
-  if(!CLOUD_ENABLED||!_supabase||!_authUser||!fleet) return;
+  if(!CLOUD_ENABLED||!_supabase||!_authUser) return;
   if(_suppressCloudSync) return;
   setSyncStatus('syncing');
-  // Safety net — if push hangs for 10s, show error rather than spinning forever
   const timeout=setTimeout(()=>setSyncStatus('error'),10000);
   try{
-    const {error}=await _supabase.from('fleet').upsert(
-      {user_id:_authUser.id, data:fleet, updated_at:new Date().toISOString()},
-      {onConflict:'user_id'}
-    );
+    // Push own fleet
+    if(fleet&&fleet.length){
+      const {error}=await _supabase.from('fleet').upsert(
+        {user_id:_authUser.id, data:fleet, updated_at:new Date().toISOString()},
+        {onConflict:'user_id'}
+      );
+      if(error)throw error;
+    }
+    // Push changes to shared aircraft back to their owners
+    if(_sharedFleet&&_sharedFleet.length){
+      const ownerGroups={};
+      _sharedFleet.forEach(a=>{
+        if(!ownerGroups[a._ownerId])ownerGroups[a._ownerId]=[];
+        ownerGroups[a._ownerId].push(a);
+      });
+      for(const ownerId of Object.keys(ownerGroups)){
+        // Fetch owner's current full fleet
+        const {data:ownerRow}=await _supabase.from('fleet').select('data').eq('user_id',ownerId).maybeSingle();
+        if(ownerRow?.data){
+          // Merge updated shared aircraft back into owner's fleet
+          const updatedFleet=ownerRow.data.map(oa=>{
+            const updated=ownerGroups[ownerId].find(sa=>sa.id===oa.id);
+            if(updated){
+              // Strip shared-specific metadata before saving back
+              const {_shared,_role,_ownerId,...clean}=updated;
+              return clean;
+            }
+            return oa;
+          });
+          await _supabase.from('fleet').update({data:updatedFleet,updated_at:new Date().toISOString()}).eq('user_id',ownerId);
+        }
+      }
+    }
     clearTimeout(timeout);
-    if(error) throw error;
     setSyncStatus('synced');
   }catch(e){
     clearTimeout(timeout);
@@ -1500,11 +1571,16 @@ async function cloudPull(){
     _suppressCloudSync=true;
     saveLS();
     _suppressCloudSync=false;
+    await pullSharedAircraft();
+    await resolveEmailInvites();
+    await checkPendingInvites();
     renderHangar(false);
     setTimeout(()=>setSyncStatus('synced'),2000);
   } else {
     // New user — no cloud data. Start empty, never push SEED
     fleet=[];sid=null;
+    await resolveEmailInvites();
+    await checkPendingInvites();
     renderHangar(false);
     setSyncStatus('synced');
   }
@@ -1552,7 +1628,6 @@ function _completeInit(){
   document.getElementById('detail-date').textContent='Today is '+ds;
   applyTheme(localStorage.getItem('at_theme')||'dark',false);
   applyAccent(localStorage.getItem('at_accent')||'blue',false);
-  if(!CLOUD_ENABLED)updStorage();
   history.replaceState({view:'hangar',sid,ctab},'');
 }
 
@@ -1618,7 +1693,8 @@ function renderHangar(pushState=true){
   const el=document.getElementById('hangar-cards');
   el.innerHTML='';
   el.classList.remove('rearrange-mode');
-  if(!fleet||!fleet.length){
+  const allAircraft=[...fleet,..._sharedFleet];
+  if(!allAircraft.length){
     el.innerHTML=`<div style="grid-column:1/-1;padding:48px 24px;text-align:center;max-width:400px;margin:0 auto">
       <div style="font-size:48px;margin-bottom:16px;opacity:.4">✈️</div>
       <div style="font-family:var(--display);font-size:20px;font-weight:700;margin-bottom:8px;color:var(--text)">Welcome to AeroTrack</div>
@@ -1644,13 +1720,13 @@ function renderHangar(pushState=true){
     </div>`;
     return;
   }
-  fleet.forEach((a,idx)=>{
+  allAircraft.forEach((a,idx)=>{
     const hD=a.inspections.some(i=>ic(i,a).s==='overdue'),hW=!hD&&a.inspections.some(i=>ic(i,a).s==='warn');
     const dot=hD?'#f04b4b':hW?'#f59e0b':'#2dd4a0';
     el.innerHTML+=`<div class="ac-tile" id="tile-${a.id}" data-id="${a.id}" data-idx="${idx}"
       onclick="if(!document.getElementById('hangar-cards').classList.contains('rearrange-mode'))selAC('${a.id}')">
       <div class="ac-tile-top">
-        <div class="ac-tile-pro">PRO</div>${a.shared?'<div class="ac-tile-shared">SHARED</div>':''}
+        <div class="ac-tile-pro">PRO</div>
         <div style="font-size:26px;font-weight:800;font-family:var(--body);letter-spacing:.06em;color:rgba(74,158,255,.22)">${a.reg}</div>
         <div style="position:absolute;bottom:8px;right:10px;width:8px;height:8px;border-radius:50%;background:${dot}"></div>
       </div>
@@ -1660,7 +1736,7 @@ function renderHangar(pushState=true){
         <div class="ac-tile-serial">${a.serial}</div>
       </div>
       <div class="ac-tile-foot">
-        <span class="role-badge">Manager</span>
+        <span class="role-badge" style="${a._shared?`color:${ROLE_COLORS[a._role]||'var(--muted2)'}`:''}"> ${a._shared?(ROLE_LABELS[a._role]||'Shared'):'Owner'}</span>
         <button class="tile-dot-btn" onclick="event.stopPropagation();openTileMenu(event,'${a.id}')" title="Options">
           <span></span><span></span><span></span>
         </button>
@@ -1681,7 +1757,8 @@ function openTileMenu(e,id){
   }
   menu.innerHTML=`
     <button class="row-dot-item" onclick="openTileSettings()">Aircraft Settings</button>
-    <button class="row-dot-item danger-item" onclick="doDeleteFromMenu()">Delete Aircraft</button>`;
+    ${can('manage_access',_tmenuAircraftId)?'<button class="row-dot-item" onclick="openManageAccess(_tmenuAircraftId);closeHangarMenus()">Manage Access</button>':''}
+    ${can('delete',_tmenuAircraftId)?'<button class="row-dot-item danger-item" onclick="doDeleteFromMenu()">Delete Aircraft</button>':''}`;
   menu.classList.add('open');
   const r=e.currentTarget.getBoundingClientRect();
   const mw=170;
@@ -2096,8 +2173,9 @@ function renderUtil(){
     const c=p>85?'var(--danger)':p>65?'var(--warn)':'var(--accent)';
     return`<div class="progress-row"><div class="progress-label"><span>${b.label}</span><span>${b.val}/${b.max} ${b.unit}</span></div><div class="progress-track"><div class="progress-fill" style="width:${p}%;background:${c}"></div></div></div>`;
   }).join('');
-  renderMaint();
-  setTimeout(()=>renderExpenseCharts(),50);
+  if(can('financial'))renderMaint();
+  else{const el=document.getElementById('maint-cost-list');if(el)el.innerHTML='<div style="padding:14px 0;text-align:center;color:var(--muted2);font-size:12px">Financial data not available for your access level.</div>';}
+  setTimeout(()=>{if(can('financial'))renderExpenseCharts();},50);
 }
 // \u2500\u2500\u2500 MAINTENANCE COST \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 const MAINT_CAT_COLORS={inspection:'var(--accent)',engine:'var(--danger)',avionics:'#a78bfa',airframe:'var(--warn)',fuel:'#34d399',oil:'var(--ok)',parts:'#60a5fa',other:'var(--muted2)'};
@@ -2469,6 +2547,23 @@ function showReceiptWarning(msg,color,showSettingsLink){
 function hideReceiptWarning(){const w=document.getElementById('receipt-warning');if(w)w.style.display='none';}
 
 
+function showForgotPassword(){
+  const emailField=document.getElementById('auth-email');
+  const forgotInput=document.getElementById('forgot-email');
+  if(forgotInput&&emailField)forgotInput.value=emailField.value.trim();
+  document.getElementById('forgot-msg').textContent='';
+  openModal('forgot');
+}
+async function submitForgotPassword(){
+  const email=document.getElementById('forgot-email').value.trim();
+  const msgEl=document.getElementById('forgot-msg');
+  if(!email){msgEl.style.color='var(--warn)';msgEl.textContent='Please enter your email address.';return;}
+  if(!_supabase){msgEl.style.color='var(--warn)';msgEl.textContent='Not connected yet — try again in a moment.';return;}
+  msgEl.style.color='var(--muted)';msgEl.textContent='Sending...';
+  const {error}=await _supabase.auth.resetPasswordForEmail(email,{redirectTo:'https://aircraft-management-dashboard.vercel.app/aerotrack_v1_04_4.html'});
+  if(error){msgEl.style.color='var(--danger)';msgEl.textContent=error.message;}
+  else{msgEl.style.color='var(--ok)';msgEl.textContent='✓ Reset email sent — check your inbox.';setTimeout(()=>closeModal('forgot'),2500);}
+}
 async function sendPasswordReset(){
   if(!_supabase||!_authUser){return;}
   const msgEl=document.getElementById('settings-reset-msg');
@@ -2647,6 +2742,208 @@ function saveScheduleEvent(){
 }
 
 
+
+// ─── DOCUMENT CLOUD STORAGE ───────────────────────────────────────────────────
+async function uploadDocToCloud(docId,fileName,base64Data,mimeType){
+  if(!CLOUD_ENABLED||!_supabase||!_authUser)return null;
+  try{
+    const raw=base64Data.includes(',')? base64Data.split(',')[1]:base64Data;
+    const byteChars=atob(raw);const bytes=new Uint8Array(byteChars.length);
+    for(let i=0;i<byteChars.length;i++)bytes[i]=byteChars.charCodeAt(i);
+    const blob=new Blob([bytes],{type:mimeType||'application/pdf'});
+    const path=_authUser.id+'/'+sid+'/'+docId+'/'+fileName;
+    const {error}=await _supabase.storage.from('documents').upload(path,blob,{upsert:true});
+    if(error)throw error;
+    return path;
+  }catch(e){console.warn('[AeroTrack] Doc upload failed:',e.message);return null;}
+}
+async function getDocUrl(storagePath){
+  if(!CLOUD_ENABLED||!_supabase||!storagePath)return null;
+  try{
+    const {data}=await _supabase.storage.from('documents').createSignedUrl(storagePath,3600);
+    return data?.signedUrl||null;
+  }catch(e){return null;}
+}
+async function deleteDocFromCloud(storagePath){
+  if(!CLOUD_ENABLED||!_supabase||!storagePath)return;
+  try{await _supabase.storage.from('documents').remove([storagePath]);}
+  catch(e){console.warn('[AeroTrack] Doc delete failed:',e.message);}
+}
+async function viewCloudDoc(doc){
+  if(doc.storagePath){
+    const url=await getDocUrl(doc.storagePath);
+    if(url){
+      document.getElementById('pdf-title').textContent=doc.name;
+      document.getElementById('pdf-frame').src=url;
+      document.getElementById('pdf-overlay').classList.add('open');
+      return;
+    }
+  }
+  const d=localStorage.getItem('atd_'+doc.id);
+  if(d){document.getElementById('pdf-title').textContent=doc.name;document.getElementById('pdf-frame').src=d;document.getElementById('pdf-overlay').classList.add('open');}
+  else alert('Document not available. It may have been stored on another device.');
+}
+
+
+
+// ─── ROLE-BASED ACCESS CONTROL ────────────────────────────────────────────────
+let _sharedFleet = [];
+let _aircraftRoles = {};
+
+const ROLE_LABELS = {owner:'Owner',co_owner:'Co-Owner',mechanic:'Mechanic',viewer:'Viewer'};
+const ROLE_COLORS = {owner:'var(--accent)',co_owner:'var(--ok)',mechanic:'var(--warn)',viewer:'var(--muted2)'};
+
+function getRole(aircraftId){
+  if(!aircraftId)return 'owner';
+  if(fleet.find(f=>f.id===aircraftId))return 'owner';
+  return _aircraftRoles[aircraftId]||'viewer';
+}
+
+function can(permission,aircraftId){
+  const role=getRole(aircraftId||sid);
+  const perms={
+    owner:['view','edit_settings','squawk','inspection','upload_doc','view_doc','financial','manage_access','delete'],
+    co_owner:['view','edit_settings','squawk','inspection','upload_doc','view_doc','financial'],
+    mechanic:['view','squawk','inspection','upload_doc','view_doc'],
+    viewer:['view','view_doc'],
+  };
+  return (perms[role]||perms.viewer).includes(permission);
+}
+
+async function pullSharedAircraft(){
+  if(!CLOUD_ENABLED||!_supabase||!_authUser)return;
+  try{
+    const {data:shares,error}=await _supabase.from('aircraft_shares').select('*').eq('shared_user_id',_authUser.id).eq('accepted',true);
+    // Also check by email in case shared_user_id wasn't resolved
+    const {data:emailShares}=await _supabase.from('aircraft_shares').select('*').eq('invited_email',_authUser.email).eq('accepted',true);
+    const allShares=[...( shares||[]),...(emailShares||[]).filter(e=>!(shares||[]).find(s=>s.id===e.id))];
+    if(!allShares.length){_sharedFleet=[];return;}
+    const ownerIds=[...new Set(allShares.map(s=>s.owner_user_id))];
+    const sharedAircraft=[];
+    for(const ownerId of ownerIds){
+      const {data:ownerFleet}=await _supabase.from('fleet').select('data').eq('user_id',ownerId).maybeSingle();
+      if(ownerFleet?.data){
+        const myShares=allShares.filter(s=>s.owner_user_id===ownerId);
+        myShares.forEach(share=>{
+          const aircraft=ownerFleet.data.find(a=>a.id===share.aircraft_id);
+          if(aircraft){sharedAircraft.push({...aircraft,_shared:true,_role:share.role,_ownerId:ownerId});_aircraftRoles[aircraft.id]=share.role;}
+        });
+      }
+    }
+    _sharedFleet=sharedAircraft;
+  }catch(e){console.warn('[AeroTrack] pullSharedAircraft failed:',e.message);}
+}
+
+async function checkPendingInvites(){
+  if(!CLOUD_ENABLED||!_supabase||!_authUser)return;
+  try{
+    const {data:byId}=await _supabase.from('aircraft_shares').select('*').eq('shared_user_id',_authUser.id).eq('accepted',false);
+    const {data:byEmail}=await _supabase.from('aircraft_shares').select('*').eq('invited_email',_authUser.email).eq('accepted',false);
+    const pending=[...( byId||[]),...(byEmail||[]).filter(e=>!(byId||[]).find(s=>s.id===e.id))];
+    if(!pending.length){hidePendingBanner();return;}
+    showPendingBanner(pending);
+  }catch(e){}
+}
+
+function showPendingBanner(invites){
+  let banner=document.getElementById('pending-invites-banner');
+  if(!banner){
+    banner=document.createElement('div');
+    banner.id='pending-invites-banner';
+    banner.style.cssText='margin:0 28px 14px;background:var(--accent-dim);border:1px solid var(--accent);border-radius:8px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap';
+    const hw=document.querySelector('.hangar-wrap');
+    if(hw)hw.before(banner);
+  }
+  banner.style.display='flex';
+  banner.innerHTML='<div style="font-size:13px"><b style="color:var(--accent)">'+invites.length+' aircraft invitation'+(invites.length>1?'s':'')+'</b> <span style="color:var(--muted2);font-size:12px">— someone shared an aircraft with you</span></div><button class="btn sm primary" onclick="openPendingInvitesModal()">Review</button>';
+}
+
+function hidePendingBanner(){const b=document.getElementById('pending-invites-banner');if(b)b.style.display='none';}
+
+async function acceptInvite(shareId){
+  if(!_supabase||!_authUser)return;
+  await resolveEmailInvites();
+  const {error}=await _supabase.from('aircraft_shares').update({accepted:true}).eq('id',shareId);
+  await pullSharedAircraft();
+  await checkPendingInvites();
+  renderHangar(false);
+}
+
+async function declineInvite(shareId){
+  if(!_supabase||!_authUser)return;
+  await _supabase.from('aircraft_shares').delete().eq('id',shareId).eq('shared_user_id',_authUser.id);
+  await checkPendingInvites();
+}
+
+async function openPendingInvitesModal(){
+  const el=document.getElementById('pending-invites-list');
+  el.innerHTML='<div style="color:var(--muted2);font-size:12px">Loading...</div>';
+  openModal('pending-invites');
+  if(!_supabase||!_authUser){el.innerHTML='Not connected.';return;}
+  const {data:pending}=await _supabase.from('aircraft_shares').select('*').eq('shared_user_id',_authUser.id).eq('accepted',false);
+  if(!pending||!pending.length){el.innerHTML='<div style="color:var(--muted2);font-size:13px">No pending invitations.</div>';return;}
+  el.innerHTML=pending.map(inv=>'<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:14px;margin-bottom:10px"><div style="font-size:13px;font-weight:600;margin-bottom:4px">Aircraft invitation</div><div style="font-size:11px;color:var(--muted2);font-family:var(--mono);margin-bottom:10px">Role: <b style="color:'+ROLE_COLORS[inv.role]+'">'+ROLE_LABELS[inv.role]+'</b></div><div style="display:flex;gap:8px"><button class="btn sm primary" onclick="acceptInvite(\''+inv.id+'\');closeModal(\'pending-invites\')">Accept</button><button class="btn sm" onclick="declineInvite(\''+inv.id+'\');this.closest(\'div\').parentElement.remove()">Decline</button></div></div>').join('');
+}
+
+let _manageAccessAircraftId=null;
+
+async function openManageAccess(aircraftId){
+  if(!can('manage_access',aircraftId))return;
+  _manageAccessAircraftId=aircraftId;
+  const a=[...fleet,..._sharedFleet].find(f=>f.id===aircraftId);
+  document.getElementById('manage-access-title').textContent='Access — '+(a?.reg||'Aircraft');
+  document.getElementById('manage-access-invite-email').value='';
+  document.getElementById('manage-access-invite-role').value='viewer';
+  document.getElementById('manage-access-msg').textContent='';
+  await renderSharesList(aircraftId);
+  openModal('manage-access');
+}
+
+async function renderSharesList(aircraftId){
+  const el=document.getElementById('manage-access-shares');
+  if(!_supabase||!_authUser){el.innerHTML='<div style="color:var(--muted2);font-size:12px">Not connected.</div>';return;}
+  el.innerHTML='<div style="color:var(--muted2);font-size:12px">Loading...</div>';
+  const {data:shares}=await _supabase.from('aircraft_shares').select('*').eq('aircraft_id',aircraftId).eq('owner_user_id',_authUser.id);
+  if(!shares||!shares.length){el.innerHTML='<div style="color:var(--muted2);font-size:12px;padding:8px 0">No one else has access yet.</div>';return;}
+  el.innerHTML=shares.map(s=>'<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)"><div style="flex:1"><div style="font-size:12px;font-weight:600">'+s.invited_email+'</div><div style="font-size:10px;color:var(--muted);font-family:var(--mono)">'+( s.accepted?'Active':'Pending acceptance')+'</div></div><select onchange="changeRole(\''+s.id+'\',this.value)" style="background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:4px 8px;color:var(--text);font-size:11px;outline:none"><option value="co_owner" '+(s.role==='co_owner'?'selected':'')+'>Co-Owner</option><option value="mechanic" '+(s.role==='mechanic'?'selected':'')+'>Mechanic</option><option value="viewer" '+(s.role==='viewer'?'selected':'')+'>Viewer</option></select><button class="action-btn del" onclick="revokeAccess(\''+s.id+'\')">Revoke</button></div>').join('');
+}
+
+async function inviteUser(){
+  const email=document.getElementById('manage-access-invite-email').value.trim().toLowerCase();
+  const role=document.getElementById('manage-access-invite-role').value;
+  const msg=document.getElementById('manage-access-msg');
+  if(!email){msg.style.color='var(--warn)';msg.textContent='Enter an email address.';return;}
+  msg.style.color='var(--muted)';msg.textContent='Sending invite...';
+  try{
+    const {data:existing}=await _supabase.from('aircraft_shares').select('id').eq('aircraft_id',_manageAccessAircraftId).eq('invited_email',email).maybeSingle();
+    if(existing){msg.style.color='var(--warn)';msg.textContent='This user already has access.';return;}
+    const {error}=await _supabase.from('aircraft_shares').insert({aircraft_id:_manageAccessAircraftId,owner_user_id:_authUser.id,shared_user_id:null,role,invited_email:email,accepted:false});
+    if(error)throw error;
+    msg.style.color='var(--ok)';msg.textContent='✓ Invite sent to '+email;
+    document.getElementById('manage-access-invite-email').value='';
+    await renderSharesList(_manageAccessAircraftId);
+  }catch(e){msg.style.color='var(--danger)';msg.textContent='Error: '+e.message;}
+}
+
+async function changeRole(shareId,newRole){
+  if(!_supabase||!_authUser)return;
+  await _supabase.from('aircraft_shares').update({role:newRole}).eq('id',shareId).eq('owner_user_id',_authUser.id);
+}
+
+async function revokeAccess(shareId){
+  if(!_supabase||!_authUser)return;
+  await _supabase.from('aircraft_shares').delete().eq('id',shareId).eq('owner_user_id',_authUser.id);
+  await renderSharesList(_manageAccessAircraftId);
+}
+
+async function resolveEmailInvites(){
+  if(!CLOUD_ENABLED||!_supabase||!_authUser)return;
+  try{
+    await _supabase.from('aircraft_shares').update({shared_user_id:_authUser.id}).eq('invited_email',_authUser.email).is('shared_user_id',null);
+  }catch(e){}
+}
+
+
 // ─── MAP ──────────────────────────────────────────────────────────────────────
 function initMap(){const a=ac();document.getElementById('map-reg').textContent=a.reg;document.getElementById('map-hint').textContent=a.reg;sizeMap();if(!mgeo)loadGeo();else drawMap();if(a.airportData){mcodes=a.airportData;renderChips();updMeta();}else{mcodes=null;renderChips();['map-count','map-summary'].forEach(id=>document.getElementById(id).textContent='');}}
 function sizeMap(){const dpr=window.devicePixelRatio||1;const wrap=document.getElementById('map-canvas-wrap');const W=wrap.clientWidth||640,H=Math.round(W*0.58);wrap.style.height=H+'px';mcan.style.width=W+'px';mcan.style.height=H+'px';mcan.width=W*dpr;mcan.height=H*dpr;mctx.setTransform(1,0,0,1,0,0);mctx.scale(dpr,dpr);mproj=d3.geoAlbersUsa().scale(W*1.1).translate([W/2,H/2]);mpath=d3.geoPath(mproj,mctx);}
@@ -2771,10 +3068,32 @@ async function handlePDF(file){
   const reader=new FileReader();
   reader.onload=e=>{
     if(!ac().documents)ac().documents=[];
-    ac().documents.unshift({id:'doc_'+Date.now(),name:file.name,size:file.size,date:new Date().toISOString().slice(0,10),shared:ac().shared,data:e.target.result});
-    saveLS();updStorage();renderDocs();
-    document.getElementById('pdf-status').textContent='Uploaded: '+file.name;
-    document.getElementById('pdf-input').value='';
+    const docId='doc_'+Date.now();
+    const doc={id:docId,name:file.name,size:file.size,date:new Date().toISOString().slice(0,10),shared:ac().shared,storagePath:null};
+    ac().documents.unshift(doc);
+    saveLS();renderDocs();
+    // Upload to cloud storage in background
+    if(CLOUD_ENABLED&&_authUser){
+      document.getElementById('pdf-status').textContent='Uploading to cloud...';
+      uploadDocToCloud(docId,file.name,e.target.result,file.type).then(path=>{
+        if(path){
+          // Find the doc in the array and update storagePath
+          const stored=ac().documents.find(d=>d.id===docId);
+          if(stored){stored.storagePath=path;saveLS();}
+          document.getElementById('pdf-status').textContent='✓ '+file.name+' uploaded';
+        } else {
+          try{localStorage.setItem('atd_'+docId,e.target.result);}catch(err){}
+          document.getElementById('pdf-status').textContent='⚠ Saved locally (cloud unavailable)';
+        }
+        document.getElementById('pdf-input').value='';
+        setTimeout(()=>{document.getElementById('pdf-status').textContent='';},3000);
+      });
+    } else {
+      try{localStorage.setItem('atd_'+docId,e.target.result);}catch(err){}
+      document.getElementById('pdf-status').textContent='✓ '+file.name+' saved';
+      document.getElementById('pdf-input').value='';
+      setTimeout(()=>{document.getElementById('pdf-status').textContent='';},3000);
+    }
   };
   reader.readAsDataURL(file);
 }
@@ -2783,16 +3102,17 @@ function renderDocs(){
   const el=document.getElementById('doc-list');
   if(!docs.length){el.innerHTML='<li style="color:var(--muted);font-size:12px;padding:8px 0">No documents uploaded yet.</li>';return;}
   el.innerHTML=docs.map(d=>`<li class="doc-item">
-    <div class="doc-pdf-icon">PDF</div>
+    <div class="doc-pdf-icon" style="background:${d.storagePath?'var(--accent-dim)':'var(--bg4)'};border-color:${d.storagePath?'var(--accent)':'var(--border2)'}">PDF</div>
     <div style="flex:1;min-width:0">
       <div class="doc-name">${d.name}</div>
       <div class="doc-meta">${(d.size/1024).toFixed(1)}KB &nbsp;· &nbsp;${d.date}&nbsp;${d.shared?'&nbsp;· <span class="cloud-dot">shared</span>':''}</div>
     </div>
-    <button class="btn sm" onclick="viewPDF('${d.id}')" ${!d.data?'disabled':''}>View</button>
+    <button class="btn sm" onclick="viewDoc(${ac().documents.indexOf(d)})">View</button>
     <button class="action-btn del" onclick="cDel('doc','${d.id}')">Delete</button>
   </li>`).join('');
 }
-function viewPDF(id){const doc=(ac().documents||[]).find(d=>d.id===id);if(!doc?.data){alert('Document data not available.');return;}document.getElementById('pdf-title').textContent=doc.name;document.getElementById('pdf-frame').src=doc.data;document.getElementById('pdf-overlay').classList.add('open');}
+function viewDoc(idx){const doc=(ac().documents||[])[idx];if(!doc)return;viewCloudDoc(doc);}
+function viewPDF(id){const doc=(ac().documents||[]).find(d=>d.id===id);if(!doc)return;viewCloudDoc(doc);}
 function closePDF(){document.getElementById('pdf-overlay').classList.remove('open');document.getElementById('pdf-frame').src='';}
 
 
@@ -3605,9 +3925,11 @@ function cDel(type,idx){
   else if(type==='squawk'){a.squawks=a.squawks.filter(s=>s.id!==idx);saveLS();renderSq();refreshStatus();if(ctab==='dashboard')renderDashboard();}
   else if(type==='flight'){if(!ac().flights)return;ac().flights.splice(idx,1);saveLS();renderDashboard();}
   else if(type==='doc'){
-    try{localStorage.removeItem('atd_'+idx);}catch(e){}
+    const doc=ac().documents[idx];
+    if(doc&&doc.storagePath)deleteDocFromCloud(doc.storagePath);
+    try{localStorage.removeItem('atd_'+doc?.id);}catch(e){}
     a.documents=a.documents.filter(d=>d.id!==idx);
-    saveLS();updStorage();renderDocs();
+    saveLS();renderDocs();
   }
 }
 
