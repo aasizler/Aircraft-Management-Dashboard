@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AeroTrack v1.04.2</title>
+<title>AeroTrack v1.04.3</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='11' fill='none' stroke='%23a3e635' stroke-width='4'/></svg>">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -420,6 +420,7 @@ body.light .ac-tile-top{background:linear-gradient(135deg,#dce8f4,#ccdaec)}
   <div class="nav">
     <div class="nav-brand" onclick="showHangar()" style="cursor:pointer" title="Back to Hangar"><div class="nav-dot"></div>AEROTRACK</div>
     <div class="nav-right">
+      <span id="sync-badge" class="sync-badge offline" style="display:none"><span class="sync-dot"></span><span id="sync-label">offline</span></span>
       <button class="btn sm primary" onclick="openModal('add-aircraft')">Add Aircraft</button>
       <div class="dot-menu-wrap" id="hangar-dot-wrap">
         <button class="dot-menu-btn" onclick="toggleDotMenu('hangar')" aria-label="Menu">
@@ -874,7 +875,7 @@ body.light .ac-tile-top{background:linear-gradient(135deg,#dce8f4,#ccdaec)}
   </div>
   <div class="page-hd" style="padding-top:20px">
     <div class="page-title">Settings</div>
-    <div style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:2px">AeroTrack v1.04.2</div>
+    <div style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:2px">AeroTrack v1.04.3</div>
     <div class="page-sub">App preferences and data management</div>
   </div>
   <div style="padding:0 28px 40px;max-width:640px">
@@ -922,10 +923,12 @@ body.light .ac-tile-top{background:linear-gradient(135deg,#dce8f4,#ccdaec)}
     <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);overflow:hidden;margin-bottom:28px">
       <div style="padding:16px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
         <div><div style="font-size:13px;font-weight:700;margin-bottom:2px;font-family:var(--display)" id="settings-user-name">Not signed in</div><div style="font-size:11px;color:var(--muted);font-family:var(--mono)" id="settings-user-email">Using local storage only</div></div>
-        <div style="display:flex;gap:8px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn sm" id="settings-auth-btn" onclick="showAuthScreen()">Sign In</button>
+          <button class="btn sm" id="settings-reset-btn" onclick="sendPasswordReset()" style="display:none">Reset Password</button>
           <button class="btn sm danger-btn" id="settings-signout-btn" onclick="signOut()" style="display:none">Sign Out</button>
         </div>
+        <div id="settings-reset-msg" style="font-size:11px;font-family:var(--mono);margin-top:6px;color:var(--muted)"></div>
       </div>
       <div style="padding:10px 20px;border-top:1px solid var(--border2);display:flex;align-items:center;gap:10px" id="settings-sync-row">
         <span id="settings-sync-badge" class="sync-badge offline"><span class="sync-dot"></span><span id="settings-sync-label">Local only</span></span>
@@ -1027,7 +1030,7 @@ body.light .ac-tile-top{background:linear-gradient(135deg,#dce8f4,#ccdaec)}
 <div class="clear-confirm-overlay" id="sq-confirm-overlay" onclick="if(event.target===this)closeSqConfirm()">
   <div class="clear-confirm-box">
     <div class="clear-confirm-icon">&#128465;&#65039;</div>
-    <div class="clear-confirm-title">Delete Squawk?</div>
+    <div class="clear-confirm-title">Confirm</div>
     <div class="clear-confirm-msg" id="sq-confirm-msg"></div>
     <div class="clear-confirm-actions">
       <button class="confirm-no" onclick="closeSqConfirm()">No, Keep It</button>
@@ -1385,10 +1388,13 @@ function updateAuthUI(user){
   if(emailEl)emailEl.textContent=signedIn?'Syncing across devices':'Using local storage only';
   const authBtn=document.getElementById('settings-auth-btn');
   if(authBtn)authBtn.style.display=signedIn?'none':'inline-flex';
+  const resetBtn=document.getElementById('settings-reset-btn');
+  if(resetBtn)resetBtn.style.display=signedIn?'inline-flex':'none';
   const signoutBtn=document.getElementById('settings-signout-btn');
   if(signoutBtn)signoutBtn.style.display=signedIn?'inline-flex':'none';
   const navDotSignout=document.getElementById('nav-dot-signout');
   if(navDotSignout)navDotSignout.style.display=signedIn?'block':'none';
+  ['sync-badge','sync-badge-detail'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=signedIn?'inline-flex':'none';});
   const hangarDotSignout=document.getElementById('hangar-dot-signout');
   if(hangarDotSignout)hangarDotSignout.style.display=signedIn?'block':'none';
 }
@@ -1601,11 +1607,28 @@ function renderHangar(pushState=true){
   el.innerHTML='';
   el.classList.remove('rearrange-mode');
   if(!fleet||!fleet.length){
-    el.innerHTML=`<div style="grid-column:1/-1;padding:48px 24px;text-align:center;color:var(--muted2)">
-      <div style="font-size:32px;margin-bottom:12px">✈️</div>
-      <div style="font-family:var(--display);font-size:18px;font-weight:700;margin-bottom:8px;color:var(--muted3)">No aircraft yet</div>
-      <div style="font-size:13px;margin-bottom:20px">Add your first aircraft to get started</div>
-      <button class="btn primary" onclick="openModal('add-aircraft')">Add Aircraft</button>
+    el.innerHTML=`<div style="grid-column:1/-1;padding:48px 24px;text-align:center;max-width:400px;margin:0 auto">
+      <div style="font-size:48px;margin-bottom:16px;opacity:.4">✈️</div>
+      <div style="font-family:var(--display);font-size:20px;font-weight:700;margin-bottom:8px;color:var(--text)">Welcome to AeroTrack</div>
+      <div style="font-size:13px;color:var(--muted2);line-height:1.7;margin-bottom:24px">Add your first aircraft to get started. You can track inspections, squawks, maintenance costs, flight hours, and more.</div>
+      <button class="btn primary" onclick="openModal('add-aircraft')" style="padding:10px 24px;font-size:14px">Add Your First Aircraft</button>
+      <div style="margin-top:20px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;text-align:left">
+        <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:12px">
+          <div style="font-size:18px;margin-bottom:4px">📋</div>
+          <div style="font-size:11px;font-weight:600;margin-bottom:2px">Inspections</div>
+          <div style="font-size:10px;color:var(--muted2)">Track all recurring maintenance</div>
+        </div>
+        <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:12px">
+          <div style="font-size:18px;margin-bottom:4px">🔧</div>
+          <div style="font-size:11px;font-weight:600;margin-bottom:2px">Squawks</div>
+          <div style="font-size:10px;color:var(--muted2)">Log and resolve issues</div>
+        </div>
+        <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:12px">
+          <div style="font-size:18px;margin-bottom:4px">💰</div>
+          <div style="font-size:11px;font-weight:600;margin-bottom:2px">Expenses</div>
+          <div style="font-size:10px;color:var(--muted2)">Scan receipts, track costs</div>
+        </div>
+      </div>
     </div>`;
     return;
   }
@@ -1646,7 +1669,7 @@ function openTileMenu(e,id){
   }
   menu.innerHTML=`
     <button class="row-dot-item" onclick="openTileSettings()">Aircraft Settings</button>
-    ${fleet.length>1?'<button class="row-dot-item danger-item" onclick="doDeleteFromMenu()">Delete Aircraft</button>':'<button class="row-dot-item" style="opacity:.4;cursor:default">Only one aircraft</button>'}`;
+    <button class="row-dot-item danger-item" onclick="doDeleteFromMenu()">Delete Aircraft</button>`;
   menu.classList.add('open');
   const r=e.currentTarget.getBoundingClientRect();
   const mw=170;
@@ -1800,20 +1823,25 @@ function cleanupDrag(){
 
 function promptDeleteAircraft(id){
   const a=fleet.find(x=>x.id===id);if(!a)return;
-  if(fleet.length<=1){
-    document.getElementById('sq-confirm-msg').innerHTML='<b>Cannot delete</b> — you need at least one aircraft in your hangar.';
-    document.getElementById('sq-confirm-yes').style.display='none';
-    document.getElementById('sq-confirm-overlay').classList.add('open');
-    setTimeout(()=>{document.getElementById('sq-confirm-yes').style.display='';document.getElementById('sq-confirm-overlay').classList.remove('open');},2200);
-    return;
-  }
-  document.getElementById('sq-confirm-msg').innerHTML=`Permanently delete <b>${a.reg}</b> and all its records? This cannot be undone.`;
-  document.getElementById('sq-confirm-yes').style.display='';
-  document.getElementById('sq-confirm-yes').onclick=()=>{
-    fleet=fleet.filter(x=>x.id!==id);sid=fleet[0].id;
+  document.getElementById('sq-confirm-msg').innerHTML=
+    `<div style="margin-bottom:12px">Permanently delete <b>${a.reg}</b> and all its records? This cannot be undone.</div>`+
+    `<div style="margin-bottom:6px;font-size:11px;color:var(--muted);font-family:var(--mono)">Type <b style="color:var(--text)">${a.reg}</b> to confirm</div>`+
+    `<input id="delete-aircraft-confirm" type="text" placeholder="${a.reg}" autocomplete="off"`+
+    ` style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:7px;padding:9px 12px;color:var(--text);font-family:var(--mono);font-size:13px;outline:none;letter-spacing:.08em;text-transform:uppercase"`+
+    ` oninput="const btn=document.getElementById('sq-confirm-yes');btn.disabled=this.value.trim().toUpperCase()!=='${a.reg.toUpperCase()}';btn.style.opacity=btn.disabled?'0.35':'1'">`;
+  const btn=document.getElementById('sq-confirm-yes');
+  btn.disabled=true;
+  btn.style.opacity='0.35';
+  btn.style.display='';
+  btn.onclick=()=>{
+    const input=document.getElementById('delete-aircraft-confirm');
+    if(!input||input.value.trim().toUpperCase()!==a.reg.toUpperCase()) return;
+    fleet=fleet.filter(x=>x.id!==id);
+    sid=fleet.length?fleet[0].id:null;
     saveLS();closeSqConfirm();renderHangar(false);
   };
   document.getElementById('sq-confirm-overlay').classList.add('open');
+  setTimeout(()=>{const inp=document.getElementById('delete-aircraft-confirm');if(inp)inp.focus();},100);
 }
 // ─── VIEW SWITCHING WITH HISTORY API ─────────────────────────────────────────
 function setView(view,pushState=true){
@@ -2250,8 +2278,32 @@ function renderExpenseCharts(){
 
 // ─── RECEIPT SCANNER ─────────────────────────────────────────────────────────
 let _receiptData=null;
-function openReceiptModal(){resetReceiptModal();openModal('receipt');}
+function openReceiptModal(){
+  resetReceiptModal();
+  openModal('receipt');
+  if(!localStorage.getItem('at_api_key')){
+    // No key — hide drop zone and result, show only warning with settings link
+    document.getElementById('receipt-drop').style.display='none';
+    document.getElementById('receipt-result').style.display='none';
+    document.getElementById('receipt-save-btn').style.display='none';
+    // Create or show no-key message
+    let noKey=document.getElementById('receipt-no-key');
+    if(!noKey){
+      noKey=document.createElement('div');
+      noKey.id='receipt-no-key';
+      noKey.style.cssText='padding:24px;text-align:center';
+      document.getElementById('modal-receipt').querySelector('.modal').appendChild(noKey);
+    }
+    noKey.style.display='block';
+    noKey.innerHTML="<div style=\"font-size:32px;opacity:.3;margin-bottom:12px\">&#128273;</div><div style=\"font-size:13px;font-weight:600;margin-bottom:8px\">API Key Required</div><div style=\"font-size:12px;color:var(--muted2);line-height:1.7;margin-bottom:16px\">Receipt scanning uses the Anthropic API. Add your key in App Settings to enable this feature.</div><button class=\"btn sm primary\" onclick=\"closeModal('receipt');showSettings()\" style=\"padding:8px 20px\">Open App Settings</button>";
+  }
+}
 function resetReceiptModal(){
+  // Restore elements hidden by no-key state
+  const drop=document.getElementById('receipt-drop');if(drop)drop.style.display='';
+  const result=document.getElementById('receipt-result');if(result)result.style.display='';
+  const saveBtn=document.getElementById('receipt-save-btn');if(saveBtn)saveBtn.style.display='';
+  const noKey=document.getElementById('receipt-no-key');if(noKey)noKey.style.display='none';
   hideReceiptWarning();
   _receiptData=null;
   document.getElementById('receipt-preview').style.display='none';
@@ -2337,7 +2389,7 @@ async function scanReceiptWithAI(data,mimeType){
     document.getElementById('receipt-result').classList.add('show');
     document.getElementById('receipt-save-btn').disabled=false;
     document.getElementById('r-date').value=new Date().toISOString().slice(0,10);
-    showReceiptWarning('No API key set — go to Settings → AI Receipt Scanning to add your Anthropic API key.','var(--warn)');
+    showReceiptWarning('No API key set. Go to App Settings to add your Anthropic API key.','var(--warn)',true);
     return;
   }
 
@@ -2388,15 +2440,33 @@ async function scanReceiptWithAI(data,mimeType){
   }
   document.getElementById('receipt-scanning').classList.remove('active');
 }
-function showReceiptWarning(msg,color){
+function showReceiptWarning(msg,color,showSettingsLink){
   let w=document.getElementById('receipt-warning');
   if(!w){w=document.createElement('div');w.id='receipt-warning';w.style.cssText='font-size:11px;padding:7px 10px;border-radius:6px;margin-top:8px;font-family:var(--mono);line-height:1.5';document.getElementById('receipt-result').before(w);}
   w.style.background=color==='var(--warn)'?'rgba(245,158,11,.1)':'rgba(240,75,75,.1)';
-  w.style.color=color;w.style.border='1px solid '+color;w.style.display='block';w.textContent=msg;
+  w.style.color=color;w.style.border='1px solid '+color;w.style.display='block';
+  w.textContent=msg;
+  if(showSettingsLink){
+    const link=document.createElement('span');
+    link.textContent=' Open Settings';
+    link.style.cssText='text-decoration:underline;cursor:pointer;margin-left:4px';
+    link.onclick=()=>{closeModal('receipt');showSettings();};
+    w.appendChild(link);
+  }
 }
 function hideReceiptWarning(){const w=document.getElementById('receipt-warning');if(w)w.style.display='none';}
 
 
+async function sendPasswordReset(){
+  if(!_supabase||!_authUser){return;}
+  const msgEl=document.getElementById('settings-reset-msg');
+  if(msgEl){msgEl.textContent='Sending...';msgEl.style.color='var(--muted)';}
+  const {error}=await _supabase.auth.resetPasswordForEmail(_authUser.email,{redirectTo:'https://aircraft-management-dashboard.vercel.app/aerotrack_v1_04_2.html'});
+  if(msgEl){
+    if(error){msgEl.textContent='Error: '+error.message;msgEl.style.color='var(--danger)';}
+    else{msgEl.textContent='✓ Reset email sent to '+_authUser.email;msgEl.style.color='var(--ok)';}
+  }
+}
 function saveApiKey(){
   const val=document.getElementById('api-key-input').value.trim();
   if(!val){document.getElementById('api-key-status').textContent='Enter a key first.';return;}
@@ -3463,7 +3533,24 @@ function renderSq(){
   const a=ac();if(!a.squawkArchive)a.squawkArchive=[];
   const el=document.getElementById('squawk-list');
   if(!a.squawks.length){el.innerHTML='<div style="padding:22px;text-align:center;color:var(--muted);font-size:13px">No active squawks on record.</div>';}
-  else{el.innerHTML=`<table class="data-table"><thead><tr><th></th><th>Description</th><th>Status</th><th>Date</th><th>Actions</th></tr></thead><tbody>${a.squawks.map(sq=>`<tr><td><div style="width:8px;height:8px;border-radius:50%;background:${SQ_COLS[sq.status]||'var(--muted)'}"></div></td><td style="font-size:12px;white-space:normal;max-width:300px">${sq.desc}</td><td><span class="badge ${SQ_CLS[sq.status]||''}">${SQ_LBLS[sq.status]||sq.status}</span></td><td class="mono">${sq.date}</td><td><div class="action-cell"><button class="action-btn sq-archive-btn" onclick="openArchiveModal('${sq.id}')">Archive</button><div class="row-dot-wrap" id="sqdw-${sq.id}"><button class="row-dot-btn" onclick="toggleSqMenu('${sq.id}')" title="More"><span></span><span></span><span></span></button><div class="row-dot-menu" id="sqdm-${sq.id}"><button class="row-dot-item" onclick="editSq('${sq.id}');closeSqMenus()">Edit</button><button class="row-dot-item danger-item" onclick="promptDeleteSq('${sq.id}');closeSqMenus()">Delete</button></div></div></div></td></tr>`).join('')}</tbody></table>`;}
+  else{el.innerHTML=`<div class="table-scroll"><table class="data-table"><thead><tr><th></th><th>Description</th><th>Status</th><th>Date</th><th style="width:40px"></th></tr></thead><tbody>${a.squawks.map(sq=>`<tr>
+  <td><div style="width:8px;height:8px;border-radius:50%;background:${SQ_COLS[sq.status]||'var(--muted)'}"></div></td>
+  <td style="font-size:12px;white-space:normal;max-width:300px">${sq.desc}</td>
+  <td><span class="badge ${SQ_CLS[sq.status]||''}">${SQ_LBLS[sq.status]||sq.status}</span></td>
+  <td class="mono">${sq.date}</td>
+  <td>
+    <div class="action-cell">
+      <button class="action-btn sq-archive-btn" onclick="openArchiveModal('${sq.id}')">Archive</button>
+      <div class="row-dot-wrap" id="sqdw-${sq.id}">
+        <button class="row-dot-btn" onclick="toggleSqMenu('${sq.id}')" title="More"><span></span><span></span><span></span></button>
+        <div class="row-dot-menu" id="sqdm-${sq.id}">
+          <button class="row-dot-item" onclick="editSq('${sq.id}');closeSqMenus()">Edit</button>
+          <button class="row-dot-item danger-item" onclick="promptDeleteSq('${sq.id}');closeSqMenus()">Delete</button>
+        </div>
+      </div>
+    </div>
+  </td>
+</tr>`).join('')}</tbody></table></div>`;}
   const sec=document.getElementById('squawk-archive-section');const lst=document.getElementById('squawk-archive-list');
   if(!a.squawkArchive.length){sec.style.display='none';}else{sec.style.display='block';if(lst.style.display!=='none')lst.innerHTML=renderArchiveTable(a.squawkArchive);}
 }
@@ -3471,7 +3558,17 @@ function renderArchiveTable(archive){
   return`<div class="table-scroll" style="margin-top:6px;opacity:.75"><table class="data-table"><thead><tr><th></th><th>Description</th><th>Status</th><th>Noted</th><th>Resolved</th><th>By</th><th>Notes / Docs</th><th>Actions</th></tr></thead><tbody>${archive.map((sq,idx)=>{const hasDoc=sq.attachment&&sq.attachment.name;return`<tr><td><div style="width:8px;height:8px;border-radius:50%;background:${SQ_COLS[sq.status]||'var(--muted)'}"></div></td><td style="font-size:12px;white-space:normal;max-width:220px">${sq.desc}</td><td><span class="badge ${SQ_CLS[sq.status]||''}">${SQ_LBLS[sq.status]||'Archived'}</span></td><td class="mono">${sq.date}</td><td class="mono">${sq.resolvedDate||sq.archivedOn||'&mdash;'}</td><td style="font-size:12px;color:var(--muted2)">${sq.resolvedBy||'&mdash;'}</td><td style="font-size:11px;color:var(--muted2);white-space:normal;max-width:180px">${sq.resolutionNotes?`<span style="display:block;margin-bottom:3px">${sq.resolutionNotes.slice(0,80)}${sq.resolutionNotes.length>80?'&hellip;':''}</span>`:''}${hasDoc?`<span style="color:var(--accent);font-family:var(--mono);font-size:10px">&#128206; ${sq.attachment.name}</span> <button class="action-btn" style="padding:3px 8px;font-size:10px" onclick="viewArchiveDoc('${sq.id}')">View</button>`:''}</td><td><div class="action-cell"><button class="action-btn" onclick="restoreSq(${idx})">Restore</button><button class="action-btn del" onclick="promptDeleteArchivedSq(${idx})">Delete</button></div></td></tr>`;}).join('')}</tbody></table></div>`;
 }
 function toggleSquawkArchive(){const lst=document.getElementById('squawk-archive-list');const icon=document.getElementById('sq-archive-toggle-icon');const a=ac();if(!a.squawkArchive)return;if(lst.style.display==='none'){lst.style.display='block';lst.innerHTML=renderArchiveTable(a.squawkArchive);icon.textContent='&#9660; hide';}else{lst.style.display='none';icon.textContent='&#9658; show';}}
-function toggleSqMenu(id){const m=document.getElementById('sqdm-'+id);const o=m.classList.contains('open');closeSqMenus();if(!o)m.classList.add('open');}
+function toggleSqMenu(id){
+  const m=document.getElementById('sqdm-'+id);
+  const btn=document.querySelector('#sqdw-'+id+' .row-dot-btn');
+  const o=m.classList.contains('open');
+  closeSqMenus();
+  if(!o){
+    const r=btn.getBoundingClientRect();
+    m.style.cssText=`position:fixed;right:${window.innerWidth-r.right}px;top:${r.bottom+4}px;min-width:140px;z-index:2000;display:block`;
+    m.classList.add('open');
+  }
+}
 function closeSqMenus(){document.querySelectorAll('[id^="sqdm-"]').forEach(m=>m.classList.remove('open'));}
 let archiveSqId=null,archiveSqDoc=null;
 function openArchiveModal(id){archiveSqId=id;archiveSqDoc=null;const sq=ac().squawks.find(s=>s.id===id);if(!sq)return;document.getElementById('sq-archive-desc-preview').textContent=sq.desc;document.getElementById('sq-archive-notes').value='';document.getElementById('sq-archive-by').value='';document.getElementById('sq-archive-date').value=new Date().toISOString().slice(0,10);document.getElementById('sq-archive-file-status').textContent='';document.getElementById('sq-archive-file').value='';openModal('sq-archive');}
