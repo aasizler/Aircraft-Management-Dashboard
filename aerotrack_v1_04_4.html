@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AeroTrack v1.04.3</title>
+<title>AeroTrack v1.04.4</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='11' fill='none' stroke='%23a3e635' stroke-width='4'/></svg>">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -416,7 +416,7 @@ body.light .ac-tile-top{background:linear-gradient(135deg,#dce8f4,#ccdaec)}
   </div>
 </div>
 
-<div id="view-hangar">
+<div id="view-hangar" style="display:none">
   <div class="nav">
     <div class="nav-brand" onclick="showHangar()" style="cursor:pointer" title="Back to Hangar"><div class="nav-dot"></div>AEROTRACK</div>
     <div class="nav-right">
@@ -434,9 +434,15 @@ body.light .ac-tile-top{background:linear-gradient(135deg,#dce8f4,#ccdaec)}
       </div>
     </div>
   </div>
-  <div class="page-hd" style="padding-top:20px">
-    <div class="page-title">My Hangar</div>
-    <div class="page-sub" id="hangar-date"></div>
+  <div class="page-hd" style="padding-top:20px;display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <div>
+      <div class="page-title">My Hangar</div>
+      <div class="page-sub" id="hangar-date"></div>
+    </div>
+    <div id="hangar-user-pill" style="display:none;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--border2);border-radius:20px;padding:5px 12px 5px 8px">
+      <div id="hangar-avatar" style="width:24px;height:24px;border-radius:50%;background:var(--accent-dim);border:1px solid rgba(74,158,255,.3);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--accent);font-weight:700;font-family:var(--mono);flex-shrink:0"></div>
+      <span id="hangar-user-email" style="font-size:11px;color:var(--muted2);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+    </div>
   </div>
   <div class="storage-bar">
     <div class="storage-dot" id="storage-dot"></div>
@@ -875,7 +881,7 @@ body.light .ac-tile-top{background:linear-gradient(135deg,#dce8f4,#ccdaec)}
   </div>
   <div class="page-hd" style="padding-top:20px">
     <div class="page-title">Settings</div>
-    <div style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:2px">AeroTrack v1.04.3</div>
+    <div style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:2px">AeroTrack v1.04.4</div>
     <div class="page-sub">App preferences and data management</div>
   </div>
   <div style="padding:0 28px 40px;max-width:640px">
@@ -1285,13 +1291,16 @@ function onAuthChange(event, session){
 let _initDone=false;
 
 async function onSignedIn(user){
-  if(_initDone)return; // prevent duplicate calls from onAuthStateChange firing multiple times
+  if(_initDone)return;
+  // Hide auth screen immediately
+  document.getElementById('view-auth').style.display='none'; // prevent duplicate calls from onAuthStateChange firing multiple times
   _initDone=true;
   updateAuthUI(user);
-  // Restore API key from account metadata if not already in localStorage
-  if(user.user_metadata?.at_api_key&&!localStorage.getItem('at_api_key')){
-    localStorage.setItem('at_api_key',user.user_metadata.at_api_key);
-  }
+  // Restore preferences from account metadata
+  const meta=user.user_metadata||{};
+  if(meta.at_api_key&&!localStorage.getItem('at_api_key'))localStorage.setItem('at_api_key',meta.at_api_key);
+  if(meta.at_theme)localStorage.setItem('at_theme',meta.at_theme);
+  if(meta.at_accent)localStorage.setItem('at_accent',meta.at_accent);
   setSyncStatus('syncing');
   _completeInit();
   await cloudPull();
@@ -1395,6 +1404,12 @@ function updateAuthUI(user){
   const navDotSignout=document.getElementById('nav-dot-signout');
   if(navDotSignout)navDotSignout.style.display=signedIn?'block':'none';
   ['sync-badge','sync-badge-detail'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=signedIn?'inline-flex':'none';});
+  const hangarPill=document.getElementById('hangar-user-pill');
+  const hangarAvatar=document.getElementById('hangar-avatar');
+  const hangarEmail=document.getElementById('hangar-user-email');
+  if(hangarPill)hangarPill.style.display=signedIn?'flex':'none';
+  if(hangarAvatar)hangarAvatar.textContent=initials;
+  if(hangarEmail)hangarEmail.textContent=email;
   const hangarDotSignout=document.getElementById('hangar-dot-signout');
   if(hangarDotSignout)hangarDotSignout.style.display=signedIn?'block':'none';
 }
@@ -1488,13 +1503,10 @@ async function cloudPull(){
     renderHangar(false);
     setTimeout(()=>setSyncStatus('synced'),2000);
   } else {
-    // No cloud data yet — only push if we have real local data to seed with
-    const localFleet = loadLS() ? fleet : [];
-    if(localFleet&&localFleet.length){
-      await cloudPush();
-    }
-    // Either way render the hangar (empty or with local data)
+    // New user — no cloud data. Start empty, never push SEED
+    fleet=[];sid=null;
     renderHangar(false);
+    setSyncStatus('synced');
   }
 }
 
@@ -3647,7 +3659,10 @@ function applyTheme(theme,save){
     const el=document.getElementById('theme-'+t);
     if(el)el.classList.toggle('active-theme',t===theme);
   });
-  if(save)localStorage.setItem('at_theme',theme);
+  if(save){
+    localStorage.setItem('at_theme',theme);
+    if(_supabase&&_authUser)_supabase.auth.updateUser({data:{at_theme:theme}}).catch(()=>{});
+  }
 }
 
 function setAccent(name){applyAccent(name,true);}
@@ -3656,11 +3671,13 @@ function applyAccent(name,save){
   const root=document.documentElement;
   root.style.setProperty('--accent',a.hex);
   root.style.setProperty('--accent-dim',`rgba(${a.rgb},.1)`);
-  // Update swatch active state
   document.querySelectorAll('.accent-swatch').forEach(el=>{
     el.classList.toggle('active-accent',el.id==='accent-'+name);
   });
-  if(save)localStorage.setItem('at_accent',name);
+  if(save){
+    localStorage.setItem('at_accent',name);
+    if(_supabase&&_authUser)_supabase.auth.updateUser({data:{at_accent:name}}).catch(()=>{});
+  }
 }
 
 function confirmResetData(){
