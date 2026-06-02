@@ -804,6 +804,12 @@ let _syncStatus = 'offline';
 
 function initSupabase(){
   CLOUD_ENABLED = SUPABASE_URL!==''&&SUPABASE_ANON_KEY!=='';
+  if(!CLOUD_ENABLED) return;
+  if(typeof supabase==='undefined'){
+    // SDK not loaded yet — retry in 500ms
+    setTimeout(initSupabase, 500);
+    return;
+  }
   try{
     _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     _supabase.auth.onAuthStateChange((event, session)=>{
@@ -880,7 +886,8 @@ async function authSubmit(){
   const errEl = document.getElementById('auth-err');
   if(!email||!password){errEl.textContent='Please enter email and password.';return;}
   if(password.length<8){errEl.textContent='Password must be at least 8 characters.';return;}
-  if(!CLOUD_ENABLED){errEl.textContent='Cloud sync not configured yet — use Continue without account.';return;}
+  if(!CLOUD_ENABLED){errEl.textContent='Cloud sync not configured yet.';return;}
+  if(!_supabase){errEl.textContent='Connecting to cloud... please try again in a moment.';initSupabase();return;}
   btn.disabled=true;btn.textContent='Please wait...';errEl.textContent='';
   try{
     let result;
