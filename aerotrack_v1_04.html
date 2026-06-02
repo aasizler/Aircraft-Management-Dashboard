@@ -838,11 +838,14 @@ function onAuthChange(event, session){
 let _initDone=false;
 
 async function onSignedIn(user){
-  if(_initDone)return; // prevent duplicate calls from onAuthStateChange firing multiple times
+  if(_initDone)return;
   _initDone=true;
   updateAuthUI(user);
   setSyncStatus('syncing');
   _completeInit();
+  // Wait for Supabase client to be ready if it isn't yet
+  let attempts=0;
+  while(!_supabase&&attempts<10){await new Promise(r=>setTimeout(r,300));attempts++;}
   await cloudPull();
 }
 
