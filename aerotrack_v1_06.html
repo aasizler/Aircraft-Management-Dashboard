@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AeroTrack v1.05.2</title>
+<title>AeroTrack v1.06</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='11' fill='none' stroke='%23a3e635' stroke-width='4'/></svg>">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -915,7 +915,7 @@ body.light .ac-tile-top{background:linear-gradient(135deg,#dce8f4,#ccdaec)}
   </div>
   <div class="page-hd" style="padding-top:20px">
     <div class="page-title">Settings</div>
-    <div style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:2px">AeroTrack v1.05.2</div>
+    <div style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:2px">AeroTrack v1.06</div>
     <div class="page-sub">App preferences and data management</div>
   </div>
   <div style="padding:0 28px 40px;max-width:640px">
@@ -1285,6 +1285,17 @@ alter table public.fleet enable row level security;
 create policy "Users own their fleet" on public.fleet
   for all using (auth.uid() = user_id);
 create index fleet_user_id_idx on public.fleet(user_id);
+
+create table public.user_session_meta (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid unique not null references auth.users(id) on delete cascade,
+  last_signout_at timestamptz,
+  known_shares jsonb default '[]'::jsonb
+);
+alter table public.user_session_meta enable row level security;
+create policy "Users can read own session meta" on public.user_session_meta for select using (auth.uid() = user_id);
+create policy "Users can insert own session meta" on public.user_session_meta for insert with check (auth.uid() = user_id);
+create policy "Users can update own session meta" on public.user_session_meta for update using (auth.uid() = user_id);
 */
 
 let _supabase = null;
@@ -1338,7 +1349,16 @@ async function onSignedIn(user){
   setSyncStatus('syncing');
   _completeInit();
   await cloudPull();
+  await checkOfflineRevocations();
   initRealtime();
+  // Cache existing sent invites for decline detection
+  if(_supabase&&_authUser){
+    _supabase.from('aircraft_shares').select('id,invited_email,aircraft_id,aircraft_reg').eq('owner_user_id',_authUser.id).eq('accepted',false).then(({data})=>{
+      if(data)data.forEach(s=>{_sentInvites[s.id]={email:s.invited_email,aircraftId:s.aircraft_id,aircraftReg:s.aircraft_reg||''};});
+    });
+    // Update known_shares strictly after offline revocation check is complete
+    await saveSessionMeta();
+  }
 }
 
 function onSignedOut(){
@@ -1405,6 +1425,7 @@ async function authSubmit(){
 
 async function signOut(){
   if(!_supabase||!_authUser) return;
+  await saveSessionMeta();
   await _supabase.auth.signOut();
   localStorage.removeItem('at_api_key');
   localStorage.removeItem(LS_KEY);
@@ -1563,8 +1584,8 @@ async function cloudPull(){
     _suppressCloudSync=true;
     saveLS();
     _suppressCloudSync=false;
-    await pullSharedAircraft();
     await resolveEmailInvites();
+    await pullSharedAircraft();
     await checkPendingInvites();
     renderHangar(false);
     setTimeout(()=>setSyncStatus('synced'),2000);
@@ -1572,6 +1593,7 @@ async function cloudPull(){
     // New user — no cloud data. Start empty, never push SEED
     fleet=[];sid=null;
     await resolveEmailInvites();
+    await pullSharedAircraft();
     await checkPendingInvites();
     renderHangar(false);
     setSyncStatus('synced');
@@ -2903,6 +2925,8 @@ async function openPendingInvitesModal(){
 }
 
 let _manageAccessAircraftId=null;
+let _sentInvites={}; // id -> {email, aircraftId, aircraftReg} for decline detection
+let _revokedByUs=null; // share id we just revoked, to avoid false decline notification
 
 async function openManageAccess(aircraftId){
   if(!can('manage_access',aircraftId))return;
@@ -2930,16 +2954,23 @@ async function inviteUser(){
   const role=document.getElementById('manage-access-invite-role').value;
   const msg=document.getElementById('manage-access-msg');
   if(!email){msg.style.color='var(--warn)';msg.textContent='Enter an email address.';return;}
-  msg.style.color='var(--muted)';msg.textContent='Sending invite...';
+  msg.style.color='var(--muted)';msg.textContent='Verifying...';
   try{
+    const {data:userExists,error:rpcErr}=await _supabase.rpc('check_user_exists',{lookup_email:email});
+    if(rpcErr)throw rpcErr;
+    if(!userExists){msg.style.color='var(--warn)';msg.textContent='No AeroTrack account found for that email.';return;}
     const {data:existing}=await _supabase.from('aircraft_shares').select('id').eq('aircraft_id',_manageAccessAircraftId).eq('invited_email',email).maybeSingle();
     if(existing){msg.style.color='var(--warn)';msg.textContent='This user already has access.';return;}
+    msg.textContent='Sending invite...';
     const a=[...fleet,..._sharedFleet].find(f=>f.id===_manageAccessAircraftId);
     const {error}=await _supabase.from('aircraft_shares').insert({aircraft_id:_manageAccessAircraftId,owner_user_id:_authUser.id,shared_user_id:null,role,invited_email:email,accepted:false,aircraft_reg:a?.reg||'',aircraft_type:a?.type||''});
     if(error)throw error;
     msg.style.color='var(--ok)';msg.textContent='✓ Invite sent to '+email;
     document.getElementById('manage-access-invite-email').value='';
     setTimeout(()=>{if(msg.textContent.startsWith('✓'))msg.textContent='';},4000);
+    // Cache invite for decline detection
+    const shareRows=await _supabase.from('aircraft_shares').select('id').eq('aircraft_id',_manageAccessAircraftId).eq('invited_email',email).maybeSingle();
+    if(shareRows?.data?.id){const ac2=[...fleet,..._sharedFleet].find(f=>f.id===_manageAccessAircraftId);_sentInvites[shareRows.data.id]={email,aircraftId:_manageAccessAircraftId,aircraftReg:ac2?.reg||''};}
     await renderSharesList(_manageAccessAircraftId);
   }catch(e){msg.style.color='var(--danger)';msg.textContent='Error: '+e.message;}
 }
@@ -2952,6 +2983,7 @@ async function changeRole(shareId,newRole){
 async function revokeAccess(shareId){
   if(!_supabase||!_authUser)return;
   if(!confirm('Remove this person\'s access? They will no longer see this aircraft.'))return;
+  _revokedByUs=shareId; // flag so realtime DELETE doesn't misfire as decline
   const {error}=await _supabase.from('aircraft_shares').delete().eq('id',shareId).eq('owner_user_id',_authUser.id);
   if(!error){
     await renderSharesList(_manageAccessAircraftId);
@@ -2964,6 +2996,37 @@ async function resolveEmailInvites(){
   try{
     await _supabase.from('aircraft_shares').update({shared_user_id:_authUser.id}).eq('invited_email',_authUser.email).is('shared_user_id',null);
   }catch(e){}
+}
+
+async function saveSessionMeta(){
+  if(!CLOUD_ENABLED||!_supabase||!_authUser)return;
+  try{
+    // Build known_shares from current accepted shared fleet share records
+    const {data:shares}=await _supabase.from('aircraft_shares').select('id,aircraft_id,aircraft_reg').eq('shared_user_id',_authUser.id).eq('accepted',true);
+    const {data:emailShares}=await _supabase.from('aircraft_shares').select('id,aircraft_id,aircraft_reg').eq('invited_email',_authUser.email).eq('accepted',true);
+    const all=[...(shares||[]),...(emailShares||[]).filter(e=>!(shares||[]).find(s=>s.id===e.id))];
+    const knownShares=all.map(s=>({share_id:s.id,aircraft_id:s.aircraft_id,aircraft_reg:s.aircraft_reg||''}));
+    await _supabase.from('user_session_meta').upsert({user_id:_authUser.id,last_signout_at:new Date().toISOString(),known_shares:knownShares},{onConflict:'user_id'});
+  }catch(e){console.warn('[AeroTrack] saveSessionMeta failed:',e.message);}
+}
+
+async function checkOfflineRevocations(){
+  if(!CLOUD_ENABLED||!_supabase||!_authUser)return;
+  try{
+    const {data:meta}=await _supabase.from('user_session_meta').select('known_shares').eq('user_id',_authUser.id).maybeSingle();
+    if(!meta||!meta.known_shares||!meta.known_shares.length)return;
+    // Fetch current accepted shares
+    const {data:current}=await _supabase.from('aircraft_shares').select('id').eq('shared_user_id',_authUser.id).eq('accepted',true);
+    const {data:currentEmail}=await _supabase.from('aircraft_shares').select('id').eq('invited_email',_authUser.email).eq('accepted',true);
+    const currentIds=new Set([...(current||[]),...(currentEmail||[])].map(s=>s.id));
+    const revoked=meta.known_shares.filter(s=>!currentIds.has(s.share_id));
+    if(!revoked.length)return;
+    // Show sequential toasts — same wording as live revocation
+    revoked.forEach((s,i)=>{
+      const reg=s.aircraft_reg||'an aircraft';
+      setTimeout(()=>showToast('Your access to '+reg+' has been revoked by the owner','var(--warn)'),i*3500);
+    });
+  }catch(e){console.warn('[AeroTrack] checkOfflineRevocations failed:',e.message);}
 }
 
 
@@ -3004,15 +3067,25 @@ async function handleRealtimeFleetUpdate(payload){
 }
 
 async function handleRealtimeSharesUpdate(payload){
-  if(payload.eventType==='UPDATE'&&payload.new?.accepted===true){
-    await pullSharedAircraft();
-    await checkPendingInvites();
-    renderHangar(false);
-    // Refresh manage access list to show Active instead of Pending acceptance
-    if(_manageAccessAircraftId)renderSharesList(_manageAccessAircraftId);
-    if(payload.new?.owner_user_id===_authUser.id){
-      const _areg=payload.new.aircraft_reg?(' for '+payload.new.aircraft_reg):'';
-      showToast(payload.new.invited_email+' accepted your invitation'+_areg+' as '+(ROLE_LABELS[payload.new.role]||payload.new.role),'var(--ok)');
+  if(payload.eventType==='UPDATE'){
+    const row=payload.new||{};
+    // Accepted invite — pull shared fleet and notify owner
+    if(row.accepted===true){
+      await pullSharedAircraft();
+      await checkPendingInvites();
+      const onDetail=document.getElementById('view-detail').style.display!=='none';
+      if(onDetail){renderHero();showTab(ctab,null,true);}else{renderHangar(false);}
+      if(_manageAccessAircraftId)renderSharesList(_manageAccessAircraftId);
+      if(row.owner_user_id===_authUser.id){
+        const _areg=row.aircraft_reg?(' for '+row.aircraft_reg):'';
+        showToast(row.invited_email+' accepted your invitation'+_areg+' as '+(ROLE_LABELS[row.role]||row.role),'var(--ok)');
+      }
+    }
+    // Role change — re-pull so collaborator sees updated permissions immediately
+    if(row.shared_user_id===_authUser.id||row.invited_email===_authUser.email){
+      await pullSharedAircraft();
+      const onDetail=document.getElementById('view-detail').style.display!=='none';
+      if(onDetail){renderHero();showTab(ctab,null,true);}else{renderHangar(false);}
     }
   }
   if(payload.eventType==='INSERT'&&payload.new?.invited_email===_authUser.email){
@@ -3025,14 +3098,12 @@ async function handleRealtimeSharesUpdate(payload){
     const old=payload.old||{};
     const isOurs=old.shared_user_id===_authUser.id||old.invited_email===_authUser.email;
     // Handle revoke-before-acceptance: pending invite for us was deleted
-    const isPendingForUs=old.invited_email===_authUser?.email&&!old.accepted;
-    if(isPendingForUs){
-      hidePendingBanner();
-      dismissToast();
-      await checkPendingInvites();
-      const pModal=document.getElementById('modal-pending-invites');
-      if(pModal&&pModal.classList.contains('open'))await openPendingInvitesModal();
-    }
+    // Always check if this delete affects us — payload.old may be empty
+    hidePendingBanner();
+    dismissToast();
+    await checkPendingInvites(); // re-shows banner only if still pending invites remain
+    const pModal=document.getElementById('modal-pending-invites');
+    if(pModal&&pModal.classList.contains('open'))await openPendingInvitesModal();
     // Capture regs BEFORE pulling so we still have them after removal
     const prevShared=_sharedFleet.map(a=>({id:a.id,reg:a.reg}));
     await pullSharedAircraft();
@@ -3052,15 +3123,22 @@ async function handleRealtimeSharesUpdate(payload){
         showToast('Your access to '+lostReg2+' has been revoked by the owner','var(--warn)');
       }
     }
-    // Detect decline: check if deleted share belongs to any of our aircraft
-    const decEmail=old.invited_email||null;
-    const decReg=old.aircraft_reg?(' for '+old.aircraft_reg):'';
-    if(decEmail&&!lostAccess.length){
-      // Check if we own any aircraft matching the deleted share's aircraft_id
-      const isOurAircraft=fleet.find(a=>a.id===old.aircraft_id);
-      if(isOurAircraft||old.owner_user_id===_authUser.id){
-        showToast(decEmail+' declined your invitation'+decReg,'var(--warn)');
+    // Detect decline using cached invite data (payload.old may be empty)
+    // Only fire if WE didn't initiate the delete (i.e. it wasn't a revoke)
+    const deletedId=old.id||payload.old?.id;
+    const weRevoked=_revokedByUs&&_revokedByUs===deletedId;
+    if(deletedId&&_sentInvites[deletedId]&&!weRevoked){
+      const inv=_sentInvites[deletedId];
+      if(!lostAccess.find(a=>a.id===inv.aircraftId)){
+        showToast(inv.email+' declined your invitation'+(inv.aircraftReg?' for '+inv.aircraftReg:''),'var(--warn)');
       }
+      delete _sentInvites[deletedId];
+    } else {
+      if(weRevoked)_revokedByUs=null; // clear flag
+      const decEmail=old.invited_email||null;
+      const decReg=old.aircraft_reg?(' for '+old.aircraft_reg):'';
+      const isOurAircraft=decEmail&&fleet.find(a=>a.id===old.aircraft_id);
+      if(isOurAircraft&&!lostAccess.length)showToast(decEmail+' declined your invitation'+decReg,'var(--warn)');
     }
     if(_manageAccessAircraftId)renderSharesList(_manageAccessAircraftId);
   }
