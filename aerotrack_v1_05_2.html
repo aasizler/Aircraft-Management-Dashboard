@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AeroTrack v1.05.1</title>
+<title>AeroTrack v1.05.2</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='11' fill='none' stroke='%23a3e635' stroke-width='4'/></svg>">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -128,7 +128,6 @@ canvas.chart{display:block;width:100%;height:150px}
 .ap-chip .acnt{color:var(--muted);font-size:10px}
 /* DOCUMENTS */
 .doc-section{padding-top:20px}
-.share-toggle-row{display:flex;align-items:center;justify-content:space-between;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:12px 16px;margin-bottom:12px}
 .toggle-info-title{font-size:13px;font-weight:600;color:var(--text)}
 .toggle-info-sub{font-size:11px;color:var(--muted);margin-top:2px}
 .toggle-wrap{position:relative;width:36px;height:20px;cursor:pointer;flex-shrink:0}
@@ -137,7 +136,6 @@ canvas.chart{display:block;width:100%;height:150px}
 .toggle-slider::after{content:'';position:absolute;width:14px;height:14px;border-radius:50%;background:#fff;top:3px;left:3px;transition:transform .2s}
 .toggle-input:checked+.toggle-slider{background:var(--accent)}
 .toggle-input:checked+.toggle-slider::after{transform:translateX(16px)}
-.shared-notice{background:rgba(45,212,160,.06);border:1px solid rgba(45,212,160,.18);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--ok);margin-bottom:12px;display:none}
 .pdf-drop{border:2px dashed var(--border2);border-radius:var(--r);padding:28px;text-align:center;cursor:pointer;transition:all .2s;background:var(--bg2);margin-bottom:10px}
 .pdf-drop:hover,.pdf-drop.drag{border-color:var(--accent);background:var(--accent-dim)}
 .pdf-drop-icon{font-size:28px;opacity:.2;margin-bottom:6px}
@@ -684,30 +682,18 @@ body.light .ac-tile-top{background:linear-gradient(135deg,#dce8f4,#ccdaec)}
     <div class="doc-section">
       <div style="margin-bottom:16px;padding-top:16px">
         <div class="section-label" style="margin-bottom:4px">Logbooks and Documents</div>
-        <div style="font-size:11px;color:var(--muted)">Upload PDFs — logbooks, annual paperwork, 337s, STCs, maintenance records. Documents are stored locally in your browser.</div>
+        <div style="font-size:11px;color:var(--muted)">Upload PDFs — logbooks, annual paperwork, 337s, STCs, maintenance records. Documents are stored securely in the cloud.</div>
       </div>
-      <div class="share-toggle-row">
-        <div>
-          <div class="toggle-info-title">Shared Storage</div>
-          <div class="toggle-info-sub" id="toggle-sub">Local only &mdash; visible on this browser only</div>
-        </div>
-        <label class="toggle-wrap">
-          <input type="checkbox" class="toggle-input" id="share-toggle" onchange="toggleSharing()">
-          <div class="toggle-slider"></div>
-        </label>
-      </div>
-      <div class="shared-notice" id="shared-notice">
-        Shared mode active &mdash; documents marked as shared are visible to all managers of this aircraft. Ideal for official logbooks, annual inspection paperwork, STCs, and 337 forms.
-      </div>
+
       <div class="pdf-drop" id="pdf-drop"
         onclick="document.getElementById('pdf-input').click()"
         ondragover="event.preventDefault();this.classList.add('drag')"
         ondragleave="this.classList.remove('drag')"
         ondrop="event.preventDefault();this.classList.remove('drag');handlePDF(event.dataTransfer.files[0])">
         <div class="pdf-drop-icon">+</div>
-        <div class="pdf-drop-title">Drop PDF here or click to browse</div>
-        <div class="pdf-drop-sub">Supports PDF files up to 4MB &mdash; logbooks, maintenance records, STCs, 337 forms</div>
-        <input type="file" id="pdf-input" accept=".pdf" style="display:none" onchange="handlePDF(this.files[0])">
+        <div class="pdf-drop-title">Drop file here or click to browse</div>
+        <div class="pdf-drop-sub">PDF, JPG, PNG, HEIC — logbooks, maintenance records, STCs, photos</div>
+        <input type="file" id="pdf-input" accept=".pdf,image/*,.heic,.HEIC" style="display:none" onchange="handlePDF(this.files[0])">
       </div>
       <div id="pdf-status" style="font-size:11px;color:var(--muted);margin-bottom:10px;min-height:14px"></div>
       <ul class="doc-list" id="doc-list"></ul>
@@ -929,7 +915,7 @@ body.light .ac-tile-top{background:linear-gradient(135deg,#dce8f4,#ccdaec)}
   </div>
   <div class="page-hd" style="padding-top:20px">
     <div class="page-title">Settings</div>
-    <div style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:2px">AeroTrack v1.05.1</div>
+    <div style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:2px">AeroTrack v1.05.2</div>
     <div class="page-sub">App preferences and data management</div>
   </div>
   <div style="padding:0 28px 40px;max-width:640px">
@@ -1352,6 +1338,7 @@ async function onSignedIn(user){
   setSyncStatus('syncing');
   _completeInit();
   await cloudPull();
+  initRealtime();
 }
 
 function onSignedOut(){
@@ -1676,7 +1663,7 @@ function ic(i,a){
 }
 
 // ─── HANGAR ───────────────────────────────────────────────────────────────────
-function selAC(id){if(!fleet||!fleet.length)return;sid=id;showDetail();}
+function selAC(id){if(!fleet||!fleet.length){if(!_sharedFleet||!_sharedFleet.length)return;}sid=id;showDetail();}
 
 function getTileIcao(a){
   if(a.type){
@@ -1741,7 +1728,7 @@ function renderHangar(pushState=true){
         <div class="ac-tile-serial">${a.serial}</div>
       </div>
       <div class="ac-tile-foot">
-        <span class="role-badge" style="${a._shared?`color:${ROLE_COLORS[a._role]||'var(--muted2)'}`:''}"> ${a._shared?(ROLE_LABELS[a._role]||'Shared'):'Owner'}</span>
+        <span class="role-badge" style="${a._shared?`color:${ROLE_COLORS[a._role]||'var(--muted2)'}`:''}" > ${a._shared?(ROLE_LABELS[a._role]||'Shared'):'Owner'}</span>${a._shared?'<span style="font-size:9px;color:var(--muted);font-family:var(--mono);margin-left:4px">shared</span>':''}
         <button class="tile-dot-btn" onclick="event.stopPropagation();openTileMenu(event,'${a.id}')" title="Options">
           <span></span><span></span><span></span>
         </button>
@@ -1994,8 +1981,6 @@ function renderHero(){
   document.getElementById('hero-right').innerHTML=a.shared
     ?'<div class="hero-badge shared">SHARED</div>'
     :'<div class="hero-badge">LOCAL</div>';
-  const t=document.getElementById('share-toggle');if(t)t.checked=!!a.shared;
-  updShareUI();
   refreshStatus();
 }
 function refreshStatus(){
@@ -2779,18 +2764,32 @@ async function deleteDocFromCloud(storagePath){
   catch(e){console.warn('[AeroTrack] Doc delete failed:',e.message);}
 }
 async function viewCloudDoc(doc){
+  let url=null;
   if(doc.storagePath){
-    const url=await getDocUrl(doc.storagePath);
-    if(url){
-      document.getElementById('pdf-title').textContent=doc.name;
-      document.getElementById('pdf-frame').src=url;
-      document.getElementById('pdf-overlay').classList.add('open');
-      return;
-    }
+    url=await getDocUrl(doc.storagePath);
   }
-  const d=localStorage.getItem('atd_'+doc.id);
-  if(d){document.getElementById('pdf-title').textContent=doc.name;document.getElementById('pdf-frame').src=d;document.getElementById('pdf-overlay').classList.add('open');}
-  else alert('Document not available. It may have been stored on another device.');
+  if(!url){
+    const d=localStorage.getItem('atd_'+doc.id);
+    if(d)url=d;
+  }
+  if(!url){alert('Document not available. It may have been stored on another device.');return;}
+  document.getElementById('pdf-title').textContent=doc.name;
+  if(doc.fileType==='image'){
+    // Show image in overlay with img tag instead of iframe
+    const frame=document.getElementById('pdf-frame');
+    frame.style.display='none';
+    let img=document.getElementById('pdf-img-viewer');
+    if(!img){img=document.createElement('img');img.id='pdf-img-viewer';img.style.cssText='max-width:100%;max-height:calc(100vh - 110px);border-radius:8px;object-fit:contain;display:block;margin:0 auto';}
+    img.src=url;
+    frame.parentNode.insertBefore(img,frame);
+  } else {
+    const img=document.getElementById('pdf-img-viewer');
+    if(img)img.style.display='none';
+    const frame=document.getElementById('pdf-frame');
+    frame.style.display='';
+    frame.src=url;
+  }
+  document.getElementById('pdf-overlay').classList.add('open');
 }
 
 
@@ -2864,7 +2863,7 @@ function showPendingBanner(invites){
     if(hw)hw.before(banner);
   }
   banner.style.display='flex';
-  banner.innerHTML='<div style="font-size:13px"><b style="color:var(--accent)">'+invites.length+' aircraft invitation'+(invites.length>1?'s':'')+'</b> <span style="color:var(--muted2);font-size:12px">— someone shared an aircraft with you</span></div><button class="btn sm primary" onclick="openPendingInvitesModal()">Review</button>';
+  banner.innerHTML='<div style="font-size:13px"><b style="color:var(--accent)">'+invites.length+' aircraft invitation'+(invites.length>1?'s':'')+'</b> <span style="color:var(--muted2);font-size:12px">— someone shared an aircraft with you</span></div><button class="btn sm primary" onclick="openPendingInvitesModal();dismissToast()">Review</button>';
 }
 
 function hidePendingBanner(){const b=document.getElementById('pending-invites-banner');if(b)b.style.display='none';}
@@ -2880,8 +2879,11 @@ async function acceptInvite(shareId){
 
 async function declineInvite(shareId){
   if(!_supabase||!_authUser)return;
-  await _supabase.from('aircraft_shares').delete().eq('id',shareId).eq('shared_user_id',_authUser.id);
+  // Delete by id only — shared_user_id may still be null for unresolved invites
+  await _supabase.from('aircraft_shares').delete().eq('id',shareId);
   await checkPendingInvites();
+  // Close modal and hide banner if no more pending
+  closeModal('pending-invites');
 }
 
 async function openPendingInvitesModal(){
@@ -2889,19 +2891,13 @@ async function openPendingInvitesModal(){
   el.innerHTML='<div style="color:var(--muted2);font-size:12px">Loading...</div>';
   openModal('pending-invites');
   if(!_supabase||!_authUser){el.innerHTML='Not connected.';return;}
-  const {data:pending}=await _supabase.from('aircraft_shares').select('*').eq('shared_user_id',_authUser.id).eq('accepted',false);
-  if(!pending||!pending.length){el.innerHTML='<div style="color:var(--muted2);font-size:13px">No pending invitations.</div>';return;}
-  // Fetch aircraft details for each unique owner
-  const ownerIds=[...new Set(pending.map(i=>i.owner_user_id))];
-  const ownerFleets={};
-  for(const ownerId of ownerIds){
-    const {data:ownerRow}=await _supabase.from('fleet').select('data').eq('user_id',ownerId).maybeSingle();
-    if(ownerRow?.data)ownerFleets[ownerId]=ownerRow.data;
-  }
+  // Query by both user ID and email to catch unresolved invites
+  const {data:byId}=await _supabase.from('aircraft_shares').select('*').eq('shared_user_id',_authUser.id).eq('accepted',false);
+  const {data:byEmail}=await _supabase.from('aircraft_shares').select('*').eq('invited_email',_authUser.email).eq('accepted',false);
+  const pending=[...(byId||[]),...(byEmail||[]).filter(e=>!(byId||[]).find(s=>s.id===e.id))];
+  if(!pending.length){el.innerHTML='<div style="color:var(--muted2);font-size:13px">No pending invitations.</div>';return;}
   el.innerHTML=pending.map(inv=>{
-    const ownerFleet=ownerFleets[inv.owner_user_id]||[];
-    const aircraft=ownerFleet.find(a=>a.id===inv.aircraft_id);
-    const acLabel=aircraft?`${aircraft.reg} — ${aircraft.type}`:`Unknown Aircraft`;
+    const acLabel=(inv.aircraft_reg&&inv.aircraft_type)?`${inv.aircraft_reg} — ${inv.aircraft_type}`:inv.aircraft_reg||'Aircraft invitation';
     return '<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:14px;margin-bottom:10px"><div style="font-size:13px;font-weight:600;margin-bottom:6px">Aircraft Invitation</div><div style="font-size:14px;color:var(--accent);font-family:var(--mono);font-weight:700;margin-bottom:6px">'+acLabel+'</div><div style="font-size:11px;color:var(--muted2);font-family:var(--mono);margin-bottom:10px">Role: <b style="color:'+ROLE_COLORS[inv.role]+'">'+ROLE_LABELS[inv.role]+'</b></div><div style="display:flex;gap:8px"><button class="btn sm primary" onclick="acceptInvite(\''+inv.id+'\');closeModal(\'pending-invites\')">Accept</button><button class="btn sm" onclick="declineInvite(\''+inv.id+'\');this.closest(\'div\').parentElement.remove()">Decline</button></div></div>';
   }).join('');
 }
@@ -2938,10 +2934,12 @@ async function inviteUser(){
   try{
     const {data:existing}=await _supabase.from('aircraft_shares').select('id').eq('aircraft_id',_manageAccessAircraftId).eq('invited_email',email).maybeSingle();
     if(existing){msg.style.color='var(--warn)';msg.textContent='This user already has access.';return;}
-    const {error}=await _supabase.from('aircraft_shares').insert({aircraft_id:_manageAccessAircraftId,owner_user_id:_authUser.id,shared_user_id:null,role,invited_email:email,accepted:false});
+    const a=[...fleet,..._sharedFleet].find(f=>f.id===_manageAccessAircraftId);
+    const {error}=await _supabase.from('aircraft_shares').insert({aircraft_id:_manageAccessAircraftId,owner_user_id:_authUser.id,shared_user_id:null,role,invited_email:email,accepted:false,aircraft_reg:a?.reg||'',aircraft_type:a?.type||''});
     if(error)throw error;
     msg.style.color='var(--ok)';msg.textContent='✓ Invite sent to '+email;
     document.getElementById('manage-access-invite-email').value='';
+    setTimeout(()=>{if(msg.textContent.startsWith('✓'))msg.textContent='';},4000);
     await renderSharesList(_manageAccessAircraftId);
   }catch(e){msg.style.color='var(--danger)';msg.textContent='Error: '+e.message;}
 }
@@ -2954,8 +2952,11 @@ async function changeRole(shareId,newRole){
 async function revokeAccess(shareId){
   if(!_supabase||!_authUser)return;
   if(!confirm('Remove this person\'s access? They will no longer see this aircraft.'))return;
-  await _supabase.from('aircraft_shares').delete().eq('id',shareId).eq('owner_user_id',_authUser.id);
-  await renderSharesList(_manageAccessAircraftId);
+  const {error}=await _supabase.from('aircraft_shares').delete().eq('id',shareId).eq('owner_user_id',_authUser.id);
+  if(!error){
+    await renderSharesList(_manageAccessAircraftId);
+    showToast('Access revoked successfully','var(--ok)');
+  }
 }
 
 async function resolveEmailInvites(){
@@ -2963,6 +2964,115 @@ async function resolveEmailInvites(){
   try{
     await _supabase.from('aircraft_shares').update({shared_user_id:_authUser.id}).eq('invited_email',_authUser.email).is('shared_user_id',null);
   }catch(e){}
+}
+
+
+
+// ─── REALTIME SYNC ───────────────────────────────────────────────────
+let _realtimeChannel=null,_sharesChannel=null;
+
+function initRealtime(){
+  if(!CLOUD_ENABLED||!_supabase||!_authUser)return;
+  if(_realtimeChannel){_supabase.removeChannel(_realtimeChannel);_realtimeChannel=null;}
+  if(_sharesChannel){_supabase.removeChannel(_sharesChannel);_sharesChannel=null;}
+
+  _realtimeChannel=_supabase.channel('fleet-changes')
+    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'fleet',filter:`user_id=eq.${_authUser.id}`},payload=>{
+      handleRealtimeFleetUpdate(payload);
+    }).subscribe();
+
+  _sharesChannel=_supabase.channel('shares-changes')
+    .on('postgres_changes',{event:'*',schema:'public',table:'aircraft_shares'},payload=>{
+      handleRealtimeSharesUpdate(payload);
+    }).subscribe();
+}
+
+async function handleRealtimeFleetUpdate(payload){
+  if(!payload.new||!payload.new.data)return;
+  const incomingFleet=payload.new.data;
+  const ourStr=JSON.stringify(fleet.map(a=>{const {_shared,_role,_ownerId,...c}=a;return c;}));
+  if(ourStr===JSON.stringify(incomingFleet))return;
+  _suppressCloudSync=true;
+  fleet=incomingFleet;
+  saveLS();
+  _suppressCloudSync=false;
+  _migrateFleet();
+  setSyncStatus('synced');
+  const onDetail=document.getElementById('view-detail').style.display!=='none';
+  if(onDetail){renderHero();showTab(ctab,null,true);}
+  else{renderHangar(false);}
+}
+
+async function handleRealtimeSharesUpdate(payload){
+  if(payload.eventType==='UPDATE'&&payload.new?.accepted===true){
+    await pullSharedAircraft();
+    await checkPendingInvites();
+    renderHangar(false);
+    // Refresh manage access list to show Active instead of Pending acceptance
+    if(_manageAccessAircraftId)renderSharesList(_manageAccessAircraftId);
+    if(payload.new?.owner_user_id===_authUser.id){
+      const _areg=payload.new.aircraft_reg?(' for '+payload.new.aircraft_reg):'';
+      showToast(payload.new.invited_email+' accepted your invitation'+_areg+' as '+(ROLE_LABELS[payload.new.role]||payload.new.role),'var(--ok)');
+    }
+  }
+  if(payload.eventType==='INSERT'&&payload.new?.invited_email===_authUser.email){
+    setTimeout(async()=>{
+      await checkPendingInvites();
+      showToast('You have a new aircraft invitation &nbsp;<span onclick="openPendingInvitesModal();dismissToast()" style="text-decoration:underline;cursor:pointer;font-weight:700">Review</span>','var(--accent)');
+    },1500);
+  }
+  if(payload.eventType==='DELETE'){
+    const old=payload.old||{};
+    const isOurs=old.shared_user_id===_authUser.id||old.invited_email===_authUser.email;
+    // Handle revoke-before-acceptance: pending invite for us was deleted
+    const isPendingForUs=old.invited_email===_authUser?.email&&!old.accepted;
+    if(isPendingForUs){
+      hidePendingBanner();
+      dismissToast();
+      await checkPendingInvites();
+      const pModal=document.getElementById('modal-pending-invites');
+      if(pModal&&pModal.classList.contains('open'))await openPendingInvitesModal();
+    }
+    // Capture regs BEFORE pulling so we still have them after removal
+    const prevShared=_sharedFleet.map(a=>({id:a.id,reg:a.reg}));
+    await pullSharedAircraft();
+    const newSharedIds=_sharedFleet.map(a=>a.id);
+    const lostAccess=prevShared.filter(a=>!newSharedIds.includes(a.id));
+    if(lostAccess.length||isOurs){
+      await checkPendingInvites();
+      renderHangar(false);
+      const pModal=document.getElementById('modal-pending-invites');
+      if(pModal&&pModal.classList.contains('open'))await openPendingInvitesModal();
+      if(lostAccess.find(a=>a.id===sid)){
+        const lostReg=lostAccess.find(a=>a.id===sid)?.reg||old.aircraft_reg||'an aircraft';
+        showHangar();
+        showToast('Your access to '+lostReg+' has been revoked by the owner','var(--warn)');
+      } else if(lostAccess.length){
+        const lostReg2=lostAccess[0]?.reg||old.aircraft_reg||'an aircraft';
+        showToast('Your access to '+lostReg2+' has been revoked by the owner','var(--warn)');
+      }
+    }
+    // Detect decline: check if deleted share belongs to any of our aircraft
+    const decEmail=old.invited_email||null;
+    const decReg=old.aircraft_reg?(' for '+old.aircraft_reg):'';
+    if(decEmail&&!lostAccess.length){
+      // Check if we own any aircraft matching the deleted share's aircraft_id
+      const isOurAircraft=fleet.find(a=>a.id===old.aircraft_id);
+      if(isOurAircraft||old.owner_user_id===_authUser.id){
+        showToast(decEmail+' declined your invitation'+decReg,'var(--warn)');
+      }
+    }
+    if(_manageAccessAircraftId)renderSharesList(_manageAccessAircraftId);
+  }
+}
+
+function dismissToast(){const t=document.getElementById('app-toast');if(t){clearTimeout(t._tmr);t.style.opacity='0';}}
+function showToast(msg,color){
+  color=color||'var(--accent)';
+  let t=document.getElementById('app-toast');
+  if(!t){t=document.createElement('div');t.id='app-toast';t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--bg2);border:1px solid;border-radius:10px;padding:12px 20px;font-size:13px;z-index:9000;box-shadow:0 8px 32px rgba(0,0,0,.5);transition:opacity .3s;max-width:340px;text-align:center';document.body.appendChild(t);}
+  t.style.borderColor=color;t.style.color=color;t.style.pointerEvents='auto';t.innerHTML=msg;t.style.opacity='1';
+  clearTimeout(t._tmr);t._tmr=setTimeout(()=>{t.style.opacity='0';},6000);
 }
 
 
@@ -3080,18 +3190,31 @@ function zoomTo(code){const ap=AP[code];if(!ap||!mproj)return;const pt=mproj([ap
 function clearMapData(){mcodes=null;ac().airportData=null;['map-status','map-count','map-summary'].forEach(id=>document.getElementById(id).textContent='');document.getElementById('map-clear-btn').style.display='none';renderChips();drawMap();saveLS();}
 
 // ─── DOCUMENTS ────────────────────────────────────────────────────────────────
-function toggleSharing(){ac().shared=document.getElementById('share-toggle').checked;updShareUI();renderHero();saveLS();}
-function updShareUI(){const on=ac().shared;document.getElementById('shared-notice').style.display=on?'block':'none';document.getElementById('toggle-sub').textContent=on?'Shared — visible to all managers of this aircraft':'Local only — visible on this browser only';}
 async function handlePDF(file){
   if(!file)return;
-  if(!file.name.toLowerCase().endsWith('.pdf')){document.getElementById('pdf-status').textContent='Only PDF files are supported.';return;}
+  const isImage=file.type.startsWith('image/')||!!file.name.toLowerCase().match(/\.(jpg|jpeg|png|heic|heif|gif|webp)$/);
+  const isPDF=file.name.toLowerCase().endsWith('.pdf')||file.type==='application/pdf';
+  if(!isImage&&!isPDF){document.getElementById('pdf-status').textContent='Unsupported file type.';return;}
   if(file.size>4.5*1024*1024){document.getElementById('pdf-status').textContent='File too large — max 4MB.';return;}
+  // Compress images before upload
+  let fileToUpload=file;
+  if(isImage){
+    document.getElementById('pdf-status').textContent='Compressing image...';
+    try{
+      const compressed=await new Promise((res,rej)=>{
+        const img=new Image();const url=URL.createObjectURL(file);
+        img.onload=()=>{URL.revokeObjectURL(url);const MAX=1600;let w=img.width,h=img.height;if(w>MAX||h>MAX){if(w>h){h=Math.round(h*MAX/w);w=MAX;}else{w=Math.round(w*MAX/h);h=MAX;}}const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);c.toBlob(b=>res(b),'image/jpeg',0.85);};
+        img.onerror=()=>{URL.revokeObjectURL(url);rej();};img.src=url;
+      });
+      fileToUpload=new File([compressed],file.name.replace(/\.(heic|heif)$/i,'.jpg'),{type:'image/jpeg'});
+    }catch(e){fileToUpload=file;}
+  }
   document.getElementById('pdf-status').textContent='Reading file...';
   const reader=new FileReader();
   reader.onload=e=>{
     if(!ac().documents)ac().documents=[];
     const docId='doc_'+Date.now();
-    const doc={id:docId,name:file.name,size:file.size,date:new Date().toISOString().slice(0,10),shared:ac().shared,storagePath:null};
+    const doc={id:docId,name:fileToUpload.name,size:fileToUpload.size,date:new Date().toISOString().slice(0,10),shared:ac().shared,storagePath:null,fileType:isImage?'image':'pdf'};
     ac().documents.unshift(doc);
     saveLS();renderDocs();
     // Upload to cloud storage in background
@@ -3117,17 +3240,17 @@ async function handlePDF(file){
       setTimeout(()=>{document.getElementById('pdf-status').textContent='';},3000);
     }
   };
-  reader.readAsDataURL(file);
+  reader.readAsDataURL(fileToUpload);
 }
 function renderDocs(){
   const docs=ac().documents||[];
   const el=document.getElementById('doc-list');
   if(!docs.length){el.innerHTML='<li style="color:var(--muted);font-size:12px;padding:8px 0">No documents uploaded yet.</li>';return;}
   el.innerHTML=docs.map(d=>`<li class="doc-item">
-    <div class="doc-pdf-icon" style="background:${d.storagePath?'var(--accent-dim)':'var(--bg4)'};border-color:${d.storagePath?'var(--accent)':'var(--border2)'}">PDF</div>
+    <div class="doc-pdf-icon" style="background:${d.storagePath?'var(--accent-dim)':'var(--bg4)'};border-color:${d.storagePath?'var(--accent)':'var(--border2)'}">${d.fileType==='image'?'IMG':'PDF'}</div>
     <div style="flex:1;min-width:0">
       <div class="doc-name">${d.name}</div>
-      <div class="doc-meta">${(d.size/1024).toFixed(1)}KB &nbsp;· &nbsp;${d.date}&nbsp;${d.shared?'&nbsp;· <span class="cloud-dot">shared</span>':''}</div>
+      <div class="doc-meta">${(d.size/1024).toFixed(1)}KB &nbsp;·&nbsp; ${d.date}</div>
     </div>
     <button class="btn sm" onclick="viewDoc(${ac().documents.indexOf(d)})">View</button>
     <button class="action-btn del" onclick="cDel('doc','${d.id}')">Delete</button>
@@ -3135,7 +3258,7 @@ function renderDocs(){
 }
 function viewDoc(idx){const doc=(ac().documents||[])[idx];if(!doc)return;viewCloudDoc(doc);}
 function viewPDF(id){const doc=(ac().documents||[]).find(d=>d.id===id);if(!doc)return;viewCloudDoc(doc);}
-function closePDF(){document.getElementById('pdf-overlay').classList.remove('open');document.getElementById('pdf-frame').src='';}
+function closePDF(){document.getElementById('pdf-overlay').classList.remove('open');document.getElementById('pdf-frame').src='';document.getElementById('pdf-frame').style.display='';const img=document.getElementById('pdf-img-viewer');if(img){img.src='';img.style.display='none';}}
 
 
 // ─── AIRCRAFT TYPE DATABASE ───────────────────────────────────────────────────
