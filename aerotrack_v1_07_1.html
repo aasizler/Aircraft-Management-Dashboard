@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AeroTrack v1.07.3</title>
+<title>AeroTrack v1.07.1</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='11' fill='none' stroke='%23a3e635' stroke-width='4'/></svg>">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -17,7 +17,7 @@
   --ok-dim:rgba(45,212,160,.1);--warn-dim:rgba(245,158,11,.1);--danger-dim:rgba(240,75,75,.1);
   --r:10px;--mono:'IBM Plex Mono',monospace;--display:'Syne',sans-serif;--body:'Inter',sans-serif;
 }
-body{background:var(--bg);color:var(--text);font-family:var(--body);min-height:100vh}
+body{background:var(--bg);color:var(--text);font-family:var(--body);min-height:100vh;overflow-x:hidden}
 /* NAV */
 .nav{display:flex;align-items:center;padding:0 28px;height:60px;border-bottom:1px solid var(--border2);background:var(--bg);position:sticky;top:0;z-index:100}
 .nav-brand{font-family:var(--display);font-size:18px;font-weight:800;letter-spacing:.05em;display:flex;align-items:center;gap:8px}
@@ -119,7 +119,7 @@ canvas.chart{display:block;width:100%;height:150px}
 .how-box{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);padding:11px 16px;margin-bottom:10px;font-size:12px;color:var(--muted2);line-height:1.9}
 .how-box b{color:var(--muted3)}
 .how-box code{font-family:var(--mono);color:var(--accent);font-size:11px}
-#map-canvas-wrap{border-radius:var(--r);overflow:hidden;border:1px solid var(--border2);background:#080e14}
+#map-canvas-wrap{border-radius:var(--r);overflow:hidden;border:1px solid var(--border2);background:#080e14;max-width:100%;box-sizing:border-box;}
 #map-canvas{display:block;width:100%;cursor:grab}
 .ap-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
 .ap-chip{background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:4px 10px;display:inline-flex;align-items:center;gap:6px;cursor:pointer;transition:border-color .15s;font-size:11px}
@@ -594,20 +594,15 @@ body.light .ac-tile-top{background:linear-gradient(135deg,#dce8f4,#ccdaec)}
         <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap">
           <span id="map-status" style="font-size:11px;color:var(--muted)"></span>
           <span id="map-count" style="font-family:var(--mono);font-size:11px;color:var(--muted2)"></span>
-          <!-- Map mode toggle -->
-          <div style="display:flex;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;overflow:hidden">
-            <button id="map-mode-airports" class="btn sm" onclick="setMapMode('airports')" style="border:none;border-radius:0;background:var(--accent);color:#fff;font-size:11px;padding:4px 10px">Airports</button>
-            <button id="map-mode-routes" class="btn sm" onclick="setMapMode('routes')" style="border:none;border-radius:0;background:transparent;color:var(--muted2);font-size:11px;padding:4px 10px">Routes</button>
-          </div>
           <button class="btn sm" onclick="openFlightModal()">Log Flight</button>
           <label class="btn sm" style="cursor:pointer">Import CSV<input type="file" id="csv-file" accept=".csv" style="display:none"></label>
           <button class="btn sm" id="map-clear-btn" style="display:none" onclick="clearMapData()">Clear</button>
         </div>
       </div>
       <div class="how-box"><b>Import from ForeFlight:</b> foreflight.com &rarr; Logbook &rarr; Export &rarr; Export CSV. Reads the exact ForeFlight format and maps every airport flown in <span id="map-hint" style="font-family:var(--mono);color:var(--accent);font-weight:700"></span>. Manual flights logged via <b>Log Flight</b> also appear on the Routes view.</div>
-      <div id="map-canvas-wrap" style="position:relative;cursor:grab"><canvas id="map-canvas" style="display:block;cursor:inherit"></canvas></div>
+      <div id="map-canvas-wrap" style="position:relative;cursor:grab"><canvas id="map-canvas" style="display:block;cursor:inherit"></canvas><div id="map-wheel-overlay" style="position:absolute;inset:0;z-index:1;cursor:inherit"></div><div style="position:absolute;top:10px;right:10px;z-index:2;display:flex;background:rgba(10,16,28,0.82);border:1px solid var(--border2);border-radius:6px;overflow:hidden;backdrop-filter:blur(4px)"><button id="map-mode-airports" onclick="setMapMode('airports')" style="padding:4px 12px;font-size:11px;font-weight:600;cursor:pointer;border:none;background:var(--accent);color:#fff;font-family:var(--body)">Airports</button><button id="map-mode-routes" onclick="setMapMode('routes')" style="padding:4px 12px;font-size:11px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--muted2);font-family:var(--body)">Routes</button></div><div style="position:absolute;bottom:10px;right:10px;z-index:2;display:flex;flex-direction:column;gap:4px"><button onclick="mapZoomBtn(1.5)" style="width:30px;height:30px;border-radius:6px;border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-size:18px;cursor:pointer;line-height:1;opacity:.85">+</button><button onclick="mapZoomBtn(1/1.5)" style="width:30px;height:30px;border-radius:6px;border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-size:18px;cursor:pointer;line-height:1;opacity:.85">−</button></div></div>
       <div style="display:flex;justify-content:space-between;margin-top:7px;flex-wrap:wrap;gap:5px">
-        <span style="font-size:11px;color:var(--muted)">Drag to pan &nbsp;|&nbsp; ⌘/Ctrl + Scroll to zoom &nbsp;|&nbsp; Click chip to zoom in</span>
+        <span style="font-size:11px;color:var(--muted)">Drag to pan &nbsp;|&nbsp; +/− buttons or Option+Scroll to zoom</span>
         <span id="map-summary" style="font-family:var(--mono);font-size:11px;color:var(--muted2)"></span>
       </div>
       <div class="ap-chips" id="ap-chips" style="display:none"></div>
@@ -947,7 +942,7 @@ body.light .ac-tile-top{background:linear-gradient(135deg,#dce8f4,#ccdaec)}
   </div>
   <div class="page-hd" style="padding-top:20px">
     <div class="page-title">Settings</div>
-    <div style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:2px">AeroTrack v1.07.3</div>
+    <div style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:2px">AeroTrack v1.07.1</div>
     <div class="page-sub">App preferences and data management</div>
   </div>
   <div style="padding:0 28px 40px;max-width:640px">
@@ -1247,8 +1242,8 @@ const SEED=[{id:'ac_default',reg:'N137BF',serial:'E-3999',type:'Beechcraft Bonan
 
 // ─── STATE ────────────────────────────────────────────────────────────────────
 let fleet=[],sid='ac_default',ctab='dashboard',eOil=null,eSq=null,eFlight=null;
-let mgeo=null,mproj=null,mpath=null,mt={x:0,y:0,k:1},mdrag=false,mlx=0,mly=0,mcodes=null;
-let _basemapCache=null,_basemapCacheK=null,_basemapCacheW=null,_basemapCacheX=null,_basemapCacheY=null,_basemapRebuildTimer=null;
+let mgeo=null,mproj=null,mpath=null,mt={x:0,y:0,k:1},mdrag=false,mlx=0,mly=0,mcodes=null,_mapDragMoved=false;
+let _basemapCache=null,_basemapCacheK=null,_basemapCacheW=null;
 let _hoveredAirport=null; // airport code currently hovered on map
 let _apDbLoaded=false,_apDbPromise=null; // airport DB state — populated from ourairports.com
 const mcan=document.getElementById('map-canvas'),mctx=mcan.getContext('2d');
@@ -3247,9 +3242,9 @@ function sizeMap(){
 }
 async function loadGeo(){
   try{
-    const r=await fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json');
+    const r=await fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json');
     const t=await r.json();
-    mgeo={countries:topojson.feature(t,t.objects.countries),borders:topojson.mesh(t,t.objects.countries,(a,b)=>a!==b)};
+    mgeo={countries:topojson.feature(t,t.objects.countries),land:topojson.feature(t,t.objects.land),borders:topojson.mesh(t,t.objects.countries,(a,b)=>a!==b)};
     drawMap();
   }catch(e){document.getElementById('map-status').textContent='Map data failed to load.';}
 }
@@ -3278,39 +3273,51 @@ function _drawMapNow(){
   const maxCY=H/2+maxY; // canvas Y must be <= this (world top visible)
   if(centerY<minCY)mt.y=minCY-H/2*mt.k;
   if(centerY>maxCY)mt.y=maxCY-H/2*mt.k;
-  // ── Basemap tile cache ──
-  // One square tile (W×W) rendered at snapK, centered on lat=0 lon=0.
-  // drawImage scales/positions it each frame — zero geo work during pan/zoom.
-  const snapK=mt.k<=1?1:mt.k<=2?2:mt.k<=4?4:8;
-  if(!_basemapCache||_basemapCacheW!==W||_basemapCacheK!==snapK){
-    const ck=snapK;
-    const tW=W*ck, tH=W*ck; // square tile captures full Mercator world at this zoom
-    const dpr=window.devicePixelRatio||1;
-    const oc=document.createElement('canvas');
-    oc.width=Math.round(tW*dpr);oc.height=Math.round(tH*dpr);
-    const octx=oc.getContext('2d');
-    octx.scale(dpr,dpr);
-    octx.fillStyle='#050d18';octx.fillRect(0,0,tW,tH);
-    // Center on lon=0, lat=0 at tile center
-    const tileProj=d3.geoMercator().scale(baseScale*ck).translate([tW/2,tH/2]);
-    const tilePath=d3.geoPath(tileProj,octx);
-    octx.beginPath();tilePath(mgeo.countries);octx.fillStyle='#0e1a10';octx.fill();
-    octx.beginPath();tilePath(mgeo.borders);octx.strokeStyle='rgba(255,255,255,0.07)';octx.lineWidth=0.5/ck;octx.stroke();
-    _basemapCache=oc;_basemapCacheK=ck;_basemapCacheW=W;
-  }
-  // lat=0/lon=0 sits at tile pixel center (tW/2, tH/2).
-  // At current zoom mt.k it should appear at canvas pixel (cx, cy).
+  // ── Basemap ──
+  // zoom-out (mt.k<=4): tiled square cache — fast, covers full world
+  // zoom-in  (mt.k> 4): direct render onto main canvas, clipped to viewport bbox — pixel-sharp
   const dpr=window.devicePixelRatio||1;
-  const tileImgW=_basemapCache.width/dpr, tileImgH=_basemapCache.height/dpr;
-  const tileScale=mt.k/_basemapCacheK;
-  const drawTileW=tileImgW*tileScale, drawTileH=tileImgH*tileScale;
-  const cx=W/2*mt.k+mt.x, cy=H/2*mt.k+mt.y;
-  const originX=cx-tileImgW/2*tileScale;
-  const originY=cy-tileImgH/2*tileScale;
   mctx.fillStyle='#050d18';mctx.fillRect(0,0,W,H);
-  const startX=originX-Math.ceil(originX/drawTileW+1)*drawTileW;
-  for(let tx=startX;tx<W;tx+=drawTileW){
-    mctx.drawImage(_basemapCache,tx,originY,drawTileW,drawTileH);
+  if(mt.k<=4){
+    // Tiled cache path
+    const maxSide=Math.floor(8192/dpr);
+    const rawSnapK=mt.k<=1?1:mt.k<=2?2:4;
+    const snapK=Math.min(rawSnapK,Math.floor(maxSide/W)||1);
+    if(!_basemapCache||_basemapCacheW!==W||_basemapCacheK!==snapK){
+      const ck=snapK;
+      const tW=W*ck,tH=W*ck;
+      const oc=document.createElement('canvas');
+      oc.width=Math.round(tW*dpr);oc.height=Math.round(tH*dpr);
+      const octx=oc.getContext('2d');
+      octx.scale(dpr,dpr);
+      octx.fillStyle='#050d18';octx.fillRect(0,0,tW,tH);
+      const tileProj=d3.geoMercator().scale(baseScale*ck).translate([tW/2,tH/2]);
+      const tilePath=d3.geoPath(tileProj,octx);
+      octx.beginPath();tilePath(mgeo.land);octx.fillStyle='#0e1a10';octx.fill();
+      octx.beginPath();tilePath(mgeo.borders);octx.strokeStyle='rgba(255,255,255,0.10)';octx.lineWidth=0.6;octx.stroke();
+      _basemapCache=oc;_basemapCacheK=ck;_basemapCacheW=W;
+    }
+    const tileImgW=_basemapCache.width/dpr,tileImgH=_basemapCache.height/dpr;
+    const tileScale=mt.k/snapK;
+    const drawTileW=tileImgW*tileScale,drawTileH=tileImgH*tileScale;
+    const cx=W/2*mt.k+mt.x,cy=H/2*mt.k+mt.y;
+    const originX=cx-tileImgW/2*tileScale,originY=cy-tileImgH/2*tileScale;
+    const startX=originX-Math.ceil(originX/drawTileW+1)*drawTileW;
+    for(let tx=startX;tx<W;tx+=drawTileW){mctx.drawImage(_basemapCache,tx,originY,drawTileW,drawTileH);}
+  } else {
+    // Direct render — pixel-sharp at any zoom. Render straight to main canvas.
+    // At k>4 only 1 tile is visible so this is fast; no pan-keyed cache (avoids dot misalignment).
+    const wW2=W*mt.k;
+    const nTiles=Math.ceil(W/wW2)*2+3;
+    for(let i=0;i<nTiles;i++){
+      const tileOffX=(i-Math.ceil(W/wW2)-1)*wW2;
+      const tileLeft=W/2*mt.k+mt.x+tileOffX-W/2*mt.k;
+      if(tileLeft>W||tileLeft+wW2<0)continue;
+      const tp=d3.geoMercator().scale(baseScale*mt.k).translate([W/2*mt.k+mt.x+tileOffX,H/2*mt.k+mt.y]);
+      const tPath=d3.geoPath(tp,mctx);
+      mctx.beginPath();tPath(mgeo.land);mctx.fillStyle='#0e1a10';mctx.fill();
+      mctx.beginPath();tPath(mgeo.borders);mctx.strokeStyle='rgba(255,255,255,0.13)';mctx.lineWidth=0.6;mctx.stroke();
+    }
   }
   // Use the center tile projection for dots/routes/proj references
   const proj=d3.geoMercator()
@@ -3412,20 +3419,23 @@ function _drawRoutes(proj){
     }
   });
 }
+// ── Map overlay — single div on top of canvas; receives all pointer+wheel events ──
+const _mwOverlay=document.getElementById('map-wheel-overlay');
 // ── Pan ──
-mcan.addEventListener('mousedown',e=>{mdrag=true;mlx=e.clientX;mly=e.clientY;mcan.style.cursor='grabbing';});
-window.addEventListener('mouseup',()=>{mdrag=false;mcan.style.cursor='grab';});
-window.addEventListener('mousemove',e=>{if(!mdrag)return;mt.x+=e.clientX-mlx;mt.y+=e.clientY-mly;mlx=e.clientX;mly=e.clientY;drawMap();});
-// ── Scroll zoom — Cmd (Mac) or Ctrl (Win/Linux) ──
-// Track modifier state manually — browser can intercept Cmd+scroll before event.metaKey is reliable
+_mwOverlay.addEventListener('mousedown',e=>{mdrag=true;mlx=e.clientX;mly=e.clientY;_mwOverlay.style.cursor='grabbing';_mapDragMoved=false;});
+window.addEventListener('mouseup',()=>{mdrag=false;_mwOverlay.style.cursor='grab';});
+window.addEventListener('mousemove',e=>{_lastMouseX=e.clientX;_lastMouseY=e.clientY;if(!mdrag)return;const dx=e.clientX-mlx,dy=e.clientY-mly;if(Math.hypot(dx,dy)>4)_mapDragMoved=true;mt.x+=dx;mt.y+=dy;mlx=e.clientX;mly=e.clientY;drawMap();});
+// ── Scroll zoom — Option/Alt (Mac) or Ctrl (Win/Linux) ──
 let _mapModKey=false;
-window.addEventListener('keydown',e=>{if(e.key==='Meta'||e.key==='Control')_mapModKey=true;});
-window.addEventListener('keyup',e=>{if(e.key==='Meta'||e.key==='Control')_mapModKey=false;});
-window.addEventListener('blur',()=>{_mapModKey=false;}); // reset if window loses focus while held
+let _mouseOverMap=false;
+window.addEventListener('keydown',e=>{if(e.key==='Alt'||e.key==='Control')_mapModKey=true;});
+window.addEventListener('keyup',e=>{if(e.key==='Alt'||e.key==='Control')_mapModKey=false;});
+window.addEventListener('blur',()=>{_mapModKey=false;});
+_mwOverlay.addEventListener('mouseenter',()=>{_mouseOverMap=true;});
+_mwOverlay.addEventListener('mouseleave',()=>{_mouseOverMap=false;});
 function _handleMapWheel(e){
-  if(!_mapModKey&&!e.ctrlKey&&!e.metaKey)return; // no modifier — let page scroll freely
+  if(!_mapModKey&&!e.ctrlKey&&!e.altKey)return;
   e.preventDefault();
-  e.stopPropagation();
   const rc=mcan.getBoundingClientRect();
   const px=e.clientX-rc.left,py=e.clientY-rc.top;
   const rawDelta=Math.abs(e.deltaY)>Math.abs(e.deltaX)?e.deltaY:e.deltaX;
@@ -3436,22 +3446,27 @@ function _handleMapWheel(e){
   mt.x=px-(px-mt.x)*(nk/mt.k);mt.y=py-(py-mt.y)*(nk/mt.k);mt.k=nk;
   drawMap();
 }
-// Window-level listener: fires regardless of overflow/stacking context
-// _mouseOverMap flag ensures we only act when pointer is over the map
-let _mouseOverMap=false;
-document.getElementById('map-canvas-wrap').addEventListener('mouseenter',()=>{_mouseOverMap=true;});
-document.getElementById('map-canvas-wrap').addEventListener('mouseleave',()=>{_mouseOverMap=false;});
-window.addEventListener('wheel',e=>{
-  if(!_mouseOverMap)return;
-  if(!_mapModKey&&!e.ctrlKey&&!e.metaKey)return; // no modifier — don't intercept
-  e.preventDefault();
+_mwOverlay.addEventListener('wheel',e=>{_handleMapWheel(e);},{passive:false});
+document.addEventListener('wheel',e=>{
+  if(!_mapModKey&&!e.ctrlKey&&!e.altKey)return;
+  const rc=mcan.getBoundingClientRect();
+  if(e.clientX<rc.left||e.clientX>rc.right||e.clientY<rc.top||e.clientY>rc.bottom)return;
   _handleMapWheel(e);
-},{passive:false});
+},{passive:false,capture:true});
+// ── Zoom buttons (reliable on all browsers incl. Safari) ──
+function mapZoomBtn(factor){
+  const wrap=document.getElementById('map-canvas-wrap');
+  const W=wrap.clientWidth||640,H=Math.round(W*0.446);
+  const px=W/2,py=H/2;
+  const nk=Math.max(0.4,Math.min(3000,mt.k*factor));
+  mt.x=px-(px-mt.x)*(nk/mt.k);mt.y=py-(py-mt.y)*(nk/mt.k);mt.k=nk;
+  drawMap();
+}
 // ── Touch ──
 let ltd=null;
-mcan.addEventListener('touchstart',e=>{if(e.touches.length===1){mdrag=true;mlx=e.touches[0].clientX;mly=e.touches[0].clientY;}if(e.touches.length===2){const dx=e.touches[0].clientX-e.touches[1].clientX,dy=e.touches[0].clientY-e.touches[1].clientY;ltd=Math.hypot(dx,dy);}e.preventDefault();},{passive:false});
-mcan.addEventListener('touchend',()=>{mdrag=false;ltd=null;});
-mcan.addEventListener('touchmove',e=>{
+_mwOverlay.addEventListener('touchstart',e=>{if(e.touches.length===1){mdrag=true;mlx=e.touches[0].clientX;mly=e.touches[0].clientY;}if(e.touches.length===2){const dx=e.touches[0].clientX-e.touches[1].clientX,dy=e.touches[0].clientY-e.touches[1].clientY;ltd=Math.hypot(dx,dy);}e.preventDefault();},{passive:false});
+_mwOverlay.addEventListener('touchend',()=>{mdrag=false;ltd=null;});
+_mwOverlay.addEventListener('touchmove',e=>{
   if(e.touches.length===1&&mdrag){mt.x+=e.touches[0].clientX-mlx;mt.y+=e.touches[0].clientY-mly;mlx=e.touches[0].clientX;mly=e.touches[0].clientY;drawMap();}
   if(e.touches.length===2){const dx=e.touches[0].clientX-e.touches[1].clientX,dy=e.touches[0].clientY-e.touches[1].clientY;const d=Math.hypot(dx,dy);if(ltd){const f=d/ltd;const mx2=(e.touches[0].clientX+e.touches[1].clientX)/2,my2=(e.touches[0].clientY+e.touches[1].clientY)/2;const rc=mcan.getBoundingClientRect();const cx=mx2-rc.left,cy=my2-rc.top;const nk=Math.max(0.4,Math.min(3000,mt.k*f));mt.x=cx-(cx-mt.x)*(nk/mt.k);mt.y=cy-(cy-mt.y)*(nk/mt.k);mt.k=nk;drawMap();}ltd=d;}
   e.preventDefault();
@@ -3517,8 +3532,8 @@ function _buildRouteMap(allRoutes){
   return m;
 }
 // ── Hover / cursor ──
-mcan.addEventListener('mousemove',e=>{
-  if(mdrag){mcan.style.cursor='grabbing';return;}
+_mwOverlay.addEventListener('mousemove',e=>{
+  if(mdrag){_mwOverlay.style.cursor='grabbing';return;}
   const W=mcan.clientWidth||640;
   const rc=mcan.getBoundingClientRect();
   const px=e.clientX-rc.left,py=e.clientY-rc.top;
@@ -3539,14 +3554,15 @@ mcan.addEventListener('mousemove',e=>{
     if(hovAp!==_hoveredAirport){_hoveredAirport=hovAp;drawMap();}
     if(!hit){
       const rHit=_hitTestRoute(px,py);
-      if(rHit){mcan.style.cursor='pointer';mcan.title=rHit.from+'\u2192'+rHit.to+' ('+rHit.entries.length+' flight'+(rHit.entries.length!==1?'s':'')+')';return;}
+      if(rHit){_mwOverlay.style.cursor='pointer';_mwOverlay.title=rHit.from+'\u2192'+rHit.to+' ('+rHit.entries.length+' flight'+(rHit.entries.length!==1?'s':'')+')';return;}
     }
   }
-  mcan.style.cursor=hit?'pointer':'grab';
-  mcan.title=hit?hit.label:'';
+  _mwOverlay.style.cursor=hit?'pointer':'grab';
+  _mwOverlay.title=hit?hit.label:'';
 });
 // ── Click — airport or route ──
-mcan.addEventListener('click',e=>{
+_mwOverlay.addEventListener('click',e=>{
+  if(_mapDragMoved){_mapDragMoved=false;return;} // suppress click after pan
   if(_mapMode!=='routes')return;
   const W=mcan.clientWidth||640;
   const rc=mcan.getBoundingClientRect();
@@ -4902,7 +4918,7 @@ function saveInspection(){
 function saveOil(){const a=ac();const qty=parseFloat(document.getElementById('o-qty').value)||0;const entry={date:document.getElementById('o-date').value,qty,type:document.getElementById('o-type').value,hobbs:parseFloat(document.getElementById('o-hobbs').value)||a.hobbs,notes:document.getElementById('o-notes').value};if(eOil!==null)a.oil[eOil]=entry;else{a.oil.unshift(entry);a.oilByMonth[5]=parseFloat((a.oilByMonth[5]+qty).toFixed(2));}eOil=null;saveLS();closeModal('oil');renderOilStats();renderOilLog();}
 function saveSquawk(){const a=ac();const desc=document.getElementById('sq-desc').value.trim();const status=document.getElementById('sq-status').value;const date=document.getElementById('sq-date').value;if(!desc)return;if(eSq!==null){const sq=a.squawks.find(s=>s.id===eSq);if(sq){sq.desc=desc;sq.status=status;sq.date=date;}}else a.squawks.unshift({id:'sq_'+Date.now(),desc,status,date});eSq=null;saveLS();closeModal('squawk');renderSq();refreshStatus();if(ctab==='dashboard')renderDashboard();}
 
-window.addEventListener('resize',()=>{if(ctab==='oil')bChart('oil-canvas',MONTHS,ac().oilByMonth,'#4a9eff');if(ctab==='utilization'){bChart('util-canvas',MONTHS,ac().monthlyHours,'#4a9eff');_basemapCache=null;_basemapCacheK=null;_basemapCacheY=null;sizeMap();drawMap();}});
+window.addEventListener('resize',()=>{if(ctab==='oil')bChart('oil-canvas',MONTHS,ac().oilByMonth,'#4a9eff');if(ctab==='utilization'){bChart('util-canvas',MONTHS,ac().monthlyHours,'#4a9eff');_basemapCache=null;_basemapCacheK=null;_basemapCacheW=null;sizeMap();drawMap();}});
 init();
 </script>
 <script>
