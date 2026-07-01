@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AeroTrack v1.07.3</title>
+<title>AeroTrack v1.07.3.1</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='11' fill='none' stroke='%23a3e635' stroke-width='4'/></svg>">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -1042,7 +1042,7 @@ body.light .ac-tile-top{background:linear-gradient(135deg,#dce8f4,#ccdaec)}
   </div>
   <div class="page-hd" style="padding-top:20px">
     <div class="page-title">Settings</div>
-    <div style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:2px">AeroTrack v1.07.3</div>
+    <div style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:2px">AeroTrack v1.07.3.1</div>
     <div class="page-sub">App preferences and data management</div>
   </div>
   <div style="padding:0 28px 40px;max-width:640px">
@@ -5575,65 +5575,33 @@ function _adsbRecordTrack(state){
 }
 
 // ── Fetch full historical track ──────────────────────────────────────────────
-// ADSBexchange trace format (v2 docs):
-//   trace[i] = [offset_sec, lat, lon, alt_ft|"ground", gs_kt, track_deg, flags, vrate_fpm]
-// globe.adsbexchange.com/re-api serves the live flight trace their own map uses.
-// We try multiple CORS proxies in order until one works.
-const _CORS_PROXIES=[
-  h=>`https://api.allorigins.win/raw?url=${encodeURIComponent(h)}`,
-  h=>`https://corsproxy.io/?url=${encodeURIComponent(h)}`,
-  h=>`https://proxy.cors.sh/${h}`,
-];
-async function _corsGet(url){
-  for(const proxy of _CORS_PROXIES){
-    try{
-      const r=await fetch(proxy(url),{signal:AbortSignal.timeout(8000)});
-      if(r.ok){
-        const text=await r.text();
-        const d=JSON.parse(text);
-        console.log('[ADS-B] Proxy success:',proxy(url).split('?')[0]);
-        return d;
-      }
-      console.warn('[ADS-B] Proxy returned HTTP',r.status,'via',proxy('…'));
-    }catch(e){
-      console.warn('[ADS-B] Proxy failed:',e.message);
-    }
-  }
-  return null;
-}
+// The /api/adsb-trace Edge Function proxies OpenSky's /tracks/all endpoint and
+// returns the full current-flight path, already normalized to
+//   points[i] = {lat, lon, alt(ft), ts(ms), track}
+// (OpenSky only allows CORS from its own origin, so this MUST go through the
+//  Edge Function — a direct browser fetch would be blocked.)
 async function _adsbFetchFullTrack(reg){
   if(_adsbTrackFetched)return; // already have the full historical trace
-  // Don't hammer failed sources — retry at most every 30s. _adsbTrackFetched is only set
-  // true on SUCCESS, so a failed attempt (offline Edge Function / dead proxy) will retry.
+  // Don't hammer a failing source — retry at most every 30s. _adsbTrackFetched is
+  // only set true on SUCCESS, so a failed attempt will retry on the next poll.
   if(Date.now()-_adsbTraceCooldown<30000)return;
   _adsbTraceCooldown=Date.now();
   const hex=_nToHex(reg);
   if(!hex){console.warn('[ADS-B] Cannot derive hex for',reg);return;}
-  const traceUrl=`https://globe.adsbexchange.com/re-api/?find=trace&icao=${hex}`;
   console.log('[ADS-B] Fetching full trace for hex',hex);
   let d=null;
-  try{const r=await fetch(`/api/adsb-trace?icao=${hex}`,{signal:AbortSignal.timeout(10000)});if(r.ok)d=await r.json();}catch(e){console.warn('[ADS-B] Edge Function failed:',e.message);}
-  if(!d)d=await _corsGet(traceUrl);
-  if(!d){console.warn('[ADS-B] All sources failed for trace fetch — will retry');return;}
-  console.log('[ADS-B] Trace response keys:',Object.keys(d));
-  if(!d.trace||!d.trace.length){
-    console.warn('[ADS-B] No trace array in response. Full response:',JSON.stringify(d).slice(0,300));
-    return;
-  }
-  const base=d.timestamp||0;
+  try{
+    const r=await fetch(`/api/adsb-trace?icao=${hex}`,{signal:AbortSignal.timeout(12000)});
+    if(r.ok)d=await r.json();
+    else console.warn('[ADS-B] Trace Edge Function HTTP',r.status);
+  }catch(e){console.warn('[ADS-B] Trace fetch failed:',e.message);}
+  if(!d||!Array.isArray(d.points)){console.warn('[ADS-B] No trace points — will retry');return;}
   const pts=[];
-  for(const t of d.trace){
-    if(!Array.isArray(t)||t[1]==null||t[2]==null)continue;
-    const alt=t[3];
-    if(alt==='ground'||alt==null)continue;
-    pts.push({
-      lat:parseFloat(t[1]),
-      lon:parseFloat(t[2]),
-      alt:typeof alt==='number'?alt:0,
-      ts:(base+(t[0]||0))*1000,
-    });
+  for(const p of d.points){
+    if(!p||p.lat==null||p.lon==null)continue;
+    pts.push({lat:parseFloat(p.lat),lon:parseFloat(p.lon),alt:p.alt||0,ts:p.ts||0});
   }
-  console.log('[ADS-B] Parsed',pts.length,'airborne trace points from',d.trace.length,'raw entries');
+  console.log('[ADS-B] Parsed',pts.length,'airborne trace points from',d.points.length,'raw entries');
   if(pts.length<2)return;
   const existing=_adsbTrack.slice();
   _adsbTrack.length=0;
@@ -5791,7 +5759,8 @@ function _fillAdsbPanel(){
   const callsign=(s.callsign||a.reg||'').trim();
   const sinceUpdate=s.last_contact?Math.round(parseFloat(s.last_contact))+'s ago':'now';
   const statusColor=onGround?'rgba(255,255,255,.55)':'#4ade80';
-  const trackMins=_adsbTrack.length>1?Math.round((_adsbTrack.length*10)/60)+'m':null;
+  const trackSpanMs=_adsbTrack.length>1?(_adsbTrack[_adsbTrack.length-1].ts-_adsbTrack[0].ts):0;
+  const trackMins=trackSpanMs>0?Math.round(trackSpanMs/60000)+'m':null;
   panel.innerHTML=`
     <div class="adsb-panel-hd">
       <div>
