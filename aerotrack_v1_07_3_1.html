@@ -5410,7 +5410,8 @@ async function _adsbPoll(){
   _adsbRecordTrack(state);
   // On first successful airborne response, fetch full historical track
   if(state&&!state.on_ground&&!_adsbTrackFetched){
-    _adsbFetchFullTrack(a.reg);
+    // Prefer the real ICAO hex from the live ADS-B data; _nToHex() is only a fallback
+    _adsbFetchFullTrack(state.icao24||a.reg);
   }
   _renderAdsbBanner(state,a);
   _adsbCheckLanding(state,a);
@@ -5580,14 +5581,15 @@ function _adsbRecordTrack(state){
 //   points[i] = {lat, lon, alt(ft), ts(ms), track}
 // (OpenSky only allows CORS from its own origin, so this MUST go through the
 //  Edge Function — a direct browser fetch would be blocked.)
-async function _adsbFetchFullTrack(reg){
+async function _adsbFetchFullTrack(hint){
   if(_adsbTrackFetched)return; // already have the full historical trace
   // Don't hammer a failing source — retry at most every 30s. _adsbTrackFetched is
   // only set true on SUCCESS, so a failed attempt will retry on the next poll.
   if(Date.now()-_adsbTraceCooldown<30000)return;
   _adsbTraceCooldown=Date.now();
-  const hex=_nToHex(reg);
-  if(!hex){console.warn('[ADS-B] Cannot derive hex for',reg);return;}
+  // hint is the real ICAO hex (from live data) when available; otherwise a tail number
+  const hex=/^[0-9a-f]{6}$/i.test(hint||'')?hint.toLowerCase():_nToHex(hint);
+  if(!hex){console.warn('[ADS-B] Cannot derive hex for',hint);return;}
   console.log('[ADS-B] Fetching full trace for hex',hex);
   let d=null;
   try{
