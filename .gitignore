@@ -1,0 +1,12 @@
+# macOS
+.DS_Store
+
+# Local working docs — not for repo
+AEROTRACK_HANDOFF.md
+*.pdf
+
+# Claude Code config
+.claude/
+
+# Old HTML versions — only current version belongs in repo
+aerotrack_v1_07_2.html
