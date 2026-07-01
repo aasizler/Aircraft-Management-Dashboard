@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AeroTrack v1.07.3.1</title>
+<title>AeroTrack v1.07.3.2</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='11' fill='none' stroke='%23a3e635' stroke-width='4'/></svg>">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -1042,7 +1042,7 @@ body.light .ac-tile-top{background:linear-gradient(135deg,#dce8f4,#ccdaec)}
   </div>
   <div class="page-hd" style="padding-top:20px">
     <div class="page-title">Settings</div>
-    <div style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:2px">AeroTrack v1.07.3.1</div>
+    <div style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:2px">AeroTrack v1.07.3.2</div>
     <div class="page-sub">App preferences and data management</div>
   </div>
   <div style="padding:0 28px 40px;max-width:640px">
@@ -3565,12 +3565,14 @@ function _drawMapNow(){
       _drawAirportDots(tproj);
     }
   }
-  // ADS-B live position overlay — tiled same as routes/dots so it survives any zoom
+  // ADS-B live position overlay — tiled same as routes/dots so it survives any zoom.
+  // Draw on every world-copy (canvas clips off-screen parts); do NOT cull by the
+  // aircraft's current position, or the track disappears when you pan the icon
+  // off-screen to look at the departure end.
   if(typeof _drawAdsbOverlay==='function'&&_adsbLast){
     for(const tileX of Array.from({length:Math.ceil(W/worldW)*2+3},(_,i)=>(i-Math.ceil(W/worldW)-1)*worldW)){
       const tproj=d3.geoMercator().scale(baseScale*mt.k).translate([W/2*mt.k+mt.x+tileX,H/2*mt.k+mt.y]);
-      const testPt=tproj([_adsbLast.lon,_adsbLast.lat]);
-      if(testPt&&testPt[0]>=-20&&testPt[0]<=W+20)_drawAdsbOverlay(tproj);
+      _drawAdsbOverlay(tproj);
     }
   }
 }
