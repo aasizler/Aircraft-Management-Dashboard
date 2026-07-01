@@ -3491,6 +3491,40 @@ const _ML_BASEMAPS={
   satellite:{tiles:['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],attribution:'Imagery © Esri, Maxar, Earthstar Geographics',maxzoom:19}
 };
 function _hexToRgb(h){h=(h||'').trim().replace('#','');if(h.length===3)h=h.split('').map(c=>c+c).join('');const n=parseInt(h||'3b9eff',16);return[(n>>16)&255,(n>>8)&255,n&255];}
+// ── Altitude colour scale (Volanta-style: green low → cyan → blue → violet high) ─
+const _ALT_SCALE=[
+  [0,     [21,128,61]],   // ground — deep green
+  [1000,  [34,197,94]],   // green
+  [3000,  [74,222,128]],  // light green
+  [6000,  [163,230,53]],  // lime
+  [10000, [34,211,238]],  // cyan
+  [18000, [59,130,246]],  // blue
+  [28000, [99,102,241]],  // indigo
+  [38000, [168,85,247]],  // violet
+  [48000, [236,72,153]],  // magenta (very high)
+];
+function _altColor(alt){
+  const s=_ALT_SCALE;alt=+alt||0;
+  if(alt<=s[0][0])return 'rgb('+s[0][1].join(',')+')';
+  if(alt>=s[s.length-1][0])return 'rgb('+s[s.length-1][1].join(',')+')';
+  for(let i=1;i<s.length;i++){
+    if(alt<=s[i][0]){const c0=s[i-1][1],c1=s[i][1],t=(alt-s[i-1][0])/(s[i][0]-s[i-1][0]);
+      return 'rgb('+Math.round(c0[0]+(c1[0]-c0[0])*t)+','+Math.round(c0[1]+(c1[1]-c0[1])*t)+','+Math.round(c0[2]+(c1[2]-c0[2])*t)+')';}
+  }
+  return 'rgb('+s[s.length-1][1].join(',')+')';
+}
+// Build a MapLibre line-gradient expression: colour interpolated along the line's
+// length using each vertex's altitude, so it blends smoothly instead of banding.
+function _mlTrackGradient(coords,alts){
+  const n=coords.length;const cum=[0];let total=0;
+  for(let i=1;i<n;i++){const a=coords[i-1],b=coords[i];const dx=(b[0]-a[0])*Math.cos((a[1]+b[1])*Math.PI/360),dy=b[1]-a[1];total+=Math.hypot(dx,dy);cum.push(total);}
+  const grad=['interpolate',['linear'],['line-progress']];
+  if(total<=0){grad.push(0,_altColor(alts[0]),1,_altColor(alts[n-1]));return grad;}
+  const step=Math.max(1,Math.floor(n/80));let lastP=-1; // ~80 stops max, plenty smooth
+  for(let i=0;i<n;i+=step){let p=cum[i]/total;if(p<=lastP)p=lastP+1e-6;if(p>1)p=1;grad.push(p,_altColor(alts[i]));lastP=p;}
+  if(lastP<1)grad.push(1,_altColor(alts[n-1]));
+  return grad;
+}
 function _mlThemeLight(){return document.body.classList.contains('light');}
 // Tiles for the current choice: 'satellite' → Esri imagery; otherwise theme-aware CARTO.
 function _mlCurrentTiles(){
@@ -3517,13 +3551,20 @@ function _mlInit(){
   _mlMap.addControl(new maplibregl.AttributionControl({compact:true}),'bottom-right');
   _mlMap.addControl(new maplibregl.NavigationControl({showCompass:false}),'bottom-right');
   _mlMap.on('load',()=>{_mlAddOverlays();_mlSync();_mlFit();});
+  // Add overlays + place the aircraft as soon as the STYLE is ready, without
+  // waiting for basemap tiles to finish downloading (which 'load' does) — so the
+  // aircraft marker isn't gated behind tile loading. Handlers are idempotent.
+  _mlMap.on('styledata',()=>{if(_mlMap.isStyleLoaded()){_mlAddOverlays();_mlSync();}});
 }
 function _mlAddOverlays(){
   if(!_mlMap)return;const m=_mlMap;
   const src=id=>{if(!m.getSource(id))m.addSource(id,{type:'geojson',data:{type:'FeatureCollection',features:[]}});};
-  ['at-routes','at-track','at-airports','at-dep'].forEach(src);
+  ['at-routes','at-airports','at-dep'].forEach(src);
+  // track is ONE LineString with lineMetrics so we can paint an altitude line-gradient
+  // (smooth blend) and it won't fragment or vanish when zoomed out
+  if(!m.getSource('at-track'))m.addSource('at-track',{type:'geojson',lineMetrics:true,tolerance:0,data:{type:'FeatureCollection',features:[]}});
   if(!m.getLayer('at-routes-l'))m.addLayer({id:'at-routes-l',type:'line',source:'at-routes',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':['get','color'],'line-width':['get','w'],'line-opacity':0.85}});
-  if(!m.getLayer('at-track-l'))m.addLayer({id:'at-track-l',type:'line',source:'at-track',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':['get','color'],'line-width':1.8}});
+  if(!m.getLayer('at-track-l'))m.addLayer({id:'at-track-l',type:'line',source:'at-track',layout:{'line-cap':'round','line-join':'round'},paint:{'line-width':2.2}});
   if(!m.getLayer('at-airports-c'))m.addLayer({id:'at-airports-c',type:'circle',source:'at-airports',paint:{'circle-radius':5,'circle-color':'rgba(160,175,195,0.9)','circle-stroke-color':'rgba(255,255,255,0.35)','circle-stroke-width':1.2}});
   if(!m.getLayer('at-airports-t'))m.addLayer({id:'at-airports-t',type:'symbol',source:'at-airports',minzoom:6,layout:{'text-field':['get','code'],'text-size':11,'text-offset':[0,1.2],'text-anchor':'top','text-font':['Noto Sans Regular']},paint:{'text-color':'#fff','text-halo-color':'rgba(0,0,0,0.75)','text-halo-width':1}});
   if(!m.getLayer('at-dep-c'))m.addLayer({id:'at-dep-c',type:'circle',source:'at-dep',paint:{'circle-radius':5,'circle-color':_getAccentHex(),'circle-stroke-color':'rgba(255,255,255,0.85)','circle-stroke-width':1.5}});
@@ -3567,21 +3608,20 @@ function _mlSyncRoutes(){
 }
 function _mlSyncAdsb(){
   const ts=_mlMap.getSource('at-track'),ds=_mlMap.getSource('at-dep');if(!ts||!ds)return;
-  const tf=[];let dep=null;
+  let dep=null;const coords=[],alts=[];
   if(_adsbLast&&!_adsbLast.on_ground&&_adsbTrack.length>1){
-    let aMin=Infinity,aMax=-Infinity;for(const p of _adsbTrack){if(p.alt<aMin)aMin=p.alt;if(p.alt>aMax)aMax=p.alt;}
-    const span=aMax-aMin;const[r,g,b]=_hexToRgb(_getAccentHex());
-    for(let i=1;i<_adsbTrack.length;i++){const p0=_adsbTrack[i-1],p1=_adsbTrack[i];const a=span>0?0.25+0.7*((p1.alt-aMin)/span):0.85;
-      tf.push({type:'Feature',geometry:{type:'LineString',coordinates:[[p0.lon,p0.lat],[p1.lon,p1.lat]]},properties:{color:'rgba('+r+','+g+','+b+','+a.toFixed(3)+')'}});}
-    // connect the last recorded point to the live position so the trail reaches
-    // the centre of the aircraft symbol instead of stopping short under the ring
-    const lp=_adsbTrack[_adsbTrack.length-1];
-    if(lp&&_adsbLast.lon!=null&&_adsbLast.lat!=null){const dlon=+_adsbLast.lon,dlat=+_adsbLast.lat;
-      if(Math.abs(lp.lon-dlon)>1e-7||Math.abs(lp.lat-dlat)>1e-7){const a=span>0?0.25+0.7*((lp.alt-aMin)/span):0.85;
-        tf.push({type:'Feature',geometry:{type:'LineString',coordinates:[[lp.lon,lp.lat],[dlon,dlat]]},properties:{color:'rgba('+r+','+g+','+b+','+a.toFixed(3)+')'}});}}
-    const d0=_adsbTrack[0];dep={type:'Feature',geometry:{type:'Point',coordinates:[d0.lon,d0.lat]},properties:{}};
+    for(const p of _adsbTrack){coords.push([p.lon,p.lat]);alts.push(p.alt||0);}
+    // append the live position so the trail reaches the centre of the aircraft symbol
+    if(_adsbLast.lon!=null&&_adsbLast.lat!=null){const dlon=+_adsbLast.lon,dlat=+_adsbLast.lat;const lp=coords[coords.length-1];
+      if(!lp||Math.abs(lp[0]-dlon)>1e-7||Math.abs(lp[1]-dlat)>1e-7){coords.push([dlon,dlat]);alts.push(alts[alts.length-1]||0);}}
+    dep={type:'Feature',geometry:{type:'Point',coordinates:coords[0]},properties:{}};
   }
-  ts.setData({type:'FeatureCollection',features:tf});
+  if(coords.length>1){
+    ts.setData({type:'Feature',geometry:{type:'LineString',coordinates:coords},properties:{}});
+    if(_mlMap.getLayer('at-track-l'))_mlMap.setPaintProperty('at-track-l','line-gradient',_mlTrackGradient(coords,alts));
+  }else{
+    ts.setData({type:'FeatureCollection',features:[]});
+  }
   ds.setData({type:'FeatureCollection',features:dep?[dep]:[]});
   _mlSyncAircraft();
 }
@@ -5507,24 +5547,21 @@ function _nToHex(nNum){
 async function _adsbFetch(reg){
   const key=_adsbKey();if(!key)return null;
   const headers={'X-RapidAPI-Key':key,'X-RapidAPI-Host':'adsbexchange-com1.p.rapidapi.com'};
-  // Try by registration first
-  try{
-    const r=await fetch(`https://adsbexchange-com1.p.rapidapi.com/v2/registration/${encodeURIComponent(reg)}/`,{headers});
-    if(r.ok){
-      const d=await r.json();
-      if(d.ac&&d.ac.length){return _normalizeAdsb(d.ac[0]);}
-    }
-  }catch(e){console.warn('[ADS-B] reg lookup failed:',e.message);}
-  // Fallback: ICAO hex
-  const hex=_nToHex(reg);if(!hex)return null;
-  try{
-    const r2=await fetch(`https://adsbexchange-com1.p.rapidapi.com/v2/icao/${hex}/`,{headers});
-    if(r2.ok){
-      const d2=await r2.json();
-      if(d2.ac&&d2.ac.length){return _normalizeAdsb(d2.ac[0]);}
-    }
-  }catch(e){console.warn('[ADS-B] hex lookup failed:',e.message);}
-  return null;
+  const base='https://adsbexchange-com1.p.rapidapi.com/v2';
+  const hex=_nToHex(reg);
+  // Fire the registration and ICAO-hex lookups in parallel and take whichever
+  // returns a live aircraft first — halves worst-case latency vs. sequential.
+  const urls=[`${base}/registration/${encodeURIComponent(reg)}/`];
+  if(hex)urls.push(`${base}/icao/${hex}/`);
+  const tryUrl=async u=>{
+    const r=await fetch(u,{headers});
+    if(!r.ok)throw new Error('http '+r.status);
+    const d=await r.json();
+    if(d.ac&&d.ac.length)return _normalizeAdsb(d.ac[0]);
+    throw new Error('no aircraft');
+  };
+  try{return await Promise.any(urls.map(tryUrl));}
+  catch(e){return null;}
 }
 function _normalizeAdsb(ac){
   // Normalize ADSBexchange response to a consistent internal format
