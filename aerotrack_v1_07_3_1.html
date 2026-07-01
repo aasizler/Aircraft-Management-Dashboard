@@ -5639,13 +5639,20 @@ function _drawAdsbOverlay(proj){
 
   // Draw track trail — catmull-rom smooth spline, fading departure→current
   if(_adsbTrack.length>1&&!onGround){
-    const n=_adsbTrack.length;
-    // Project all points first, skip any that project to null
-    const scr=_adsbTrack.map(p=>proj([p.lon,p.lat])).filter(p=>p&&isFinite(p[0])&&isFinite(p[1]));
+    // Keep altitude alongside each projected point so shading can follow altitude
+    const sp=_adsbTrack.map(p=>({pt:proj([p.lon,p.lat]),alt:p.alt||0}))
+                       .filter(o=>o.pt&&isFinite(o.pt[0])&&isFinite(o.pt[1]));
+    const scr=sp.map(o=>o.pt);
     if(scr.length>1){
-      // Draw smooth catmull-rom spline in segments so we can fade opacity
-      // Split into ~10 bands of equal point count, each slightly brighter
-      const bands=Math.min(10,scr.length-1);
+      // Opacity follows altitude, normalized to THIS flight's own min/max so both
+      // low GA circuits and high-altitude airliners shade well. Width is constant —
+      // no taper (segments are drawn at a fixed lineWidth).
+      let aMin=Infinity,aMax=-Infinity;
+      for(const o of sp){if(o.alt<aMin)aMin=o.alt;if(o.alt>aMax)aMax=o.alt;}
+      const aSpan=aMax-aMin;
+      const altAlpha=a=>aSpan>0?0.25+0.7*((a-aMin)/aSpan):0.85;
+      // Many short bands → smooth altitude gradient along the catmull-rom spline
+      const bands=Math.min(48,scr.length-1);
       const ptsPerBand=Math.max(1,Math.floor(scr.length/bands));
       for(let b=0;b<bands;b++){
         const start=b*ptsPerBand;
@@ -5663,8 +5670,10 @@ function _drawAdsbOverlay(proj){
           const cp2y=p2[1]-(p3[1]-p1[1])/6;
           mctx.bezierCurveTo(cp1x,cp1y,cp2x,cp2y,p2[0],p2[1]);
         }
+        // Representative altitude = sample near this band's midpoint
+        const midAlt=sp[Math.min(sp.length-1,start+Math.floor((end-start)/2))].alt;
         mctx.strokeStyle=accent;
-        mctx.globalAlpha=0.1+0.75*((b+1)/bands);
+        mctx.globalAlpha=altAlpha(midAlt);
         mctx.lineWidth=1.8;
         mctx.lineJoin='round';
         mctx.lineCap='round';
