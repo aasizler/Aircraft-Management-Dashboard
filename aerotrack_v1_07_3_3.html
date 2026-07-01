@@ -3,9 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AeroTrack v1.07.3.2</title>
+<title>AeroTrack v1.07.3.3</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='11' fill='none' stroke='%23a3e635' stroke-width='4'/></svg>">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<!-- MapLibre GL (Phase 1 map migration — beta, behind a flag) -->
+<link href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<style>
+.ml-ac{width:30px;height:30px;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.ml-ac svg{filter:drop-shadow(0 1px 2px rgba(0,0,0,.55))}
+.ml-ac-ring{position:absolute;top:50%;left:50%;width:38px;height:38px;margin:-19px 0 0 -19px;border-radius:50%;border:1.5px solid #3b9eff;opacity:.5;animation:mlpulse 2s ease-out infinite}
+@keyframes mlpulse{0%{transform:scale(.55);opacity:.5}100%{transform:scale(1.35);opacity:0}}
+.maplibregl-popup.ml-tip .maplibregl-popup-content{background:rgba(12,18,28,.94);color:#e8edf3;border:1px solid rgba(255,255,255,.15);border-radius:6px;padding:6px 9px;font:12px Inter,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.4)}
+.maplibregl-popup.ml-tip .maplibregl-popup-tip{border-top-color:rgba(12,18,28,.94);border-bottom-color:rgba(12,18,28,.94)}
+</style>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -688,7 +699,7 @@ body.light .ac-tile-top{background:linear-gradient(135deg,#dce8f4,#ccdaec)}
         </div>
       </div>
       <div class="how-box"><b>Import from ForeFlight:</b> foreflight.com &rarr; Logbook &rarr; Export &rarr; Export CSV. Reads the exact ForeFlight format and maps every airport flown in <span id="map-hint" style="font-family:var(--mono);color:var(--accent);font-weight:700"></span>. Manual flights logged via <b>Log Flight</b> also appear on the Routes view.</div>
-      <div id="map-canvas-wrap" style="position:relative;cursor:grab"><canvas id="map-canvas" style="display:block;cursor:inherit"></canvas><div id="map-wheel-overlay" style="position:absolute;inset:0;z-index:1;cursor:inherit"></div><div style="position:absolute;top:10px;right:10px;z-index:2;display:flex;background:rgba(10,16,28,0.82);border:1px solid var(--border2);border-radius:6px;overflow:hidden;backdrop-filter:blur(4px)"><button id="map-mode-airports" onclick="setMapMode('airports')" style="padding:4px 12px;font-size:11px;font-weight:600;cursor:pointer;border:none;background:var(--accent);color:#fff;font-family:var(--body)">Airports</button><button id="map-mode-routes" onclick="setMapMode('routes')" style="padding:4px 12px;font-size:11px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--muted2);font-family:var(--body)">Routes</button></div><div style="position:absolute;bottom:10px;right:10px;z-index:2;display:flex;flex-direction:column;gap:4px"><button onclick="mapZoomBtn(1.5)" style="width:30px;height:30px;border-radius:6px;border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-size:18px;cursor:pointer;line-height:1;opacity:.85">+</button><button onclick="mapZoomBtn(1/1.5)" style="width:30px;height:30px;border-radius:6px;border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-size:18px;cursor:pointer;line-height:1;opacity:.85">−</button></div></div>
+      <div id="map-canvas-wrap" style="position:relative;cursor:grab"><canvas id="map-canvas" style="display:block;cursor:inherit"></canvas><div id="ml-map" style="position:absolute;inset:0;z-index:3;display:none"></div><div id="ml-switcher" style="position:absolute;top:10px;left:10px;z-index:4;display:none;gap:4px;transition:left .22s cubic-bezier(.4,0,.2,1);background:rgba(10,16,28,0.82);border:1px solid var(--border2);border-radius:6px;overflow:hidden;backdrop-filter:blur(4px)"><button data-ml-base="map" onclick="_mlSetBasemap('map')" style="padding:4px 12px;font-size:11px;font-weight:600;cursor:pointer;border:none;background:var(--accent);color:#fff;font-family:var(--body)">Map</button><button data-ml-base="satellite" onclick="_mlSetBasemap('satellite')" style="padding:4px 12px;font-size:11px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--muted2);font-family:var(--body)">Satellite</button></div><div id="map-wheel-overlay" style="position:absolute;inset:0;z-index:1;cursor:inherit"></div><div style="position:absolute;top:10px;right:10px;z-index:4;display:flex;background:rgba(10,16,28,0.82);border:1px solid var(--border2);border-radius:6px;overflow:hidden;backdrop-filter:blur(4px)"><button id="map-mode-airports" onclick="setMapMode('airports')" style="padding:4px 12px;font-size:11px;font-weight:600;cursor:pointer;border:none;background:var(--accent);color:#fff;font-family:var(--body)">Airports</button><button id="map-mode-routes" onclick="setMapMode('routes')" style="padding:4px 12px;font-size:11px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--muted2);font-family:var(--body)">Routes</button></div><div style="position:absolute;bottom:10px;right:10px;z-index:2;display:flex;flex-direction:column;gap:4px"><button onclick="mapZoomBtn(1.5)" style="width:30px;height:30px;border-radius:6px;border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-size:18px;cursor:pointer;line-height:1;opacity:.85">+</button><button onclick="mapZoomBtn(1/1.5)" style="width:30px;height:30px;border-radius:6px;border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-size:18px;cursor:pointer;line-height:1;opacity:.85">−</button></div></div>
       <div style="display:flex;justify-content:space-between;margin-top:7px;flex-wrap:wrap;gap:5px">
         <span style="font-size:11px;color:var(--muted)">Drag to pan &nbsp;·&nbsp; Ctrl/⌘ + scroll to zoom &nbsp;·&nbsp; Click a route or airport for details</span>
         <span id="map-summary" style="font-family:var(--mono);font-size:11px;color:var(--muted2)"></span>
@@ -1042,7 +1053,7 @@ body.light .ac-tile-top{background:linear-gradient(135deg,#dce8f4,#ccdaec)}
   </div>
   <div class="page-hd" style="padding-top:20px">
     <div class="page-title">Settings</div>
-    <div style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:2px">AeroTrack v1.07.3.2</div>
+    <div style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:2px">AeroTrack v1.07.3.3</div>
     <div class="page-sub">App preferences and data management</div>
   </div>
   <div style="padding:0 28px 40px;max-width:640px">
@@ -3444,6 +3455,7 @@ function initMap(){
   const initMercY=initScale*Math.log(Math.tan(Math.PI/4+20*Math.PI/360));
   mt={x:0,y:initMercY,k:1};
   sizeMap();
+  _applyMapMode();
   if(!mgeo)loadGeo();else drawMap();
   if(a.airportData){mcodes=a.airportData;renderChips();updMeta();document.getElementById('map-clear-btn').style.display='';}
   else{mcodes=null;renderChips();document.getElementById('map-clear-btn').style.display='none';['map-count','map-summary'].forEach(id=>document.getElementById(id).textContent='');}
@@ -3462,6 +3474,158 @@ function sizeMap(){
   const mercY=Math.log(Math.tan(Math.PI/4+20*Math.PI/360))*(W/6.28);
   mproj=d3.geoMercator().scale(W/6.28).translate([W/2,-mercY+H/2]);
   mpath=d3.geoPath(mproj,mctx);
+  if(_mlMap)_mlMap.resize();
+}
+
+// ── MapLibre GL map — primary renderer (Dark + Esri Satellite; overlays ported) ─
+// MapLibre is the default map. The classic canvas renderer stays dormant as a
+// fallback (🛰 toggle, bottom-left). Basemaps swap via layer VISIBILITY (both are
+// loaded in one style) so switching never resets the camera or drops overlays.
+let _mlMap=null,_mlAcMarker=null,_mlPopup=null,_mlOverlaysReady=false;
+// basemap is 'map' (theme-aware dark/light tiles) or 'satellite'
+let _mlBasemap=localStorage.getItem('at_ml_basemap')==='satellite'?'satellite':'map';
+let _mlEnabled=(typeof maplibregl!=='undefined'); // on by default; false only if the lib failed to load
+const _ML_BASEMAPS={
+  dark:{tiles:['https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png','https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png','https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'],attribution:'© OpenStreetMap contributors © CARTO',maxzoom:20},
+  light:{tiles:['https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png','https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png','https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png'],attribution:'© OpenStreetMap contributors © CARTO',maxzoom:20},
+  satellite:{tiles:['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],attribution:'Imagery © Esri, Maxar, Earthstar Geographics',maxzoom:19}
+};
+function _hexToRgb(h){h=(h||'').trim().replace('#','');if(h.length===3)h=h.split('').map(c=>c+c).join('');const n=parseInt(h||'3b9eff',16);return[(n>>16)&255,(n>>8)&255,n&255];}
+function _mlThemeLight(){return document.body.classList.contains('light');}
+// Tiles for the current choice: 'satellite' → Esri imagery; otherwise theme-aware CARTO.
+function _mlCurrentTiles(){
+  if(_mlBasemap==='satellite')return _ML_BASEMAPS.satellite.tiles;
+  return _mlThemeLight()?_ML_BASEMAPS.light.tiles:_ML_BASEMAPS.dark.tiles;
+}
+// ONE raster base source; switching basemaps swaps its tiles in place via
+// setTiles() — no setStyle (which resets camera/overlays) and no fragile
+// multi-layer visibility toggling (which was breaking the switch + leaving
+// stale/pixelated tiles). Overlays are added above 'base'.
+function _mlBgColor(){if(_mlBasemap==='satellite')return '#0b1220';return _mlThemeLight()?'#e9edf1':'#0b1220';}
+function _mlBaseStyle(){
+  return{version:8,glyphs:'https://fonts.openmaptiles.org/{fontstack}/{range}.pbf',
+    sources:{base:{type:'raster',tiles:_mlCurrentTiles(),tileSize:256,minzoom:0,maxzoom:19,attribution:'© OpenStreetMap · CARTO · Imagery © Esri'}},
+    // solid background under the tiles so gaps show a flat colour, not a flash, while tiles stream in
+    layers:[{id:'bg',type:'background',paint:{'background-color':_mlBgColor()}},{id:'base',type:'raster',source:'base',paint:{'raster-fade-duration':120}}]};
+}
+function _mlInit(){
+  if(_mlMap||typeof maplibregl==='undefined')return;
+  const el=document.getElementById('ml-map');if(!el)return;
+  _mlMap=new maplibregl.Map({container:el,style:_mlBaseStyle(),center:[-98,39],zoom:3.2,renderWorldCopies:true,maxTileCacheSize:512,attributionControl:false});
+  _mlMap.scrollZoom.disable(); // zoom only on Ctrl/⌘/Alt + wheel (matches classic map); plain scroll = page scroll
+  // Collapsed ⓘ attribution — required credit stays present, expands on click
+  _mlMap.addControl(new maplibregl.AttributionControl({compact:true}),'bottom-right');
+  _mlMap.addControl(new maplibregl.NavigationControl({showCompass:false}),'bottom-right');
+  _mlMap.on('load',()=>{_mlAddOverlays();_mlSync();_mlFit();});
+}
+function _mlAddOverlays(){
+  if(!_mlMap)return;const m=_mlMap;
+  const src=id=>{if(!m.getSource(id))m.addSource(id,{type:'geojson',data:{type:'FeatureCollection',features:[]}});};
+  ['at-routes','at-track','at-airports','at-dep'].forEach(src);
+  if(!m.getLayer('at-routes-l'))m.addLayer({id:'at-routes-l',type:'line',source:'at-routes',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':['get','color'],'line-width':['get','w'],'line-opacity':0.85}});
+  if(!m.getLayer('at-track-l'))m.addLayer({id:'at-track-l',type:'line',source:'at-track',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':['get','color'],'line-width':1.8}});
+  if(!m.getLayer('at-airports-c'))m.addLayer({id:'at-airports-c',type:'circle',source:'at-airports',paint:{'circle-radius':5,'circle-color':'rgba(160,175,195,0.9)','circle-stroke-color':'rgba(255,255,255,0.35)','circle-stroke-width':1.2}});
+  if(!m.getLayer('at-airports-t'))m.addLayer({id:'at-airports-t',type:'symbol',source:'at-airports',minzoom:6,layout:{'text-field':['get','code'],'text-size':11,'text-offset':[0,1.2],'text-anchor':'top','text-font':['Noto Sans Regular']},paint:{'text-color':'#fff','text-halo-color':'rgba(0,0,0,0.75)','text-halo-width':1}});
+  if(!m.getLayer('at-dep-c'))m.addLayer({id:'at-dep-c',type:'circle',source:'at-dep',paint:{'circle-radius':5,'circle-color':_getAccentHex(),'circle-stroke-color':'rgba(255,255,255,0.85)','circle-stroke-width':1.5}});
+  if(!_mlOverlaysReady){_mlWireHover();_mlOverlaysReady=true;}
+}
+function _mlWireHover(){
+  const m=_mlMap;_mlPopup=new maplibregl.Popup({closeButton:false,closeOnClick:false,className:'ml-tip',offset:10});
+  m.on('mouseenter','at-airports-c',()=>{m.getCanvas().style.cursor='pointer';});
+  m.on('mousemove','at-airports-c',e=>{const f=e.features&&e.features[0];if(!f)return;const p=f.properties;_mlPopup.setLngLat(f.geometry.coordinates.slice()).setHTML('<b>'+p.code+'</b>'+(p.name?'<br>'+p.name:'')).addTo(m);});
+  m.on('mouseleave','at-airports-c',()=>{m.getCanvas().style.cursor='';if(_mlPopup)_mlPopup.remove();});
+}
+function _mlApplyBase(){
+  const s=_mlMap&&_mlMap.getSource('base');
+  if(s&&s.setTiles)s.setTiles(_mlCurrentTiles());
+  if(_mlMap&&_mlMap.getLayer('bg'))_mlMap.setPaintProperty('bg','background-color',_mlBgColor());
+  document.querySelectorAll('[data-ml-base]').forEach(b=>{const on=b.getAttribute('data-ml-base')===_mlBasemap;b.style.background=on?'var(--accent)':'transparent';b.style.color=on?'#fff':'var(--muted2)';});
+}
+function _mlSetBasemap(name){
+  if(name!=='map'&&name!=='satellite')return;
+  _mlBasemap=name;localStorage.setItem('at_ml_basemap',name);
+  _mlApplyBase();
+}
+function _mlSync(){
+  if(!_mlMap||!_mlMap.isStyleLoaded())return;
+  try{_mlSyncAirports();_mlSyncRoutes();_mlSyncAdsb();_mlApplyModeVis();}catch(e){console.warn('[ML] sync failed:',e.message);}
+}
+function _mlSyncAirports(){
+  const s=_mlMap.getSource('at-airports');if(!s)return;const f=[];
+  if(mcodes){for(const code of Object.keys(mcodes)){const ap=apLookup(code);if(!ap)continue;f.push({type:'Feature',geometry:{type:'Point',coordinates:[ap.o,ap.a]},properties:{code,name:ap.n||''}});}}
+  s.setData({type:'FeatureCollection',features:f});
+}
+function _mlSyncRoutes(){
+  const s=_mlMap.getSource('at-routes');if(!s)return;const f=[];const accent=_getAccentHex();
+  const all=(typeof _getAllRoutes==='function')?_getAllRoutes():[];
+  const rm=(typeof _buildRouteMap==='function')?_buildRouteMap(all):{};
+  const maxFreq=Math.max(1,...Object.values(rm).map(v=>v.length));
+  for(const[key,entries]of Object.entries(rm)){const[a,b]=key.split('|');const A=apLookup(a),B=apLookup(b);if(!A||!B)continue;
+    const interp=d3.geoInterpolate([A.o,A.a],[B.o,B.a]);const coords=[];for(let i=0;i<=32;i++)coords.push(interp(i/32));
+    f.push({type:'Feature',geometry:{type:'LineString',coordinates:coords},properties:{color:accent,w:1+3*(entries.length/maxFreq)}});}
+  s.setData({type:'FeatureCollection',features:f});
+}
+function _mlSyncAdsb(){
+  const ts=_mlMap.getSource('at-track'),ds=_mlMap.getSource('at-dep');if(!ts||!ds)return;
+  const tf=[];let dep=null;
+  if(_adsbLast&&!_adsbLast.on_ground&&_adsbTrack.length>1){
+    let aMin=Infinity,aMax=-Infinity;for(const p of _adsbTrack){if(p.alt<aMin)aMin=p.alt;if(p.alt>aMax)aMax=p.alt;}
+    const span=aMax-aMin;const[r,g,b]=_hexToRgb(_getAccentHex());
+    for(let i=1;i<_adsbTrack.length;i++){const p0=_adsbTrack[i-1],p1=_adsbTrack[i];const a=span>0?0.25+0.7*((p1.alt-aMin)/span):0.85;
+      tf.push({type:'Feature',geometry:{type:'LineString',coordinates:[[p0.lon,p0.lat],[p1.lon,p1.lat]]},properties:{color:'rgba('+r+','+g+','+b+','+a.toFixed(3)+')'}});}
+    // connect the last recorded point to the live position so the trail reaches
+    // the centre of the aircraft symbol instead of stopping short under the ring
+    const lp=_adsbTrack[_adsbTrack.length-1];
+    if(lp&&_adsbLast.lon!=null&&_adsbLast.lat!=null){const dlon=+_adsbLast.lon,dlat=+_adsbLast.lat;
+      if(Math.abs(lp.lon-dlon)>1e-7||Math.abs(lp.lat-dlat)>1e-7){const a=span>0?0.25+0.7*((lp.alt-aMin)/span):0.85;
+        tf.push({type:'Feature',geometry:{type:'LineString',coordinates:[[lp.lon,lp.lat],[dlon,dlat]]},properties:{color:'rgba('+r+','+g+','+b+','+a.toFixed(3)+')'}});}}
+    const d0=_adsbTrack[0];dep={type:'Feature',geometry:{type:'Point',coordinates:[d0.lon,d0.lat]},properties:{}};
+  }
+  ts.setData({type:'FeatureCollection',features:tf});
+  ds.setData({type:'FeatureCollection',features:dep?[dep]:[]});
+  _mlSyncAircraft();
+}
+function _mlSyncAircraft(){
+  if(!_mlMap)return;
+  if(!_adsbLast||_adsbLast.lat==null||_adsbLast.lon==null){if(_mlAcMarker){_mlAcMarker.remove();_mlAcMarker=null;}return;}
+  const accent=_getAccentHex(),onG=!!_adsbLast.on_ground,trk=parseFloat(_adsbLast.track)||0;
+  if(!_mlAcMarker){const el=document.createElement('div');el.className='ml-ac';
+    el.innerHTML='<div class="ml-ac-ring"></div><svg viewBox="0 0 100 100" width="30" height="30"><path d="M50,2 C46,2 44,5 44,14 L41,36 L4,54 L4,63 L41,55 L42,74 L32,79 L32,86 L50,81 L68,86 L68,79 L58,74 L59,55 L96,63 L96,54 L59,36 L56,14 C56,5 54,2 50,2Z"/></svg>';
+    el.style.pointerEvents='auto';el.style.cursor='pointer';el.title='Show flight data';
+    el.addEventListener('click',ev=>{ev.stopPropagation();if(typeof _openAdsbPopup==='function')_openAdsbPopup();});
+    _mlAcMarker=new maplibregl.Marker({element:el}).setLngLat([+_adsbLast.lon,+_adsbLast.lat]).addTo(_mlMap);}
+  _mlAcMarker.setLngLat([+_adsbLast.lon,+_adsbLast.lat]);
+  const el=_mlAcMarker.getElement(),svg=el.querySelector('svg'),ring=el.querySelector('.ml-ac-ring');
+  if(svg){svg.style.transform='rotate('+trk+'deg)';const pth=svg.querySelector('path');if(pth)pth.setAttribute('fill',onG?'#94a3b8':accent);}
+  if(ring){ring.style.borderColor=accent;ring.style.display=onG?'none':'block';}
+}
+function _mlApplyModeVis(){
+  if(!_mlMap)return;const routes=_mapMode==='routes';
+  const v=(id,on)=>{if(_mlMap.getLayer(id))_mlMap.setLayoutProperty(id,'visibility',on?'visible':'none');};
+  v('at-routes-l',routes);v('at-airports-c',!routes);v('at-airports-t',!routes);
+}
+function _mlFit(){
+  if(!_mlMap)return;
+  if(_adsbLast&&_adsbLast.lat!=null&&_adsbLast.lon!=null){_mlMap.jumpTo({center:[+_adsbLast.lon,+_adsbLast.lat],zoom:7});return;}
+  const pts=[];if(mcodes){for(const c of Object.keys(mcodes)){const ap=apLookup(c);if(ap)pts.push([ap.o,ap.a]);}}
+  if(pts.length>=2){const lo=pts.map(p=>p[0]),la=pts.map(p=>p[1]);try{_mlMap.fitBounds([[Math.min(...lo),Math.min(...la)],[Math.max(...lo),Math.max(...la)]],{padding:50,maxZoom:8,duration:0});}catch(e){}return;}
+  if(pts.length===1){_mlMap.jumpTo({center:pts[0],zoom:8});return;}
+  _mlMap.jumpTo({center:[-98,39],zoom:3.2});
+}
+function _applyMapMode(){
+  const ml=document.getElementById('ml-map'),sw=document.getElementById('ml-switcher');
+  if(!ml)return;
+  if(typeof maplibregl==='undefined')_mlEnabled=false; // CDN blocked → classic fallback
+  if(_mlEnabled){
+    try{_mlInit();}catch(err){console.warn('[ML] init failed, falling back to classic map:',err&&err.message);_mlEnabled=false;_mlMap=null;}
+  }
+  if(_mlEnabled){
+    ml.style.display='block';if(sw)sw.style.display='flex';
+    requestAnimationFrame(()=>{if(_mlMap){_mlMap.resize();if(_mlMap.isStyleLoaded()){_mlSync();_mlFit();}_mlApplyBase();}});
+  }else{
+    ml.style.display='none';if(sw)sw.style.display='none';
+    drawMap(); // classic canvas fallback
+  }
 }
 async function loadGeo(){
   try{
@@ -3473,6 +3637,8 @@ async function loadGeo(){
 }
 let _drawPending=false;
 function drawMap(){
+  // When MapLibre is the active map, keep its overlays in sync (no camera change).
+  if(_mlEnabled&&_mlMap){try{_mlSync();}catch(e){}}
   if(_drawPending)return;
   _drawPending=true;
   requestAnimationFrame(()=>{_drawPending=false;_drawMapNow();});
@@ -3699,6 +3865,8 @@ document.getElementById('page-scroll').addEventListener('wheel',e=>{
   _userKnowsZoom=true;_hideScrollHint();
   const px=e.clientX-rc.left,py=e.clientY-rc.top;
   const raw=(Math.abs(e.deltaY)>Math.abs(e.deltaX)?e.deltaY:e.deltaX)*(e.deltaMode===1?16:e.deltaMode===2?100:1);
+  // MapLibre active → zoom it around the cursor, matching the classic feel, then stop
+  if(_mlEnabled&&_mlMap){const around=_mlMap.unproject([px,py]);_mlMap.easeTo({zoom:_mlMap.getZoom()-Math.max(-100,Math.min(100,raw))*0.0025,around,duration:0});return;}
   const f=Math.pow(0.999,Math.max(-100,Math.min(100,raw)));
   const nk=Math.max(0.4,Math.min(3000,mt.k*f));
   mt.x=px-(px-mt.x)*(nk/mt.k);mt.y=py-(py-mt.y)*(nk/mt.k);mt.k=nk;
@@ -5200,6 +5368,8 @@ function applyTheme(theme,save){
     localStorage.setItem('at_theme',theme);
     if(_supabase&&_authUser)_supabase.auth.updateUser({data:{at_theme:theme}}).catch(()=>{});
   }
+  // keep the MapLibre base tiles in step with the app theme (dark ⇄ light)
+  if(typeof _mlApplyBase==='function'&&_mlMap){_mlApplyBase();_mlSync();}
 }
 
 function setAccent(name){applyAccent(name,true);}
@@ -5750,12 +5920,15 @@ function _closeAdsbPopup(){
   const p=document.getElementById('adsb-map-popup');
   if(p)p.classList.remove('open');
   _adsbPopupOpen=false;
+  const sw=document.getElementById('ml-switcher');if(sw)sw.style.left='10px';
 }
 function _openAdsbPopup(){
   if(!_adsbLast)return;
   _fillAdsbPanel();
   _getOrCreateAdsbPanel().classList.add('open');
   _adsbPopupOpen=true;
+  // slide the Map/Satellite toggle right so the 190px panel doesn't cover it
+  const sw=document.getElementById('ml-switcher');if(sw)sw.style.left='200px';
 }
 function _fillAdsbPanel(){
   const panel=_getOrCreateAdsbPanel();
