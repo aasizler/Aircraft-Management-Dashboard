@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AeroTrack v1.07.3.4</title>
+<title>AeroTrack v1.07.3.5</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='11' fill='none' stroke='%23a3e635' stroke-width='4'/></svg>">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- MapLibre GL (Phase 1 map migration — beta, behind a flag) -->
@@ -52,7 +52,7 @@ html,body{height:100%}
 .page-title{font-family:var(--display);font-size:26px;font-weight:800}
 .page-sub{font-size:12px;color:var(--muted);margin-top:3px}
 /* HERO */
-.hero-banner{margin:0 28px;background:var(--bg2);border:1px solid var(--border2);border-radius:12px 12px 0 0;padding:14px 22px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.hero-banner{margin:0 28px;background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:14px 22px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
 .hero-reg-sm{font-family:var(--body);font-size:22px;font-weight:800;letter-spacing:.06em;white-space:nowrap}
 .hero-divider{width:1px;height:26px;background:var(--border2);flex-shrink:0}
 .hero-model-sm{font-size:12px;color:var(--muted2)}
@@ -63,14 +63,6 @@ html,body{height:100%}
 .last-sync{font-size:11px;color:var(--muted2);margin-left:auto;white-space:nowrap}
 .hero-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(74,158,255,.08);border:1px solid rgba(74,158,255,.2);color:var(--accent);font-size:10px;font-weight:600;padding:4px 10px;border-radius:20px;font-family:var(--mono);white-space:nowrap}
 .hero-badge.shared{background:rgba(45,212,160,.08);border-color:rgba(45,212,160,.2);color:var(--ok)}
-/* SYNC BANNER */
-.sync-banner{margin:0 28px;background:var(--bg3);border:1px solid var(--border2);border-top:none;border-radius:0 0 14px 14px;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
-.sync-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px}
-.sync-sub{font-size:11px;color:var(--muted)}
-.sync-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
-.svc-chip{font-size:11px;background:var(--bg4);border:1px solid var(--border2);color:var(--muted2);padding:3px 10px;border-radius:20px;font-family:var(--mono)}
-.sync-pill{display:inline-flex;align-items:center;gap:5px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);color:var(--warn);font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;font-family:var(--mono)}
-.sync-pill-dot{width:5px;height:5px;border-radius:50%;background:var(--warn)}
 /* TABS */
 .tabs{display:flex;padding:0 28px;border-bottom:1px solid var(--border2);margin-top:22px;overflow-x:auto}
 .tab{padding:12px 20px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all .15s}
@@ -121,7 +113,15 @@ html,body{height:100%}
 .nc-lbl{font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-family:var(--mono);color:var(--muted)}
 .nc-name{font-family:var(--display);font-size:22px;font-weight:800;margin-top:6px}
 .nc-sub{font-size:12px;color:var(--muted2);margin-top:4px}
-.nc-pct{font-family:var(--display);font-size:30px;font-weight:800;line-height:1}
+.nc-pct-col{display:flex;flex-direction:column;align-items:flex-end}
+.nc-pct-row{display:flex;align-items:baseline;gap:6px}
+/* Number + unit word share ONE font/size/weight so "60 Days" reads as a single
+   uniform phrase. Both use --body (Inter), not --display (Syne) — Syne's
+   stylized lowercase letterforms don't match its digit proportions even at
+   the same px size, which is what caused the mismatched look to begin with. */
+.nc-pct-num{font-family:var(--body);font-size:26px;font-weight:800;line-height:1;white-space:nowrap}
+.nc-pct-unit{font-family:var(--body);font-size:26px;font-weight:800;line-height:1;white-space:nowrap}
+.nc-pct-foot{font-size:9px;letter-spacing:.09em;text-transform:uppercase;font-family:var(--mono);color:var(--muted);margin-top:4px}
 .nc-bar{position:relative;height:8px;border-radius:6px;background:var(--bg4);margin-top:16px;overflow:hidden}
 .nc-bar>i{position:absolute;left:0;top:0;bottom:0;border-radius:6px;transition:width .6s ease}
 .status-card{position:relative;overflow:hidden;border-radius:14px;border:1px solid var(--border2);padding:18px 22px;margin-bottom:18px;background:linear-gradient(135deg,var(--bg2),var(--bg3));display:flex;align-items:center;gap:16px}
@@ -129,11 +129,18 @@ html,body{height:100%}
 .sc-icon{font-size:26px;flex-shrink:0;position:relative;line-height:1}
 .sc-title{font-family:var(--display);font-size:20px;font-weight:800;position:relative;line-height:1.1}
 .sc-sub{font-size:12px;color:var(--muted2);line-height:1.5;margin-top:4px;position:relative}
-.dash-quick{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:4px}
+.dash-live-chip{display:flex;align-items:center;gap:10px;margin:10px 0 4px;padding:10px 14px;border-radius:10px;background:var(--accent-dim);border:1px solid rgba(74,158,255,.25);cursor:pointer;transition:border-color .15s}
+.dash-live-chip:hover{border-color:var(--accent)}
+.dash-live-dot{width:9px;height:9px;border-radius:50%;background:var(--accent);flex-shrink:0;box-shadow:0 0 0 0 rgba(74,158,255,.5);animation:dashLivePulse 1.8s infinite}
+@keyframes dashLivePulse{0%{box-shadow:0 0 0 0 rgba(74,158,255,.5)}70%{box-shadow:0 0 0 7px rgba(74,158,255,0)}100%{box-shadow:0 0 0 0 rgba(74,158,255,0)}}
+.dash-live-txt{font-size:13px;font-weight:700;color:var(--accent);font-family:var(--body)}
+.dash-live-sub{font-size:12px;color:var(--muted3);font-family:var(--mono)}
+.dash-live-go{margin-left:auto;font-size:11px;font-weight:600;color:var(--accent);font-family:var(--mono);white-space:nowrap}
+.dash-quick{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:4px}
 .dash-qbtn{display:flex;align-items:center;justify-content:center;gap:8px;padding:13px;border-radius:11px;background:linear-gradient(160deg,var(--bg2),var(--bg3));border:1px solid var(--border2);color:var(--muted3);font-family:var(--body);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s}
 .dash-qbtn:hover{border-color:var(--accent);color:var(--accent)}
 .dash-qbtn .qi{font-size:15px}
-.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
 @media(max-width:720px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.dash-quick{grid-template-columns:1fr}}
 .kpi{position:relative;background:linear-gradient(160deg,var(--bg2),var(--bg3));border:1px solid var(--border2);border-radius:12px;padding:15px 16px;cursor:pointer;transition:transform .15s,border-color .15s;overflow:hidden}
 .kpi:hover{transform:translateY(-2px);border-color:var(--border3)}
@@ -570,17 +577,6 @@ body.light .ac-tile-top{background:linear-gradient(135deg,#dce8f4,#ccdaec)}
     <div class="last-sync" id="hero-sync"></div>
     <div id="hero-right"></div>
   </div>
-  <div class="sync-banner">
-    <div>
-      <div class="sync-title">Live Data Integration</div>
-      <div class="sync-sub">Connect Vref to your avionics ecosystem for automatic flight data sync.</div>
-      <div class="sync-chips"><span class="svc-chip">AirSync</span><span class="svc-chip">ForeFlight</span><span class="svc-chip">Garmin Pilot</span><span class="svc-chip">CloudAhoy</span><span class="svc-chip">More coming...</span></div>
-    </div>
-    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
-      <div class="sync-pill"><div class="sync-pill-dot"></div>Integration Pending</div>
-      <button class="btn sm">Request Early Access</button>
-    </div>
-  </div>
   <div id="adsb-live-banner" style="display:none"></div>
   <div class="tabs">
     <div class="tab active" onclick="showTab('dashboard',this)">Dashboard</div>
@@ -597,11 +593,13 @@ body.light .ac-tile-top{background:linear-gradient(135deg,#dce8f4,#ccdaec)}
   <div id="tab-dashboard" class="tab-content active">
     <div style="padding-top:16px">
       <div id="dash-ribbon"></div>
+      <div id="dash-live" style="display:none"></div>
       <div id="dash-nextdue"></div>
       <div class="dash-quick">
         <button class="dash-qbtn" onclick="openFlightModal()"><span class="qi">&#9992;&#65039;</span>Log Flight</button>
         <button class="dash-qbtn" onclick="openSquawkModal()"><span class="qi">&#9888;&#65039;</span>Add Squawk</button>
-        <button class="dash-qbtn" onclick="openOilModal()"><span class="qi">&#128738;</span>Log Oil</button>
+        <button class="dash-qbtn" onclick="openOilModal('add')"><span class="qi">&#128738;</span>Log Oil</button>
+        <button class="dash-qbtn" onclick="openOilModal('change')"><span class="qi">&#128295;</span>Oil Change</button>
       </div>
       <div class="dash-sec-h"><span>Needs Attention</span><span class="sec-note" id="dash-all-clear"></span></div>
       <div class="alert-feed" id="dash-alerts"></div>
@@ -623,7 +621,7 @@ body.light .ac-tile-top{background:linear-gradient(135deg,#dce8f4,#ccdaec)}
     <div class="stat-row" id="oil-stats"></div>
     <div class="two-col">
       <div class="panel"><div class="panel-title">Monthly Oil Consumption (quarts)</div><canvas id="oil-canvas" class="chart"></canvas></div>
-      <div class="panel"><div class="panel-title">Recent Log</div><ul class="log-list" id="oil-log"></ul><button class="btn" style="margin-top:12px;width:100%" onclick="openOilModal()">Log Oil Addition</button></div>
+      <div class="panel"><div class="panel-title">Recent Log</div><ul class="log-list" id="oil-log"></ul><div style="display:flex;gap:8px;margin-top:12px"><button class="btn" style="flex:1" onclick="openOilModal('add')">Log Oil Addition</button><button class="btn" style="flex:1" onclick="openOilModal('change')">Log Oil Change</button></div></div>
     </div>
   </div>
 
@@ -699,7 +697,7 @@ body.light .ac-tile-top{background:linear-gradient(135deg,#dce8f4,#ccdaec)}
         </div>
       </div>
       <div class="how-box"><b>Import from ForeFlight:</b> foreflight.com &rarr; Logbook &rarr; Export &rarr; Export CSV. Reads the exact ForeFlight format and maps every airport flown in <span id="map-hint" style="font-family:var(--mono);color:var(--accent);font-weight:700"></span>. Manual flights logged via <b>Log Flight</b> also appear on the Routes view.</div>
-      <div id="map-canvas-wrap" style="position:relative;cursor:grab"><canvas id="map-canvas" style="display:block;cursor:inherit"></canvas><div id="ml-map" style="position:absolute;inset:0;z-index:3;display:none"></div><div id="ml-switcher" style="position:absolute;top:10px;left:10px;z-index:4;display:none;gap:4px;transition:left .22s cubic-bezier(.4,0,.2,1);background:rgba(10,16,28,0.82);border:1px solid var(--border2);border-radius:6px;overflow:hidden;backdrop-filter:blur(4px)"><button data-ml-base="map" onclick="_mlSetBasemap('map')" style="padding:4px 12px;font-size:11px;font-weight:600;cursor:pointer;border:none;background:var(--accent);color:#fff;font-family:var(--body)">Map</button><button data-ml-base="satellite" onclick="_mlSetBasemap('satellite')" style="padding:4px 12px;font-size:11px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--muted2);font-family:var(--body)">Satellite</button></div><div id="map-wheel-overlay" style="position:absolute;inset:0;z-index:1;cursor:inherit"></div><div style="position:absolute;top:10px;right:10px;z-index:4;display:flex;background:rgba(10,16,28,0.82);border:1px solid var(--border2);border-radius:6px;overflow:hidden;backdrop-filter:blur(4px)"><button id="map-mode-airports" onclick="setMapMode('airports')" style="padding:4px 12px;font-size:11px;font-weight:600;cursor:pointer;border:none;background:var(--accent);color:#fff;font-family:var(--body)">Airports</button><button id="map-mode-routes" onclick="setMapMode('routes')" style="padding:4px 12px;font-size:11px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--muted2);font-family:var(--body)">Routes</button></div><div style="position:absolute;bottom:10px;right:10px;z-index:2;display:flex;flex-direction:column;gap:4px"><button onclick="mapZoomBtn(1.5)" style="width:30px;height:30px;border-radius:6px;border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-size:18px;cursor:pointer;line-height:1;opacity:.85">+</button><button onclick="mapZoomBtn(1/1.5)" style="width:30px;height:30px;border-radius:6px;border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-size:18px;cursor:pointer;line-height:1;opacity:.85">−</button></div></div>
+      <div id="map-canvas-wrap" style="position:relative;cursor:grab"><canvas id="map-canvas" style="display:block;cursor:inherit"></canvas><div id="ml-map" style="position:absolute;inset:0;z-index:3;display:none"></div><div id="ml-switcher" style="position:absolute;top:10px;left:10px;z-index:4;display:none;gap:4px;transition:left .22s cubic-bezier(.4,0,.2,1);background:rgba(10,16,28,0.82);border:1px solid var(--border2);border-radius:6px;overflow:hidden;backdrop-filter:blur(4px)"><button data-ml-base="map" onclick="_mlSetBasemap('map')" style="padding:4px 12px;font-size:11px;font-weight:600;cursor:pointer;border:none;background:var(--accent);color:#fff;font-family:var(--body)">Map</button><button data-ml-base="satellite" onclick="_mlSetBasemap('satellite')" style="padding:4px 12px;font-size:11px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--muted2);font-family:var(--body)">Satellite</button></div><div id="map-wheel-overlay" style="position:absolute;inset:0;z-index:1;cursor:inherit"></div><div style="position:absolute;top:10px;right:10px;z-index:4;display:flex;background:rgba(10,16,28,0.82);border:1px solid var(--border2);border-radius:6px;overflow:hidden;backdrop-filter:blur(4px)"><button id="map-mode-airports" onclick="setMapMode('airports')" style="padding:4px 12px;font-size:11px;font-weight:600;cursor:pointer;border:none;background:var(--accent);color:#fff;font-family:var(--body)">Airports</button><button id="map-mode-routes" onclick="setMapMode('routes')" style="padding:4px 12px;font-size:11px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--muted2);font-family:var(--body)">Routes</button></div><div style="position:absolute;bottom:10px;right:10px;z-index:2;display:flex;flex-direction:column;gap:4px"><button onclick="mapZoomBtn(1.5)" style="width:30px;height:30px;border-radius:6px;border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-size:18px;cursor:pointer;line-height:1;opacity:.85">+</button><button onclick="mapZoomBtn(1/1.5)" style="width:30px;height:30px;border-radius:6px;border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-size:18px;cursor:pointer;line-height:1;opacity:.85">−</button></div><button id="ml-lastflight-btn" onclick="_mlToggleLastFlight()" style="position:absolute;bottom:10px;left:10px;z-index:4;display:none;align-items:center;gap:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border2);border-radius:6px;background:rgba(10,16,28,0.82);color:var(--muted2);font-family:var(--body);backdrop-filter:blur(4px)"><span style="font-size:12px">&#9992;&#65039;</span><span id="ml-lastflight-lbl">Last Flight</span></button></div>
       <div style="display:flex;justify-content:space-between;margin-top:7px;flex-wrap:wrap;gap:5px">
         <span style="font-size:11px;color:var(--muted)">Drag to pan &nbsp;·&nbsp; Ctrl/⌘ + scroll to zoom &nbsp;·&nbsp; Click a route or airport for details</span>
         <span id="map-summary" style="font-family:var(--mono);font-size:11px;color:var(--muted2)"></span>
@@ -1019,14 +1017,6 @@ body.light .ac-tile-top{background:linear-gradient(135deg,#dce8f4,#ccdaec)}
     <!-- Flight log entries on this route -->
     <div style="font-size:10px;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">Flight Log Entries</div>
     <div id="route-detail-flights" style="margin-bottom:18px"></div>
-    <!-- ADS-B placeholder -->
-    <div style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:14px;margin-bottom:6px">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-        <span style="font-size:11px;font-weight:700;color:var(--muted3);text-transform:uppercase;letter-spacing:.07em;font-family:var(--mono)">ADS-B Telemetry</span>
-        <span style="font-size:9px;background:var(--bg4);border:1px solid var(--border2);color:var(--muted);padding:2px 7px;border-radius:3px;font-family:var(--mono)">COMING SOON</span>
-      </div>
-      <div style="font-size:11px;color:var(--muted2);line-height:1.6">Live and historical flight tracks, altitude profiles, and ground speed data will appear here once ADS-B integration is enabled.</div>
-    </div>
     <div class="form-actions"><button class="btn-cancel" onclick="closeModal('route-detail')">Close</button></div>
   </div>
 </div>
@@ -1053,7 +1043,7 @@ body.light .ac-tile-top{background:linear-gradient(135deg,#dce8f4,#ccdaec)}
   </div>
   <div class="page-hd" style="padding-top:20px">
     <div class="page-title">Settings</div>
-    <div style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:2px">AeroTrack v1.07.3.4</div>
+    <div style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:2px">AeroTrack v1.07.3.5</div>
     <div class="page-sub">App preferences and data management</div>
   </div>
   <div style="padding:0 28px 40px;max-width:640px">
@@ -1253,13 +1243,14 @@ body.light .ac-tile-top{background:linear-gradient(135deg,#dce8f4,#ccdaec)}
       <div id="m-engine-resolved" style="display:none;background:var(--accent-dim);border:1px solid rgba(74,158,255,.2);border-radius:6px;padding:6px 10px;margin-top:6px;font-size:11px;color:var(--accent);font-family:var(--mono)"></div>
     </div>
     <div class="form-grid"><div class="form-row"><label>Total Airframe Hours</label><input id="m-tt" type="number" placeholder="1243"></div><div class="form-row"><label>Engine SMOH Hours</label><input id="m-eng" type="number" placeholder="441"></div></div>
-    <div class="form-grid"><div class="form-row"><label>Engine TBO (hrs)</label><input id="m-tbo" type="number" placeholder="1700"><div style="font-size:10px;color:var(--muted2);margin-top:4px">Auto-filled from engine type — adjust as needed</div></div><div class="form-row"><label>Home Airport</label>
+    <div class="form-grid"><div class="form-row"><label>Engine TBO (hrs)</label><input id="m-tbo" type="number" placeholder="1700"><div style="font-size:10px;color:var(--muted2);margin-top:4px">Auto-filled from engine type — adjust as needed</div></div><div class="form-row"><label>Oil Change Interval (hrs)</label><input id="m-oilint" type="number" placeholder="50"></div></div>
+    <div class="form-row"><label>Home Airport</label>
       <div class="ac-wrap">
         <input id="m-airport" placeholder="ICAO code (e.g. KPIE)" autocomplete="off" oninput="acAirport(this,'m-airport-drop','m-airport-resolved')" onkeydown="acKey(event,'m-airport-drop')">
         <div class="ac-dropdown" id="m-airport-drop"></div>
       </div>
       <div class="airport-resolved" id="m-airport-resolved"></div>
-    </div></div>
+    </div>
     <div id="m-err" style="display:none;font-size:12px;color:var(--danger);font-family:var(--mono);margin-top:10px"></div>
     <div class="form-actions"><button class="btn-cancel" onclick="closeModal('add-aircraft')">Cancel</button><button class="btn-save" onclick="saveAircraft()">Add Aircraft</button></div>
   </div>
@@ -1281,13 +1272,14 @@ body.light .ac-tile-top{background:linear-gradient(135deg,#dce8f4,#ccdaec)}
       <div id="s-engine-resolved" style="display:none;background:var(--accent-dim);border:1px solid rgba(74,158,255,.2);border-radius:6px;padding:6px 10px;margin-top:6px;font-size:11px;color:var(--accent);font-family:var(--mono)"></div>
     </div>
     <div class="form-grid"><div class="form-row"><label>Total Airframe Hours</label><input id="s-tt" type="number"></div><div class="form-row"><label>Engine SMOH Hours</label><input id="s-eng" type="number"></div></div>
-    <div class="form-grid"><div class="form-row"><label>Engine TBO (hrs)</label><input id="s-tbo" type="number"><div style="font-size:10px;color:var(--muted2);margin-top:4px">Adjust as needed</div></div><div class="form-row"><label>Home Airport</label>
+    <div class="form-grid"><div class="form-row"><label>Engine TBO (hrs)</label><input id="s-tbo" type="number"><div style="font-size:10px;color:var(--muted2);margin-top:4px">Adjust as needed</div></div><div class="form-row"><label>Oil Change Interval (hrs)</label><input id="s-oilint" type="number" placeholder="50"></div></div>
+    <div class="form-row"><label>Home Airport</label>
       <div class="ac-wrap">
         <input id="s-airport" placeholder="ICAO code (e.g. KVDF)" autocomplete="off" oninput="acAirport(this,'s-airport-drop','s-airport-resolved')" onkeydown="acKey(event,'s-airport-drop')">
         <div class="ac-dropdown" id="s-airport-drop"></div>
       </div>
       <div class="airport-resolved" id="s-airport-resolved"></div>
-    </div></div>
+    </div>
     <div class="form-actions"><button class="btn-cancel" onclick="closeModal('settings')">Cancel</button><button class="btn-save" onclick="saveSettings()">Save Changes</button></div>
   </div>
 </div>
@@ -1320,8 +1312,9 @@ body.light .ac-tile-top{background:linear-gradient(135deg,#dce8f4,#ccdaec)}
 </div>
 <div class="modal-overlay" id="modal-oil">
   <div class="modal"><h3 id="oil-title">Log Oil Addition</h3>
-    <div class="form-row"><label>Fluid Type</label><select id="o-type"><option>Engine Oil</option><option>Hydraulic Fluid</option><option>Brake Fluid</option></select></div>
-    <div class="form-grid"><div class="form-row"><label>Quantity (quarts)</label><input id="o-qty" type="number" step=".25" placeholder="1.0"></div><div class="form-row"><label>Date</label><input id="o-date" type="date"></div></div>
+    <div class="form-row"><label>Entry Type</label><select id="o-kind" onchange="oilKindChanged()"><option value="add">Oil Added (top-off)</option><option value="change">Oil Change Performed</option></select></div>
+    <div class="form-row" id="o-type-row"><label>Fluid Type</label><select id="o-type"><option>Engine Oil</option><option>Hydraulic Fluid</option><option>Brake Fluid</option></select></div>
+    <div class="form-grid" id="o-qtydate-grid"><div class="form-row" id="o-qty-row"><label>Quantity (quarts)</label><input id="o-qty" type="number" step=".25" placeholder="1.0"></div><div class="form-row"><label>Date</label><input id="o-date" type="date"></div></div>
     <div class="form-row"><label>Hobbs / Tach Time</label><input id="o-hobbs" type="number" placeholder="1243"></div>
     <div class="form-row"><label>Notes</label><input id="o-notes" placeholder="Grade, brand, etc."></div>
     <div class="form-actions"><button class="btn-cancel" onclick="closeModal('oil')">Cancel</button><button class="btn-save" onclick="saveOil()">Save</button></div>
@@ -1364,7 +1357,7 @@ function makeCoreInspections(){
   return CORE_INSP.map(c=>({...c,lastDate:null,lastHobbs:null,by:null,updatedOn:null,populated:false}));
 }
 
-const SEED=[{id:'ac_default',reg:'N137BF',serial:'E-3999',type:'Beechcraft Bonanza G36',airport:'KPIE — St Pete-Clearwater Intl',tt:1243,hobbs:1243,engineSMOH:441,tbo:1700,lastUpdated:'Updated manually after last flight',shared:false,
+const SEED=[{id:'ac_default',reg:'N137BF',serial:'E-3999',type:'Beechcraft Bonanza G36',airport:'KPIE — St Pete-Clearwater Intl',tt:1243,hobbs:1243,engineSMOH:441,tbo:1700,oilInterval:50,oilHobbs:1221,oilChangeDate:'2026-05-02',lastUpdated:'Updated manually after last flight',shared:false,
   inspections:makeCoreInspections(),
   oil:[],squawks:[
     {id:'sq1',desc:'Nav light right wingtip flickering intermittently at cruise',status:'open',date:'2026-04-28'},
@@ -1407,14 +1400,6 @@ function loadLS(){
   }catch(e){return false;}
 }
 
-
-function updStorage(){
-  try{
-    const kb=Math.round(Object.keys(localStorage).filter(k=>k===LS_KEY||k.startsWith('atd_')).reduce((s,k)=>s+(localStorage.getItem(k)||'').length,0)/1024);
-    document.getElementById('storage-msg').textContent='Local storage active — '+kb+'KB used · data persists across sessions';
-    document.getElementById('storage-dot').className='storage-dot'+(kb>3000?' warn':'');
-  }catch(e){}
-}
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 
@@ -1822,14 +1807,16 @@ function calMonthDue(lastDateStr,intervalDays){
   return lastDayOfMonth(dueYear,dueMonth);
 }
 function ic(i,a){
-  if(!i.lastDate&&!i.populated)return{p:0,s:'ok',nl:'—'};
-  let p=0,nl='',s='ok';const t=Date.now();
+  if(!i.lastDate&&!i.populated)return{p:0,s:'ok',nl:'—',remNum:'—',remUnit:'',remFoot:''};
+  let p=0,nl='',s='ok',remNum='',remUnit='',remFoot='';const t=Date.now();
   const currentHobbs=Math.max(a.hobbs||0,a.tt||0);
   if(i.intervalHrs&&i.lastHobbs!=null){
     const u=currentHobbs-(i.lastHobbs||0);
     p=Math.min(100,u/i.intervalHrs*100);
     const rem=Math.max(0,i.intervalHrs-u);
     nl=(i.lastHobbs+i.intervalHrs).toFixed(0)+' hrs ('+rem.toFixed(0)+' hrs rem)';
+    if(rem<=0){remNum='Due Now';remUnit='';remFoot='';}
+    else{const rh=Math.round(rem);remNum=rh;remUnit=rh===1?'Hour':'Hours';remFoot='remaining';}
   }
   if(i.intervalDays&&i.lastDate){
     // Use end-of-month logic for calendar-based intervals (365, 730, 30 days)
@@ -1841,12 +1828,13 @@ function ic(i,a){
       p=dp;
       const dl=Math.round((nx.getTime()-t)/86400000);
       const dateStr=nx.toISOString().slice(0,10);
-      if(dl<0)nl=dateStr+' ('+Math.abs(dl)+'d overdue)';
-      else nl=dateStr+' ('+dl+'d)';
+      if(dl<0){nl=dateStr+' ('+Math.abs(dl)+'d overdue)';remNum=Math.abs(dl);remUnit=Math.abs(dl)===1?'Day':'Days';remFoot='overdue';}
+      else if(dl===0){nl=dateStr+' (due today)';remNum='Due Today';remUnit='';remFoot='';}
+      else{nl=dateStr+' ('+dl+'d)';remNum=dl;remUnit=dl===1?'Day':'Days';remFoot='remaining';}
     }
   }
   if(p>=100)s='overdue';else if(p>=80)s='warn';
-  return{p,s,nl};
+  return{p,s,nl,remNum,remUnit,remFoot};
 }
 
 // ─── HANGAR ───────────────────────────────────────────────────────────────────
@@ -2426,10 +2414,29 @@ function preInsp(idx){
 }
 
 // ─── OIL ──────────────────────────────────────────────────────────────────────
-function renderOilStats(){const a=ac();const tot=a.oil.reduce((s,o)=>s+o.qty,0);const avg=(a.oilByMonth.reduce((s,v)=>s+v,0)/6).toFixed(2);const hrs=a.monthlyHours.reduce((s,v)=>s+v,0);const rate=hrs>0?(tot/hrs*10).toFixed(2):'--';document.getElementById('oil-stats').innerHTML=`<div class="stat-box"><div class="stat-lbl">Total Added</div><div class="stat-val">${tot.toFixed(1)} qt</div><div class="stat-sub">${a.oil.length} entries</div></div><div class="stat-box"><div class="stat-lbl">Avg / Month</div><div class="stat-val">${avg} qt</div><div class="stat-sub">6-month avg</div></div><div class="stat-box"><div class="stat-lbl">Consumption</div><div class="stat-val">${rate} qt</div><div class="stat-sub">per 10 hrs</div></div>`;}
-function renderOilLog(){document.getElementById('oil-log').innerHTML=ac().oil.map((o,idx)=>`<li class="log-item"><span class="log-date">${o.date}</span><span class="log-qty">${o.qty}qt</span><span class="log-note">${o.notes||o.type}</span><button class="action-btn" style="padding:3px 8px;font-size:11px" onclick="editOil(${idx})">Edit</button><button class="action-btn del" style="padding:3px 8px;font-size:11px" onclick="confirmDel('oil',${idx},'oil entry')">Delete</button></li>`).join('');}
-function openOilModal(){eOil=null;document.getElementById('oil-title').textContent='Log Oil Addition';['o-qty','o-hobbs','o-notes'].forEach(x=>document.getElementById(x).value='');document.getElementById('o-type').value='Engine Oil';document.getElementById('o-date').value=new Date().toISOString().slice(0,10);openModal('oil');}
-function editOil(idx){eOil=idx;const o=ac().oil[idx];document.getElementById('oil-title').textContent='Edit Oil Entry';document.getElementById('o-type').value=o.type;document.getElementById('o-qty').value=o.qty;document.getElementById('o-date').value=o.date;document.getElementById('o-hobbs').value=o.hobbs;document.getElementById('o-notes').value=o.notes;openModal('oil');}
+// Oil life is tracked like Cirrus IQ's oil-change gauge: percent remaining until
+// the next change, based on hours flown since oilHobbs (set by the last "Oil
+// Change Performed" entry) against the aircraft's oilInterval.
+function oilLife(a){
+  const interval=a.oilInterval||50;
+  const changeHobbs=a.oilHobbs!=null?a.oilHobbs:(a.hobbs||a.tt||0);
+  const used=Math.max(0,(a.hobbs||a.tt||0)-changeHobbs);
+  const pct=interval>0?Math.max(0,Math.min(100,Math.round(100-(used/interval*100)))):100;
+  const rem=interval-used;
+  const hrsLeft=Math.max(0,+rem.toFixed(1));
+  const overdueHrs=Math.max(0,+(-rem).toFixed(1));
+  return{pct,hrsLeft,overdueHrs,used,interval};
+}
+function renderOilStats(){const a=ac();const tot=a.oil.reduce((s,o)=>s+o.qty,0);const avg=(a.oilByMonth.reduce((s,v)=>s+v,0)/6).toFixed(2);const hrs=a.monthlyHours.reduce((s,v)=>s+v,0);const rate=hrs>0?(tot/hrs*10).toFixed(2):'--';const ol=oilLife(a);const olCol=ol.pct<15?'var(--danger)':ol.pct<35?'var(--warn)':'var(--ok)';document.getElementById('oil-stats').innerHTML=`<div class="stat-box"><div class="stat-lbl">Oil Life</div><div class="stat-val" style="color:${olCol}">${ol.pct}%</div><div class="stat-sub">${ol.hrsLeft} hrs left · ${ol.interval}hr interval</div></div><div class="stat-box"><div class="stat-lbl">Total Added</div><div class="stat-val">${tot.toFixed(1)} <span class="nc-pct-unit">qt</span></div><div class="stat-sub">${a.oil.length} entries</div></div><div class="stat-box"><div class="stat-lbl">Avg / Month</div><div class="stat-val">${avg} <span class="nc-pct-unit">qt</span></div><div class="stat-sub">6-month avg</div></div><div class="stat-box"><div class="stat-lbl">Consumption</div><div class="stat-val">${rate} <span class="nc-pct-unit">qt</span></div><div class="stat-sub">per 10 hrs</div></div>`;}
+function renderOilLog(){document.getElementById('oil-log').innerHTML=ac().oil.map((o,idx)=>`<li class="log-item"><span class="log-date">${o.date}</span><span class="log-qty">${o.kind==='change'?'Oil Change':o.qty+'qt'}</span><span class="log-note">${o.notes||o.type}</span><button class="action-btn" style="padding:3px 8px;font-size:11px" onclick="editOil(${idx})">Edit</button><button class="action-btn del" style="padding:3px 8px;font-size:11px" onclick="confirmDel('oil',${idx},'oil entry')">Delete</button></li>`).join('');}
+function oilKindChanged(){const kind=document.getElementById('o-kind').value;const change=kind==='change';
+  document.getElementById('oil-title').textContent=eOil!==null?'Edit Oil Entry':(change?'Log Oil Change':'Log Oil Addition');
+  // An oil change only needs date, tach, notes — hide fluid type + quantity and let Date span full width.
+  document.getElementById('o-type-row').style.display=change?'none':'';
+  document.getElementById('o-qty-row').style.display=change?'none':'';
+  document.getElementById('o-qtydate-grid').style.gridTemplateColumns=change?'1fr':'1fr 1fr';}
+function openOilModal(mode){eOil=null;document.getElementById('o-kind').value=mode==='change'?'change':'add';oilKindChanged();['o-qty','o-hobbs','o-notes'].forEach(x=>document.getElementById(x).value='');document.getElementById('o-type').value='Engine Oil';document.getElementById('o-date').value=new Date().toISOString().slice(0,10);openModal('oil');}
+function editOil(idx){eOil=idx;const o=ac().oil[idx];document.getElementById('o-kind').value=o.kind==='change'?'change':'add';oilKindChanged();document.getElementById('o-type').value=o.type;document.getElementById('o-qty').value=o.qty;document.getElementById('o-date').value=o.date;document.getElementById('o-hobbs').value=o.hobbs;document.getElementById('o-notes').value=o.notes;openModal('oil');}
 
 // ─── SQUAWKS ──────────────────────────────────────────────────────────────────
 
@@ -2903,9 +2910,8 @@ function saveFromReceipt(){
 function exportMaintExcel(){
   const a=ac();const entries=a.maintCosts||[];
   if(!entries.length){alert('No cost entries to export.');return;}
-  const LBLS={inspection:'Inspection',engine:'Engine',avionics:'Avionics',airframe:'Airframe',fuel:'Fuel',oil:'Oil/Fluids',parts:'Parts',other:'Other'};
   const header='Date,Category,Description,Shop / Vendor,Amount ($)\n';
-  const rows=entries.map(e=>[e.date,LBLS[e.cat]||e.cat,'"'+(e.desc||'').replace(/"/g,'""')+'"','"'+(e.shop||'').replace(/"/g,'""')+'"',e.cost.toFixed(2)].join(',')).join('\n');
+  const rows=entries.map(e=>[e.date,MAINT_CAT_LABELS[e.cat]||e.cat,'"'+(e.desc||'').replace(/"/g,'""')+'"','"'+(e.shop||'').replace(/"/g,'""')+'"',e.cost.toFixed(2)].join(',')).join('\n');
   const total=',,,,\nTotal,,,,'+entries.reduce((s,e)=>s+e.cost,0).toFixed(2);
   const csv='data:text/csv;charset=utf-8,'+encodeURIComponent(header+rows+'\n'+total);
   const link=document.createElement('a');link.href=csv;link.download=a.reg+'_maintenance_costs_'+new Date().toISOString().slice(0,10)+'.csv';link.click();
@@ -3455,10 +3461,12 @@ function initMap(){
   const initMercY=initScale*Math.log(Math.tan(Math.PI/4+20*Math.PI/360));
   mt={x:0,y:initMercY,k:1};
   sizeMap();
-  _applyMapMode();
-  if(!mgeo)loadGeo();else drawMap();
+  // Populate mcodes (airport data) BEFORE the map initializes/syncs — otherwise the
+  // first _mlSync runs with no airport data and dots don't appear until a mode toggle.
   if(a.airportData){mcodes=a.airportData;renderChips();updMeta();document.getElementById('map-clear-btn').style.display='';}
   else{mcodes=null;renderChips();document.getElementById('map-clear-btn').style.display='none';['map-count','map-summary'].forEach(id=>document.getElementById(id).textContent='');}
+  _applyMapMode();
+  if(!mgeo)loadGeo();else drawMap();
   renderFlightLog();
 }
 function sizeMap(){
@@ -3482,15 +3490,25 @@ function sizeMap(){
 // fallback (🛰 toggle, bottom-left). Basemaps swap via layer VISIBILITY (both are
 // loaded in one style) so switching never resets the camera or drops overlays.
 let _mlMap=null,_mlAcMarker=null,_mlPopup=null,_mlOverlaysReady=false;
+// Route highlight: _mlRouteIndex maps each route feature id → its from/to (so hovering an
+// airport can light up every route touching it); _mlHlSet tracks which ids are currently lit.
+let _mlRouteIndex=[],_mlHlSet=new Set();
+let _mlLastFlightOn=false; // true while the stored "last flight" track is being replayed
+function _mlSetRouteHl(ids){
+  if(!_mlMap)return;const next=new Set(ids);
+  for(const id of _mlHlSet)if(!next.has(id))_mlMap.setFeatureState({source:'at-routes',id},{hl:false});
+  for(const id of next)if(!_mlHlSet.has(id))_mlMap.setFeatureState({source:'at-routes',id},{hl:true});
+  _mlHlSet=next;
+}
 // basemap is 'map' (theme-aware dark/light tiles) or 'satellite'
 let _mlBasemap=localStorage.getItem('at_ml_basemap')==='satellite'?'satellite':'map';
 let _mlEnabled=(typeof maplibregl!=='undefined'); // on by default; false only if the lib failed to load
 const _ML_BASEMAPS={
-  dark:{tiles:['https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png','https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png','https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'],attribution:'© OpenStreetMap contributors © CARTO',maxzoom:20},
-  light:{tiles:['https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png','https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png','https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png'],attribution:'© OpenStreetMap contributors © CARTO',maxzoom:20},
+  // @2x = retina tiles (512px image per 256 logical tile) → sharp on high-DPI screens
+  dark:{tiles:['https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png','https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png','https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png'],attribution:'© OpenStreetMap contributors © CARTO',maxzoom:20},
+  light:{tiles:['https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png','https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png','https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png'],attribution:'© OpenStreetMap contributors © CARTO',maxzoom:20},
   satellite:{tiles:['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],attribution:'Imagery © Esri, Maxar, Earthstar Geographics',maxzoom:19}
 };
-function _hexToRgb(h){h=(h||'').trim().replace('#','');if(h.length===3)h=h.split('').map(c=>c+c).join('');const n=parseInt(h||'3b9eff',16);return[(n>>16)&255,(n>>8)&255,n&255];}
 // ── Altitude colour scale (Volanta-style: green low → cyan → blue → violet high) ─
 const _ALT_SCALE=[
   [0,     [21,128,61]],   // ground — deep green
@@ -3526,6 +3544,12 @@ function _mlTrackGradient(coords,alts){
   return grad;
 }
 function _mlThemeLight(){return document.body.classList.contains('light');}
+// Resting (un-highlighted) route colour: grayscale with enough contrast against the
+// active basemap. Light gray over dark map/imagery, dark gray over the light map.
+function _mlRouteBaseColor(){
+  if(_mlBasemap==='satellite')return '#e2e8f0';
+  return _mlThemeLight()?'#5b6570':'#c3cad3';
+}
 // Tiles for the current choice: 'satellite' → Esri imagery; otherwise theme-aware CARTO.
 function _mlCurrentTiles(){
   if(_mlBasemap==='satellite')return _ML_BASEMAPS.satellite.tiles;
@@ -3559,27 +3583,54 @@ function _mlInit(){
 function _mlAddOverlays(){
   if(!_mlMap)return;const m=_mlMap;
   const src=id=>{if(!m.getSource(id))m.addSource(id,{type:'geojson',data:{type:'FeatureCollection',features:[]}});};
-  ['at-routes','at-airports','at-dep'].forEach(src);
+  ['at-routes','at-airports','at-dep','at-track-gap'].forEach(src);
   // track is ONE LineString with lineMetrics so we can paint an altitude line-gradient
   // (smooth blend) and it won't fragment or vanish when zoomed out
   if(!m.getSource('at-track'))m.addSource('at-track',{type:'geojson',lineMetrics:true,tolerance:0,data:{type:'FeatureCollection',features:[]}});
-  if(!m.getLayer('at-routes-l'))m.addLayer({id:'at-routes-l',type:'line',source:'at-routes',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':['get','color'],'line-width':['get','w'],'line-opacity':0.85}});
+  if(!m.getLayer('at-routes-l'))m.addLayer({id:'at-routes-l',type:'line',source:'at-routes',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':['case',['boolean',['feature-state','hl'],false],_getAccentHex(),_mlRouteBaseColor()],'line-width':['+',['get','w'],['case',['boolean',['feature-state','hl'],false],2.5,0]],'line-opacity':['case',['boolean',['feature-state','hl'],false],1,0.8]}});
+  // Invisible wide "hitbox" over the thin route lines so hover/click doesn't require
+  // landing precisely on the 1–4px stroke. Events are wired to this layer; it drives
+  // the visible line's hover via shared feature-state (same source + feature ids).
+  if(!m.getLayer('at-routes-hit'))m.addLayer({id:'at-routes-hit',type:'line',source:'at-routes',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#000','line-opacity':0,'line-width':16}});
   if(!m.getLayer('at-track-l'))m.addLayer({id:'at-track-l',type:'line',source:'at-track',layout:{'line-cap':'round','line-join':'round'},paint:{'line-width':2.2}});
-  if(!m.getLayer('at-airports-c'))m.addLayer({id:'at-airports-c',type:'circle',source:'at-airports',paint:{'circle-radius':5,'circle-color':'rgba(160,175,195,0.9)','circle-stroke-color':'rgba(255,255,255,0.35)','circle-stroke-width':1.2}});
+  // Dashed overlay for stretches with no data (source handoff / coverage gap) — the
+  // straight line drawn there is NOT the real flown path, so it's marked distinctly
+  // instead of implying accuracy it doesn't have (unlike ADS-B Exchange's continuous feed).
+  if(!m.getLayer('at-track-gap-l'))m.addLayer({id:'at-track-gap-l',type:'line',source:'at-track-gap',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'rgba(200,205,215,0.75)','line-width':1.6,'line-dasharray':[1,1.6]}});
+  if(!m.getLayer('at-airports-c'))m.addLayer({id:'at-airports-c',type:'circle',source:'at-airports',paint:{'circle-radius':5,'circle-color':_getAccentHex(),'circle-stroke-color':'rgba(255,255,255,0.7)','circle-stroke-width':1.2}});
   if(!m.getLayer('at-airports-t'))m.addLayer({id:'at-airports-t',type:'symbol',source:'at-airports',minzoom:6,layout:{'text-field':['get','code'],'text-size':11,'text-offset':[0,1.2],'text-anchor':'top','text-font':['Noto Sans Regular']},paint:{'text-color':'#fff','text-halo-color':'rgba(0,0,0,0.75)','text-halo-width':1}});
   if(!m.getLayer('at-dep-c'))m.addLayer({id:'at-dep-c',type:'circle',source:'at-dep',paint:{'circle-radius':5,'circle-color':_getAccentHex(),'circle-stroke-color':'rgba(255,255,255,0.85)','circle-stroke-width':1.5}});
   if(!_mlOverlaysReady){_mlWireHover();_mlOverlaysReady=true;}
 }
 function _mlWireHover(){
   const m=_mlMap;_mlPopup=new maplibregl.Popup({closeButton:false,closeOnClick:false,className:'ml-tip',offset:10});
+  // ── Airports: hover popup + light up every connected route + click → airport detail ──
   m.on('mouseenter','at-airports-c',()=>{m.getCanvas().style.cursor='pointer';});
-  m.on('mousemove','at-airports-c',e=>{const f=e.features&&e.features[0];if(!f)return;const p=f.properties;_mlPopup.setLngLat(f.geometry.coordinates.slice()).setHTML('<b>'+p.code+'</b>'+(p.name?'<br>'+p.name:'')).addTo(m);});
-  m.on('mouseleave','at-airports-c',()=>{m.getCanvas().style.cursor='';if(_mlPopup)_mlPopup.remove();});
+  m.on('mousemove','at-airports-c',e=>{const f=e.features&&e.features[0];if(!f)return;const p=f.properties;
+    _mlPopup.setLngLat(f.geometry.coordinates.slice()).setHTML('<b>'+p.code+'</b>'+(p.name?'<br>'+p.name:'')).addTo(m);
+    _mlSetRouteHl(_mlRouteIndex.filter(r=>r.from===p.code||r.to===p.code).map(r=>r.id));});
+  m.on('mouseleave','at-airports-c',()=>{m.getCanvas().style.cursor='';if(_mlPopup)_mlPopup.remove();_mlSetRouteHl([]);});
+  m.on('click','at-airports-c',e=>{const f=e.features&&e.features[0];if(f&&typeof openAirportDetail==='function')openAirportDetail(f.properties.code);});
+  // ── Routes: hover-highlight the line (feature-state) + click → route detail ──
+  m.on('mousemove','at-routes-hit',e=>{
+    // an airport dot under the cursor takes priority (it highlights the whole fan of routes)
+    if(m.queryRenderedFeatures(e.point,{layers:['at-airports-c']}).length)return;
+    const f=e.features&&e.features[0];if(!f)return;m.getCanvas().style.cursor='pointer';_mlSetRouteHl([f.id]);});
+  m.on('mouseleave','at-routes-hit',()=>{m.getCanvas().style.cursor='';_mlSetRouteHl([]);});
+  m.on('click','at-routes-hit',e=>{const f=e.features&&e.features[0];if(!f)return;const from=f.properties.from,to=f.properties.to;
+    const rm=(typeof _buildRouteMap==='function')?_buildRouteMap(_getAllRoutes()):{};const entries=rm[from+'|'+to]||rm[to+'|'+from];
+    if(entries&&typeof openRouteDetail==='function')openRouteDetail({from,to,entries});});
 }
 function _mlApplyBase(){
   const s=_mlMap&&_mlMap.getSource('base');
   if(s&&s.setTiles)s.setTiles(_mlCurrentTiles());
   if(_mlMap&&_mlMap.getLayer('bg'))_mlMap.setPaintProperty('bg','background-color',_mlBgColor());
+  // keep the accent-coloured airport + departure dots and the grayscale/accent route
+  // lines in step with the theme, accent, and basemap
+  if(_mlMap){const ac=_getAccentHex();
+    if(_mlMap.getLayer('at-airports-c'))_mlMap.setPaintProperty('at-airports-c','circle-color',ac);
+    if(_mlMap.getLayer('at-dep-c'))_mlMap.setPaintProperty('at-dep-c','circle-color',ac);
+    if(_mlMap.getLayer('at-routes-l'))_mlMap.setPaintProperty('at-routes-l','line-color',['case',['boolean',['feature-state','hl'],false],ac,_mlRouteBaseColor()]);}
   document.querySelectorAll('[data-ml-base]').forEach(b=>{const on=b.getAttribute('data-ml-base')===_mlBasemap;b.style.background=on?'var(--accent)':'transparent';b.style.color=on?'#fff':'var(--muted2)';});
 }
 function _mlSetBasemap(name){
@@ -3589,11 +3640,16 @@ function _mlSetBasemap(name){
 }
 function _mlSync(){
   if(!_mlMap||!_mlMap.isStyleLoaded())return;
-  try{_mlSyncAirports();_mlSyncRoutes();_mlSyncAdsb();_mlApplyModeVis();}catch(e){console.warn('[ML] sync failed:',e.message);}
+  try{_mlSyncAirports();_mlSyncRoutes();_mlSyncAdsb();_mlApplyModeVis();_mlUpdateLastFlightBtn();}catch(e){console.warn('[ML] sync failed:',e.message);}
 }
 function _mlSyncAirports(){
   const s=_mlMap.getSource('at-airports');if(!s)return;const f=[];
-  if(mcodes){for(const code of Object.keys(mcodes)){const ap=apLookup(code);if(!ap)continue;f.push({type:'Feature',geometry:{type:'Point',coordinates:[ap.o,ap.a]},properties:{code,name:ap.n||''}});}}
+  // Plot every airport we know about: CSV-import counts (mcodes) UNION flight-log
+  // endpoints. Route lines come from the flight log, so a manually-logged field like
+  // 5R4 has routes but no mcodes entry — union so it still gets a dot.
+  const codes=new Set(mcodes?Object.keys(mcodes):[]);
+  if(typeof _getAllFlightAirports==='function')for(const c of _getAllFlightAirports())codes.add(c);
+  for(const code of codes){const ap=apLookup(code);if(!ap)continue;f.push({type:'Feature',geometry:{type:'Point',coordinates:[ap.o,ap.a]},properties:{code,name:ap.n||''}});}
   s.setData({type:'FeatureCollection',features:f});
 }
 function _mlSyncRoutes(){
@@ -3603,24 +3659,45 @@ function _mlSyncRoutes(){
   const maxFreq=Math.max(1,...Object.values(rm).map(v=>v.length));
   for(const[key,entries]of Object.entries(rm)){const[a,b]=key.split('|');const A=apLookup(a),B=apLookup(b);if(!A||!B)continue;
     const interp=d3.geoInterpolate([A.o,A.a],[B.o,B.a]);const coords=[];for(let i=0;i<=32;i++)coords.push(interp(i/32));
-    f.push({type:'Feature',geometry:{type:'LineString',coordinates:coords},properties:{color:accent,w:1+3*(entries.length/maxFreq)}});}
+    // id + from/to let us wire hover-highlight (feature-state) and click→openRouteDetail
+    f.push({type:'Feature',id:f.length,geometry:{type:'LineString',coordinates:coords},properties:{color:accent,w:1+3*(entries.length/maxFreq),from:a,to:b}});}
   s.setData({type:'FeatureCollection',features:f});
+  // rebuild the airport→routes index for airport-hover highlighting; drop stale highlight state
+  _mlRouteIndex=f.map(feat=>({id:feat.id,from:feat.properties.from,to:feat.properties.to}));
+  _mlHlSet=new Set();
 }
+// Consecutive track points further apart than this are treated as a data gap
+// (source handoff between the historical trace and live polling, or a coverage
+// hole) rather than the aircraft's real path, and are drawn dashed instead of
+// as a solid coloured line — a straight line across a multi-minute gap is a
+// guess, not a position, and shouldn't look as confident as real telemetry.
+const _ADSB_GAP_MS=90000;
 function _mlSyncAdsb(){
-  const ts=_mlMap.getSource('at-track'),ds=_mlMap.getSource('at-dep');if(!ts||!ds)return;
-  let dep=null;const coords=[],alts=[];
+  // While replaying the stored last flight, don't let the live-track sync overwrite it —
+  // unless real live airborne data arrives, in which case live takes over.
+  if(_mlLastFlightOn&&!(_adsbLast&&!_adsbLast.on_ground))return;
+  const ts=_mlMap.getSource('at-track'),ds=_mlMap.getSource('at-dep'),gs=_mlMap.getSource('at-track-gap');if(!ts||!ds)return;
+  let dep=null;const coords=[],alts=[],times=[];
   if(_adsbLast&&!_adsbLast.on_ground&&_adsbTrack.length>1){
-    for(const p of _adsbTrack){coords.push([p.lon,p.lat]);alts.push(p.alt||0);}
+    for(const p of _adsbTrack){coords.push([p.lon,p.lat]);alts.push(p.alt||0);times.push(p.ts||0);}
     // append the live position so the trail reaches the centre of the aircraft symbol
     if(_adsbLast.lon!=null&&_adsbLast.lat!=null){const dlon=+_adsbLast.lon,dlat=+_adsbLast.lat;const lp=coords[coords.length-1];
-      if(!lp||Math.abs(lp[0]-dlon)>1e-7||Math.abs(lp[1]-dlat)>1e-7){coords.push([dlon,dlat]);alts.push(alts[alts.length-1]||0);}}
+      if(!lp||Math.abs(lp[0]-dlon)>1e-7||Math.abs(lp[1]-dlat)>1e-7){coords.push([dlon,dlat]);alts.push(alts[alts.length-1]||0);times.push(Date.now());}}
     dep={type:'Feature',geometry:{type:'Point',coordinates:coords[0]},properties:{}};
   }
   if(coords.length>1){
     ts.setData({type:'Feature',geometry:{type:'LineString',coordinates:coords},properties:{}});
     if(_mlMap.getLayer('at-track-l'))_mlMap.setPaintProperty('at-track-l','line-gradient',_mlTrackGradient(coords,alts));
+    if(gs){
+      const gapFeatures=[];
+      for(let i=1;i<coords.length;i++){if(times[i]&&times[i-1]&&(times[i]-times[i-1])>_ADSB_GAP_MS){
+        gapFeatures.push({type:'Feature',geometry:{type:'LineString',coordinates:[coords[i-1],coords[i]]},properties:{}});
+      }}
+      gs.setData({type:'FeatureCollection',features:gapFeatures});
+    }
   }else{
     ts.setData({type:'FeatureCollection',features:[]});
+    if(gs)gs.setData({type:'FeatureCollection',features:[]});
   }
   ds.setData({type:'FeatureCollection',features:dep?[dep]:[]});
   _mlSyncAircraft();
@@ -3642,7 +3719,48 @@ function _mlSyncAircraft(){
 function _mlApplyModeVis(){
   if(!_mlMap)return;const routes=_mapMode==='routes';
   const v=(id,on)=>{if(_mlMap.getLayer(id))_mlMap.setLayoutProperty(id,'visibility',on?'visible':'none');};
-  v('at-routes-l',routes);v('at-airports-c',!routes);v('at-airports-t',!routes);
+  // Airport dots persist in BOTH modes (still clickable in routes view); labels stay
+  // airports-mode-only so they don't clutter the route lines.
+  v('at-routes-l',routes);v('at-routes-hit',routes);v('at-airports-c',true);v('at-airports-t',!routes);
+}
+// ── Last-flight replay ────────────────────────────────────────────────────────
+// Show/hide the "Last Flight" button: only when a stored track exists and the aircraft
+// isn't currently live-airborne (live view takes precedence).
+function _mlUpdateLastFlightBtn(){
+  const btn=document.getElementById('ml-lastflight-btn');if(!btn)return;
+  const lf=(typeof ac==='function')&&ac()&&ac().lastFlight;
+  const live=_adsbLast&&!_adsbLast.on_ground;
+  const avail=!!(lf&&lf.points&&lf.points.length>1)&&!live;
+  btn.style.display=avail?'inline-flex':'none';
+  if(!avail&&_mlLastFlightOn)_mlShowLastFlight(false);
+  const on=_mlLastFlightOn;
+  btn.style.background=on?'var(--accent)':'rgba(10,16,28,0.82)';
+  btn.style.color=on?'#fff':'var(--muted2)';
+  const lbl=document.getElementById('ml-lastflight-lbl');if(lbl)lbl.textContent=on?'Live Map':'Last Flight';
+}
+function _mlToggleLastFlight(){_mlShowLastFlight(!_mlLastFlightOn);}
+function _mlShowLastFlight(on){
+  _mlLastFlightOn=on;
+  if(_mlMap){
+    const ts=_mlMap.getSource('at-track'),ds=_mlMap.getSource('at-dep'),gs=_mlMap.getSource('at-track-gap');
+    const lf=ac()&&ac().lastFlight;
+    if(on&&lf&&lf.points&&lf.points.length>1){
+      const coords=lf.points.map(p=>[p.lon,p.lat]),alts=lf.points.map(p=>p.alt||0);
+      if(ts)ts.setData({type:'Feature',geometry:{type:'LineString',coordinates:coords},properties:{}});
+      if(_mlMap.getLayer('at-track-l'))_mlMap.setPaintProperty('at-track-l','line-gradient',_mlTrackGradient(coords,alts));
+      if(gs)gs.setData({type:'FeatureCollection',features:[]});
+      if(ds)ds.setData({type:'FeatureCollection',features:[{type:'Feature',geometry:{type:'Point',coordinates:coords[0]},properties:{}}]});
+      if(_mlAcMarker){_mlAcMarker.remove();_mlAcMarker=null;} // no live aircraft marker in replay
+      const lo=coords.map(c=>c[0]),la=coords.map(c=>c[1]);
+      try{_mlMap.fitBounds([[Math.min(...lo),Math.min(...la)],[Math.max(...lo),Math.max(...la)]],{padding:60,maxZoom:9,duration:400});}catch(e){}
+    }else{
+      // turning replay off → clear the stored track and resume the normal live sync
+      if(ts)ts.setData({type:'FeatureCollection',features:[]});
+      if(ds)ds.setData({type:'FeatureCollection',features:[]});
+      if(typeof _mlSyncAdsb==='function')_mlSyncAdsb();
+    }
+  }
+  _mlUpdateLastFlightBtn();
 }
 function _mlFit(){
   if(!_mlMap)return;
@@ -3662,6 +3780,11 @@ function _applyMapMode(){
   if(_mlEnabled){
     ml.style.display='block';if(sw)sw.style.display='flex';
     requestAnimationFrame(()=>{if(_mlMap){_mlMap.resize();if(_mlMap.isStyleLoaded()){_mlSync();_mlFit();}_mlApplyBase();}});
+    // Belt-and-suspenders: guarantee one sync after the map has fully settled its first
+    // render. On first open the style/tiles/airport DB often aren't ready during the rAF
+    // above (so _mlSync is skipped) and nothing re-synced until a manual mode toggle —
+    // which is why airport dots didn't paint until clicking Routes then Airports.
+    if(_mlMap)_mlMap.once('idle',()=>{if(_mlMap){_mlMap.resize();_mlSync();_mlFit();_mlApplyBase();}});
   }else{
     ml.style.display='none';if(sw)sw.style.display='none';
     drawMap(); // classic canvas fallback
@@ -4260,14 +4383,14 @@ async function _loadFaaSupplemental(){
     const text=await r.text();
     const lines=text.split('\n');
     if(!lines.length)return;
-    // Parse header to find column indices dynamically
-    const hdr=lines[0].split(',').map(h=>h.replace(/"/g,'').trim().toUpperCase());
-    const iLOC=hdr.indexOf('LOCATION_ID');   // FAA local ID (X06, FA40 etc)
-    const iICAO=hdr.indexOf('ICAO_ID');
-    const iNAME=hdr.indexOf('FACILITY_NAME');
-    const iLAT=hdr.findIndex(h=>h.includes('LAT')&&h.includes('DEG'));
-    const iLON=hdr.findIndex(h=>h.includes('LON')&&h.includes('DEG'));
-    if(iLOC<0||iLAT<0||iLON<0)return;
+    // This FAA/ADIP dataset's columns are: X (decimal lon), Y (decimal lat), IDENT
+    // (the local identifier, e.g. 5R4), NAME, ICAO_ID. Strip a possible UTF-8 BOM on
+    // the first header. (The old code looked for LOCATION_ID / *DEG* columns that don't
+    // exist here, so it bailed and NO local identifiers were ever added.)
+    const hdr=lines[0].split(',').map(h=>h.replace(/^﻿/,'').replace(/"/g,'').trim().toUpperCase());
+    const iLON=hdr.indexOf('X'),iLAT=hdr.indexOf('Y');
+    const iIDENT=hdr.indexOf('IDENT'),iICAO=hdr.indexOf('ICAO_ID'),iNAME=hdr.indexOf('NAME');
+    if(iLON<0||iLAT<0||iIDENT<0)return;
     let added=0;
     for(let i=1;i<lines.length;i++){
       const cols=[];let cur='',inQ=false;
@@ -4281,8 +4404,8 @@ async function _loadFaaSupplemental(){
       const lat=parseFloat(cols[iLAT]),lon=parseFloat(cols[iLON]);
       if(isNaN(lat)||isNaN(lon))continue;
       const name=(cols[iNAME]||'').trim().substring(0,32);
-      const loc=(cols[iLOC]||'').trim().toUpperCase();
-      if(loc&&!AP[loc]){AP[loc]={a:lat,o:lon,n:name||loc};added++;}
+      const ident=(cols[iIDENT]||'').trim().toUpperCase();
+      if(ident&&!AP[ident]){AP[ident]={a:lat,o:lon,n:name||ident};added++;}
       if(iICAO>=0){
         const icao=(cols[iICAO]||'').trim().toUpperCase();
         if(icao&&!AP[icao]){AP[icao]={a:lat,o:lon,n:name||icao};added++;}
@@ -4456,7 +4579,6 @@ function renderDocs(){
   </li>`).join('');
 }
 function viewDoc(idx){const doc=(ac().documents||[])[idx];if(!doc)return;viewCloudDoc(doc);}
-function viewPDF(id){const doc=(ac().documents||[]).find(d=>d.id===id);if(!doc)return;viewCloudDoc(doc);}
 function closePDF(){document.getElementById('pdf-overlay').classList.remove('open');document.getElementById('pdf-frame').src='';document.getElementById('pdf-frame').style.display='';const img=document.getElementById('pdf-img-viewer');if(img){img.src='';img.style.display='none';}}
 
 
@@ -5177,19 +5299,37 @@ function renderDashboard(){
   else if(warnings.length){ribbon.innerHTML='';} // "Coming Up" is covered by the Next Inspection Due card below
   else if(_sqWatch.length){ribbon.innerHTML=_statusCard('rgba(245,158,11,.22)','var(--warn)','&#128992;','Active Squawk',`${_sqWatch.length} squawk${_sqWatch.length>1?'s':''} in progress or watch &mdash; inspections current`);}
   else{ribbon.innerHTML=_statusCard('rgba(45,212,160,.2)','var(--ok)','&#9989;','All Clear',`${a.reg} is current on all inspections &mdash; nothing due within 30 days`);}
-  const alerts=[...overdues.map(i=>({type:'danger',name:i.name,detail:ic(i,a).nl,idx:a.inspections.indexOf(i)})),...warnings.map(i=>({type:'warning',name:i.name,detail:ic(i,a).nl,idx:a.inspections.indexOf(i)}))];
+  const ol=oilLife(a);
+  const oilAlert=ol.pct<=0?{type:'danger',name:'Oil Change',detail:`Overdue by ${ol.overdueHrs} hrs — was due at ${((a.oilHobbs||0)+ol.interval).toFixed(0)} hrs`,oil:true}
+    :ol.pct<15?{type:'warning',name:'Oil Change',detail:`${ol.hrsLeft} hrs remaining until next change`,oil:true}:null;
+  const alerts=[...overdues.map(i=>({type:'danger',name:i.name,detail:ic(i,a).nl,idx:a.inspections.indexOf(i)})),...warnings.map(i=>({type:'warning',name:i.name,detail:ic(i,a).nl,idx:a.inspections.indexOf(i)})),...(oilAlert?[oilAlert]:[])];
   const feed=document.getElementById('dash-alerts');const allClear=document.getElementById('dash-all-clear');
   if(!alerts.length){feed.innerHTML='';allClear.textContent='All inspections current';}
-  else{allClear.textContent=alerts.length+' item'+(alerts.length>1?'s':'')+' need attention';feed.innerHTML=alerts.map(al=>`<div class="alert-item a${al.type}" onclick="showTab('inspections');setTimeout(()=>preInsp(${al.idx}),50)"><div class="al-icon">${al.type==='danger'?'&#9888;&#65039;':'&#9200;'}</div><div class="al-text"><div class="al-name">${al.name}</div><div class="al-detail">${al.detail}</div></div><div class="al-badge"><span class="badge ${al.type==='danger'?'overdue':'warn'}">${al.type==='danger'?'OVERDUE':'DUE SOON'}</span></div><div style="color:var(--muted2);font-size:14px">&#8250;</div></div>`).join('');}
+  else{allClear.textContent=alerts.length+' item'+(alerts.length>1?'s':'')+' need attention';feed.innerHTML=alerts.map(al=>`<div class="alert-item a${al.type}" onclick="${al.oil?`showTab('oil')`:`showTab('inspections');setTimeout(()=>preInsp(${al.idx}),50)`}"><div class="al-icon">${al.type==='danger'?'&#9888;&#65039;':'&#9200;'}</div><div class="al-text"><div class="al-name">${al.name}</div><div class="al-detail">${al.detail}</div></div><div class="al-badge"><span class="badge ${al.type==='danger'?'overdue':'warn'}">${al.type==='danger'?'OVERDUE':'DUE SOON'}</span></div><div style="color:var(--muted2);font-size:14px">&#8250;</div></div>`).join('');}
   renderNextDue(a);
   const tot=a.monthlyHours.reduce((s,v)=>s+v,0);const openSq=a.squawks.filter(sq=>sq.status==='open'||sq.status==='progress'||sq.status==='watch').length;const tbo=a.tbo||1700;const ep=tbo>0?Math.round(a.engineSMOH/tbo*100):0;
   const spark=_sparkline(a.monthlyHours);
+  const olCol=ol.pct<15?'var(--danger)':ol.pct<35?'var(--warn)':'var(--ok)';
   document.getElementById('dash-stats').innerHTML=
     `<div class="kpi" onclick="showTab('utilization')"><div class="kpi-lbl">6-Month Hours</div><div class="kpi-val">${tot}</div><div class="kpi-sub">flight hours</div>${spark}</div>`+
     `<div class="kpi" onclick="showTab('inspections')"><div class="kpi-lbl">Engine SMOH</div><div class="kpi-val" style="color:${ep>85?'var(--danger)':ep>65?'var(--warn)':'var(--ok)'}">${ep}%</div><div class="kpi-sub">${tbo-a.engineSMOH} hrs to TBO</div></div>`+
+    `<div class="kpi" onclick="showTab('oil')"><div class="kpi-lbl">Oil Life</div><div class="kpi-val" style="color:${olCol}">${ol.pct}%</div><div class="kpi-sub">${ol.hrsLeft} hrs left</div></div>`+
     `<div class="kpi" onclick="showTab('squawks')"><div class="kpi-lbl">Active Squawks</div><div class="kpi-val" style="color:${openSq>0?'var(--warn)':'var(--ok)'}">${openSq}</div><div class="kpi-sub">open items</div></div>`+
     `<div class="kpi" onclick="showTab('documents')"><div class="kpi-lbl">Documents</div><div class="kpi-val">${(a.documents||[]).length}</div><div class="kpi-sub">on file</div></div>`;
   renderActivity(a);
+  _updateDashLiveChip();
+}
+// Live "in flight" chip in the dashboard ribbon — driven by the ADS-B poll so it
+// updates in place. Only shows on the dashboard tab while the aircraft is airborne.
+function _updateDashLiveChip(){
+  const el=document.getElementById('dash-live');if(!el)return;
+  const s=_adsbLast;
+  if(ctab==='dashboard'&&s&&!s.on_ground&&s.lat!=null&&s.lon!=null){
+    const alt=s.alt_baro!=null?Math.round(s.alt_baro):null;
+    const spd=s.gspd!=null?Math.round(s.gspd):null;
+    el.style.display='';
+    el.innerHTML=`<div class="dash-live-chip" onclick="if(typeof _adsbGoToMap==='function')_adsbGoToMap()"><span class="dash-live-dot"></span><span class="dash-live-txt">In flight</span>${alt!=null?`<span class="dash-live-sub">${alt.toLocaleString()} ft</span>`:''}${spd!=null?`<span class="dash-live-sub">${spd} kt</span>`:''}<span class="dash-live-go">View on map &rsaquo;</span></div>`;
+  }else{el.style.display='none';el.innerHTML='';}
 }
 function renderNextDue(a){
   const el=document.getElementById('dash-nextdue');if(!el)return;
@@ -5200,7 +5340,12 @@ function renderNextDue(a){
   const {i,c}=scored[0];const pct=Math.round(c.p);
   const col=c.s==='overdue'?'var(--danger)':c.s==='warn'?'var(--warn)':'var(--accent)';
   const glow=c.s==='overdue'?'rgba(240,75,75,.24)':c.s==='warn'?'rgba(245,158,11,.22)':'rgba(59,158,255,.2)';
-  el.innerHTML=`<div class="next-card" style="--nc-glow:${glow}" onclick="showTab('inspections');setTimeout(()=>preInsp(${a.inspections.indexOf(i)}),50)"><div class="nc-top"><div><div class="nc-lbl">Next Inspection Due</div><div class="nc-name">${i.name}</div><div class="nc-sub">${c.nl}</div></div><div class="nc-pct" style="color:${col}">${pct}%</div></div><div class="nc-bar"><i style="width:${Math.min(100,pct)}%;background:${col}"></i></div></div>`;
+  // Headline shows time/hours remaining, spelled out (e.g. "60 Days"), not %.
+  // Percent is reserved for health metrics (e.g. Engine SMOH). The number and
+  // unit word use different fonts on purpose (Syne digits + Inter unit word) so
+  // they render at a uniform, matched size instead of Syne's mismatched glyph
+  // proportions when a lowercase unit letter was appended directly to a digit.
+  el.innerHTML=`<div class="next-card" style="--nc-glow:${glow}" onclick="showTab('inspections');setTimeout(()=>preInsp(${a.inspections.indexOf(i)}),50)"><div class="nc-top"><div><div class="nc-lbl">Next Inspection Due</div><div class="nc-name">${i.name}</div><div class="nc-sub">${c.nl}</div></div><div class="nc-pct-col" style="color:${col}"><div class="nc-pct-row"><span class="nc-pct-num">${c.remNum}</span>${c.remUnit?`<span class="nc-pct-unit">${c.remUnit}</span>`:''}</div>${c.remFoot?`<div class="nc-pct-foot">${c.remFoot}</div>`:''}</div></div><div class="nc-bar"><i style="width:${Math.min(100,pct)}%;background:${col}"></i></div></div>`;
 }
 function _sparkline(vals){
   if(!vals||vals.length<2)return'';
@@ -5214,7 +5359,7 @@ function renderActivity(a){
   const f=(a.flights||[])[0];
   if(f)items.push({ic:'&#9992;&#65039;',t:`${f.from||'?'} &rarr; ${f.to||'?'}`,d:(f.dur?f.dur+'h':'')+(f.rem?(f.dur?' · ':'')+f.rem:'')||'Flight logged',time:f.date||''});
   const o=(a.oil||[])[0];
-  if(o)items.push({ic:'&#128738;',t:`${o.qty} qt ${o.type||'oil'} added`,d:o.notes||('at '+(o.hobbs||0)+' hrs'),time:o.date||''});
+  if(o)items.push(o.kind==='change'?{ic:'&#128295;',t:'Oil change performed',d:o.notes||('at '+(o.hobbs||0)+' hrs'),time:o.date||''}:{ic:'&#128738;',t:`${o.qty} qt ${o.type||'oil'} added`,d:o.notes||('at '+(o.hobbs||0)+' hrs'),time:o.date||''});
   if(!items.length){el.innerHTML='<div style="padding:14px;text-align:center;color:var(--muted);font-size:12px;background:var(--bg2);border:1px solid var(--border2);border-radius:9px">No recent activity yet.</div>';return;}
   el.innerHTML='<div class="act-list">'+items.map(it=>`<div class="act-item"><div class="act-ic">${it.ic}</div><div class="act-main"><div class="act-t">${it.t}</div><div class="act-d">${it.d}</div></div><div class="act-time">${it.time}</div></div>`).join('')+'</div>';
 }
@@ -5367,7 +5512,7 @@ function onInspTypeChange(){
   document.getElementById('interval-display').style.display=core?'block':'none';
   if(core)document.getElementById('interval-display-val').textContent=core.intervalLabel;
 }
-function openSettingsModal(){const a=ac();document.getElementById('s-reg').value=a.reg;document.getElementById('s-serial').value=a.serial||'';document.getElementById('s-type').value=a.type;document.getElementById('s-tt').value=a.tt;document.getElementById('s-eng').value=a.engineSMOH;document.getElementById('s-tbo').value=a.tbo||'';document.getElementById('s-engine-type').value=a.engineType||'';document.getElementById('s-engine-resolved').style.display='none';document.getElementById('s-airport').value=(a.airport||'').split(' — ')[0];openModal('settings');setTimeout(()=>{showExistingAirport('s-airport','s-airport-resolved');if(a.engineType)showEngineResolved('s-engine-resolved',a.engineType);},50);}
+function openSettingsModal(){const a=ac();document.getElementById('s-reg').value=a.reg;document.getElementById('s-serial').value=a.serial||'';document.getElementById('s-type').value=a.type;document.getElementById('s-tt').value=a.tt;document.getElementById('s-eng').value=a.engineSMOH;document.getElementById('s-tbo').value=a.tbo||'';document.getElementById('s-oilint').value=a.oilInterval||50;document.getElementById('s-engine-type').value=a.engineType||'';document.getElementById('s-engine-resolved').style.display='none';document.getElementById('s-airport').value=(a.airport||'').split(' — ')[0];openModal('settings');setTimeout(()=>{showExistingAirport('s-airport','s-airport-resolved');if(a.engineType)showEngineResolved('s-engine-resolved',a.engineType);},50);}
 
 // ─── DOT MENU ─────────────────────────────────────────────────────────────────
 function toggleDotMenu(id){
@@ -5421,6 +5566,8 @@ function applyAccent(name,save){
   document.querySelectorAll('.accent-swatch').forEach(el=>{
     el.classList.toggle('active-accent',el.id==='accent-'+name);
   });
+  // repaint the accent-coloured map dots when the accent changes
+  if(typeof _mlApplyBase==='function'&&_mlMap)_mlApplyBase();
   if(save){
     localStorage.setItem('at_accent',name);
     if(_supabase&&_authUser)_supabase.auth.updateUser({data:{at_accent:name}}).catch(()=>{});
@@ -5443,8 +5590,8 @@ const _req=[['m-reg',reg,'Registration'],['m-type',type,'Aircraft Type / Model']
 const _err=document.getElementById('m-err');if(_missing.length){_err.textContent='Required: '+_missing.join(', ');_err.style.display='block';return;}_err.style.display='none';
 const tt=parseFloat(document.getElementById('m-tt').value)||0;const rawAp=(document.getElementById('m-airport').value||'').trim().toUpperCase();const apName=AP_FULL[rawAp]||(apLookup(rawAp)?apLookup(rawAp).n:null);const apStr=apName?rawAp+' — '+apName:rawAp;
 const engType=document.getElementById('m-engine-type').value.trim()||null;
-fleet.push({id:'ac_'+Date.now(),reg,serial:document.getElementById('m-serial').value||'--',type,engineType:engType,airport:apStr,tt,hobbs:tt,engineSMOH:parseFloat(document.getElementById('m-eng').value)||0,tbo:parseInt(document.getElementById('m-tbo').value)||1700,lastUpdated:'Not yet updated',shared:false,inspections:makeCoreInspections(),oil:[],squawks:[],monthlyHours:[0,0,0,0,0,0],oilByMonth:[0,0,0,0,0,0],airportData:null,documents:[],flights:[],squawkArchive:[],maintCosts:[],insurance:{provider:'',policy:'',effective:'',expiration:'',hull:0,liability:'',deductible:'',pilots:[],documents:[]},schedule:[]});saveLS();closeModal('add-aircraft');renderHangar();}
-function saveSettings(){const a=ac();a.reg=document.getElementById('s-reg').value||a.reg;a.serial=document.getElementById('s-serial').value||a.serial;a.type=document.getElementById('s-type').value||a.type;const ttVal=document.getElementById('s-tt').value;if(ttVal!==''){a.tt=parseFloat(ttVal)||0;a.hobbs=a.tt;}const engVal=document.getElementById('s-eng').value;if(engVal!=='')a.engineSMOH=parseFloat(engVal)||0;if(document.getElementById('s-engine-type').value)a.engineType=document.getElementById('s-engine-type').value;const newTbo=parseFloat(document.getElementById('s-tbo').value);if(newTbo)a.tbo=newTbo;const rawAp2=(document.getElementById('s-airport').value||'').trim().toUpperCase();const apName2=AP_FULL[rawAp2]||(apLookup(rawAp2)?apLookup(rawAp2).n:null);a.airport=apName2?rawAp2+' — '+apName2:(document.getElementById('s-airport').value||a.airport);a.lastUpdated='Updated '+new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});saveLS();closeModal('settings');renderHero();if(ctab==='dashboard')renderDashboard();if(document.getElementById('view-hangar').style.display!=='none')renderHangar(false);}
+fleet.push({id:'ac_'+Date.now(),reg,serial:document.getElementById('m-serial').value||'--',type,engineType:engType,airport:apStr,tt,hobbs:tt,engineSMOH:parseFloat(document.getElementById('m-eng').value)||0,tbo:parseInt(document.getElementById('m-tbo').value)||1700,oilInterval:parseFloat(document.getElementById('m-oilint').value)||50,oilHobbs:tt,oilChangeDate:'',lastUpdated:'Not yet updated',shared:false,inspections:makeCoreInspections(),oil:[],squawks:[],monthlyHours:[0,0,0,0,0,0],oilByMonth:[0,0,0,0,0,0],airportData:null,documents:[],flights:[],squawkArchive:[],maintCosts:[],insurance:{provider:'',policy:'',effective:'',expiration:'',hull:0,liability:'',deductible:'',pilots:[],documents:[]},schedule:[]});saveLS();closeModal('add-aircraft');renderHangar();}
+function saveSettings(){const a=ac();a.reg=document.getElementById('s-reg').value||a.reg;a.serial=document.getElementById('s-serial').value||a.serial;a.type=document.getElementById('s-type').value||a.type;const ttVal=document.getElementById('s-tt').value;if(ttVal!==''){a.tt=parseFloat(ttVal)||0;a.hobbs=a.tt;}const engVal=document.getElementById('s-eng').value;if(engVal!=='')a.engineSMOH=parseFloat(engVal)||0;if(document.getElementById('s-engine-type').value)a.engineType=document.getElementById('s-engine-type').value;const newTbo=parseFloat(document.getElementById('s-tbo').value);if(newTbo)a.tbo=newTbo;const newOilInt=parseFloat(document.getElementById('s-oilint').value);if(newOilInt)a.oilInterval=newOilInt;const rawAp2=(document.getElementById('s-airport').value||'').trim().toUpperCase();const apName2=AP_FULL[rawAp2]||(apLookup(rawAp2)?apLookup(rawAp2).n:null);a.airport=apName2?rawAp2+' — '+apName2:(document.getElementById('s-airport').value||a.airport);a.lastUpdated='Updated '+new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});saveLS();closeModal('settings');renderHero();if(ctab==='dashboard')renderDashboard();if(document.getElementById('view-hangar').style.display!=='none')renderHangar(false);}
 // deleteAircraft handled by promptDeleteAircraft above
 function saveInspection(){
   const a=ac();
@@ -5477,7 +5624,7 @@ function saveInspection(){
   }
   saveLS();closeModal('inspection');renderInsp();refreshStatus();if(ctab==='dashboard')renderDashboard();
 }
-function saveOil(){const a=ac();const qty=parseFloat(document.getElementById('o-qty').value)||0;const entry={date:document.getElementById('o-date').value,qty,type:document.getElementById('o-type').value,hobbs:parseFloat(document.getElementById('o-hobbs').value)||a.hobbs,notes:document.getElementById('o-notes').value};if(eOil!==null)a.oil[eOil]=entry;else{a.oil.unshift(entry);a.oilByMonth[5]=parseFloat((a.oilByMonth[5]+qty).toFixed(2));}eOil=null;saveLS();closeModal('oil');renderOilStats();renderOilLog();}
+function saveOil(){const a=ac();const kind=document.getElementById('o-kind').value;const change=kind==='change';const qty=change?0:(parseFloat(document.getElementById('o-qty').value)||0);const date=document.getElementById('o-date').value;const hobbs=parseFloat(document.getElementById('o-hobbs').value)||a.hobbs;const entry={date,qty,type:change?'':document.getElementById('o-type').value,hobbs,notes:document.getElementById('o-notes').value,kind};if(eOil!==null)a.oil[eOil]=entry;else{a.oil.unshift(entry);if(!change)a.oilByMonth[5]=parseFloat((a.oilByMonth[5]+qty).toFixed(2));}if(change){a.oilHobbs=hobbs;a.oilChangeDate=date;}eOil=null;saveLS();closeModal('oil');renderOilStats();renderOilLog();if(ctab==='dashboard')renderDashboard();}
 function saveSquawk(){const a=ac();const desc=document.getElementById('sq-desc').value.trim();const status=document.getElementById('sq-status').value;const date=document.getElementById('sq-date').value;if(!desc)return;if(eSq!==null){const sq=a.squawks.find(s=>s.id===eSq);if(sq){sq.desc=desc;sq.status=status;sq.date=date;}}else a.squawks.unshift({id:'sq_'+Date.now(),desc,status,date});eSq=null;saveLS();closeModal('squawk');renderSq();refreshStatus();if(ctab==='dashboard')renderDashboard();}
 
 
@@ -5624,6 +5771,7 @@ async function _adsbPoll(){
   }
   _renderAdsbBanner(state,a);
   _adsbCheckLanding(state,a);
+  if(typeof _updateDashLiveChip==='function')_updateDashLiveChip();
   if(ctab==='utilization'){
     drawMap();
     if(state&&!state.on_ground)_adsbStartPulse();
@@ -5655,6 +5803,15 @@ function _adsbCheckLanding(state,a){
       _adsbLandedFlight.dur=dur;
       _adsbLandedFlight.date=dep;
       _adsbLandedFlight.to=destCode;
+      // Snapshot the completed ADS-B track into a single "last flight" slot on the
+      // aircraft (full fidelity, overwritten each flight) so it can be replayed later.
+      if(_adsbTrack.length>1){
+        const pts=_adsbTrack.map(p=>({lat:p.lat,lon:p.lon,alt:p.alt||0,ts:p.ts||0}));
+        let maxAlt=0;pts.forEach(p=>{if(p.alt>maxAlt)maxAlt=p.alt;});
+        a.lastFlight={points:pts,from:_nearestAirport(pts[0].lat,pts[0].lon),to:destCode,date:dep,dur,maxAlt,savedTs:Date.now()};
+        saveLS();
+        if(_mlEnabled&&_mlMap&&typeof _mlUpdateLastFlightBtn==='function')_mlUpdateLastFlightBtn();
+      }
       _showLandingPrompt(_adsbLandedFlight);
       _adsbLandedFlight=null;
     }
@@ -5763,11 +5920,6 @@ function _adsbGoToMap(){
   showTab('utilization');
   setTimeout(()=>{const m=document.getElementById('map-canvas-wrap');if(m)m.scrollIntoView({behavior:'smooth',block:'center'});},120);
 }
-function _renderAdsbHeroChip(state,onGround){
-  // Deprecated — hero altitude chip removed as redundant with the ADS-B banner.
-  const chip=document.getElementById('adsb-hero-chip');if(chip)chip.remove();
-}
-
 // ── ADS-B track history ───────────────────────────────────────────────────────
 const _adsbTrack=[];   // [{lat,lon,alt,ts}] — full flight track
 const _adsbTrackMax=720; // 2hr at 10s as fallback rolling buffer
