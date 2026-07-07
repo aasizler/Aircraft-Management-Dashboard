@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AeroTrack v1.07.3.5</title>
+<title>AeroTrack v1.07.3.6</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='11' fill='none' stroke='%23a3e635' stroke-width='4'/></svg>">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- MapLibre GL (Phase 1 map migration — beta, behind a flag) -->
@@ -1043,7 +1043,7 @@ body.light .ac-tile-top{background:linear-gradient(135deg,#dce8f4,#ccdaec)}
   </div>
   <div class="page-hd" style="padding-top:20px">
     <div class="page-title">Settings</div>
-    <div style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:2px">AeroTrack v1.07.3.5</div>
+    <div style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:2px">AeroTrack v1.07.3.6</div>
     <div class="page-sub">App preferences and data management</div>
   </div>
   <div style="padding:0 28px 40px;max-width:640px">
@@ -1700,11 +1700,29 @@ async function cloudPush(){
     }
     clearTimeout(timeout);
     setSyncStatus('synced');
+    _syncMonitoredAircraft();
   }catch(e){
     clearTimeout(timeout);
     console.warn('[AeroTrack] Cloud push failed:', e.message, e.code);
     setSyncStatus('error');
   }
+}
+
+// Keep the backend flight monitor's poll list in sync with the owned fleet.
+// Upserts {reg, icao24} per aircraft so the Edge Function can watch each tail in
+// the background; the monitor maintains last_arr_ts itself, so we never touch it.
+async function _syncMonitoredAircraft(){
+  if(!CLOUD_ENABLED||!_supabase||!_authUser||!fleet||!fleet.length) return;
+  try{
+    const rows=fleet.filter(a=>a&&a.id&&a.reg).map(a=>({
+      user_id:_authUser.id,
+      aircraft_id:a.id,
+      reg:a.reg,
+      icao24:(typeof _nToHex==='function'?_nToHex(a.reg):null)||null,
+      updated_at:new Date().toISOString()
+    }));
+    if(rows.length)await _supabase.from('monitored_aircraft').upsert(rows,{onConflict:'user_id,aircraft_id'});
+  }catch(e){console.warn('[AeroTrack] monitored_aircraft sync failed:',e.message);}
 }
 
 async function cloudLoad(table, filter){
@@ -1734,6 +1752,8 @@ async function cloudPull(){
     await resolveEmailInvites();
     await pullSharedAircraft();
     await checkPendingInvites();
+    _syncMonitoredAircraft(); // seed/refresh the backend poll list on load
+    await _pullFlightHistory();
     renderHangar(false);
     setTimeout(()=>setSyncStatus('synced'),2000);
   } else {
@@ -1745,6 +1765,57 @@ async function cloudPull(){
     renderHangar(false);
     setSyncStatus('synced');
   }
+}
+
+// Populate each aircraft's `lastFlight` from the backend flight_history so a
+// flight completed while the app was CLOSED still shows on load. Metadata only —
+// the heavy `track` blob is left out here and lazy-loaded on replay (see
+// _ensureLastFlightTrack). Only overwrites lastFlight when the stored flight is
+// newer, so a fresher live-detected track is never clobbered.
+async function _pullFlightHistory(){
+  if(!CLOUD_ENABLED||!_supabase||!_authUser||!fleet||!fleet.length) return;
+  try{
+    const {data,error}=await _supabase.from('flight_history')
+      .select('id,aircraft_id,reg,dep_code,arr_code,dep_ts,arr_ts,duration_h,max_alt,distance_nm,point_count')
+      .eq('user_id',_authUser.id)
+      .order('arr_ts',{ascending:false})
+      .limit(400);
+    if(error||!data)return;
+    const latest={}; // aircraft_id → newest row (data is already arr_ts desc)
+    for(const r of data){if(!latest[r.aircraft_id])latest[r.aircraft_id]=r;}
+    fleet.forEach(a=>{
+      const r=latest[a.id];if(!r)return;
+      const arrMs=r.arr_ts?Date.parse(r.arr_ts):0;
+      const existing=a.lastFlight&&a.lastFlight.savedTs||0;
+      if(arrMs<=existing)return; // keep the fresher (likely live) track
+      a.lastFlight={
+        flightId:r.id, points:null, // lazy-loaded on replay
+        from:r.dep_code, to:r.arr_code,
+        date:r.dep_ts?r.dep_ts.slice(0,10):null,
+        dur:r.duration_h, maxAlt:r.max_alt, distNm:r.distance_nm,
+        pointCount:r.point_count, savedTs:arrMs
+      };
+    });
+    _suppressCloudSync=true;saveLS();_suppressCloudSync=false;
+    if(_mlEnabled&&_mlMap&&typeof _mlUpdateLastFlightBtn==='function')_mlUpdateLastFlightBtn();
+  }catch(e){console.warn('[AeroTrack] flight_history pull failed:',e.message);}
+}
+
+// Lazy-load a stored flight's full track blob on demand (only when it's about to
+// be drawn). Fills lastFlight.points in place and caches it. Returns true if
+// points are available afterward.
+async function _ensureLastFlightTrack(a){
+  const lf=a&&a.lastFlight;if(!lf)return false;
+  if(lf.points&&lf.points.length>1)return true;
+  if(!lf.flightId||!_supabase||!_authUser)return false;
+  try{
+    const {data,error}=await _supabase.from('flight_history')
+      .select('track').eq('id',lf.flightId).maybeSingle();
+    if(error||!data||!Array.isArray(data.track))return false;
+    lf.points=data.track.filter(p=>p&&p.lat!=null&&p.lon!=null)
+      .map(p=>({lat:p.lat,lon:p.lon,alt:p.alt||0,ts:p.ts||0}));
+    return lf.points.length>1;
+  }catch(e){console.warn('[AeroTrack] track lazy-load failed:',e.message);return false;}
 }
 
 function _migrateFleet(){
@@ -3730,7 +3801,9 @@ function _mlUpdateLastFlightBtn(){
   const btn=document.getElementById('ml-lastflight-btn');if(!btn)return;
   const lf=(typeof ac==='function')&&ac()&&ac().lastFlight;
   const live=_adsbLast&&!_adsbLast.on_ground;
-  const avail=!!(lf&&lf.points&&lf.points.length>1)&&!live;
+  // A stored flight is available if it has drawable points OR a flightId whose
+  // track can be lazy-loaded on demand (background-detected flight from history).
+  const avail=!!(lf&&((lf.points&&lf.points.length>1)||lf.flightId))&&!live;
   btn.style.display=avail?'inline-flex':'none';
   if(!avail&&_mlLastFlightOn)_mlShowLastFlight(false);
   const on=_mlLastFlightOn;
@@ -3739,7 +3812,19 @@ function _mlUpdateLastFlightBtn(){
   const lbl=document.getElementById('ml-lastflight-lbl');if(lbl)lbl.textContent=on?'Live Map':'Last Flight';
 }
 function _mlToggleLastFlight(){_mlShowLastFlight(!_mlLastFlightOn);}
-function _mlShowLastFlight(on){
+async function _mlShowLastFlight(on){
+  // A history-sourced flight carries metadata but no points until first replay —
+  // lazy-load the track blob before drawing (one network fetch, then cached).
+  if(on){
+    const a=ac();
+    if(a&&a.lastFlight&&(!a.lastFlight.points||a.lastFlight.points.length<2)&&a.lastFlight.flightId){
+      const btn=document.getElementById('ml-lastflight-btn');
+      if(btn)btn.style.opacity='0.6';
+      const ok=typeof _ensureLastFlightTrack==='function'&&await _ensureLastFlightTrack(a);
+      if(btn)btn.style.opacity='';
+      if(!ok){showToast('Could not load flight track','var(--warn)');return;}
+    }
+  }
   _mlLastFlightOn=on;
   if(_mlMap){
     const ts=_mlMap.getSource('at-track'),ds=_mlMap.getSource('at-dep'),gs=_mlMap.getSource('at-track-gap');
@@ -5808,8 +5893,14 @@ function _adsbCheckLanding(state,a){
       if(_adsbTrack.length>1){
         const pts=_adsbTrack.map(p=>({lat:p.lat,lon:p.lon,alt:p.alt||0,ts:p.ts||0}));
         let maxAlt=0;pts.forEach(p=>{if(p.alt>maxAlt)maxAlt=p.alt;});
-        a.lastFlight={points:pts,from:_nearestAirport(pts[0].lat,pts[0].lon),to:destCode,date:dep,dur,maxAlt,savedTs:Date.now()};
+        const fromCode=_nearestAirport(pts[0].lat,pts[0].lon);
+        a.lastFlight={points:pts,from:fromCode,to:destCode,date:dep,dur,maxAlt,savedTs:Date.now()};
         saveLS();
+        // Mirror this live-detected flight into the backend history store so it
+        // shares one source of truth with background-monitor flights. The unique
+        // (user_id,aircraft_id,dep_ts) constraint dedupes if the monitor already
+        // logged it, so ignore conflicts.
+        _pushLiveFlight(a,pts,fromCode,destCode,maxAlt,dur);
         if(_mlEnabled&&_mlMap&&typeof _mlUpdateLastFlightBtn==='function')_mlUpdateLastFlightBtn();
       }
       _showLandingPrompt(_adsbLandedFlight);
@@ -5820,6 +5911,28 @@ function _adsbCheckLanding(state,a){
     // Do not count this toward a landing.
     _adsbGroundConfirm=0;
   }
+}
+
+// Insert a live-detected completed flight into the backend flight_history so
+// live + background flights share one store. Decimates to <=1000 pts (matching
+// the Edge Function) and ignores duplicate-key conflicts. On success, stamps the
+// returned id back onto lastFlight so future replays lazy-load from the same row.
+async function _pushLiveFlight(a,pts,fromCode,destCode,maxAlt,dur){
+  if(!CLOUD_ENABLED||!_supabase||!_authUser||!a||!pts||pts.length<2)return;
+  try{
+    let track=pts;
+    if(track.length>1000){const step=track.length/1000;const out=[];for(let i=0;i<track.length;i+=step)out.push(track[Math.floor(i)]);if(out[out.length-1]!==track[track.length-1])out.push(track[track.length-1]);track=out;}
+    let dist=0;for(let i=1;i<track.length;i++){const dLat=(track[i].lat-track[i-1].lat)*Math.PI/180,dLon=(track[i].lon-track[i-1].lon)*Math.PI/180,la1=track[i-1].lat*Math.PI/180,la2=track[i].lat*Math.PI/180;const h=Math.sin(dLat/2)**2+Math.cos(la1)*Math.cos(la2)*Math.sin(dLon/2)**2;dist+=2*3440.065*Math.asin(Math.min(1,Math.sqrt(h)));}
+    const depTs=new Date(pts[0].ts||Date.now()).toISOString();
+    const row={user_id:_authUser.id,aircraft_id:a.id,reg:a.reg,icao24:(_adsbLast&&_adsbLast.icao24)||(typeof _nToHex==='function'?_nToHex(a.reg):null)||null,
+      dep_code:fromCode,arr_code:destCode,dep_lat:pts[0].lat,dep_lon:pts[0].lon,arr_lat:pts[pts.length-1].lat,arr_lon:pts[pts.length-1].lon,
+      dep_ts:depTs,arr_ts:new Date(pts[pts.length-1].ts||Date.now()).toISOString(),
+      duration_h:parseFloat(dur),max_alt:maxAlt,distance_nm:Math.round(dist),point_count:track.length,track,source:'live'};
+    const {data,error}=await _supabase.from('flight_history')
+      .upsert(row,{onConflict:'user_id,aircraft_id,dep_ts',ignoreDuplicates:true})
+      .select('id').maybeSingle();
+    if(!error&&data&&data.id&&a.lastFlight)a.lastFlight.flightId=data.id;
+  }catch(e){console.warn('[AeroTrack] live flight push failed:',e.message);}
 }
 
 function _nearestAirport(lat,lon){
