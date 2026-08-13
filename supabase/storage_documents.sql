@@ -12,7 +12,9 @@ insert into storage.buckets (id, name, public)
 values ('documents', 'documents', false)
 on conflict (id) do nothing;
 
-alter table storage.objects enable row level security;
+-- Note: RLS is already enabled on storage.objects by Supabase — do NOT try to
+-- `alter table storage.objects ...` (you're not its owner; it errors 42501).
+-- Creating policies on it, below, is permitted.
 
 drop policy if exists "docs read"   on storage.objects;
 drop policy if exists "docs insert" on storage.objects;
