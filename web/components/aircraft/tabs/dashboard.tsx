@@ -50,7 +50,12 @@ export function DashboardTab({ data, maintHrs, costHrs, aircraft }: TabProps) {
             </div>
           </div>
           <div className="nc-bar">
-            <i style={{ width: `${next.st.p}%`, background: pctColor(next.st.p) }} />
+            <i
+              style={{
+                width: `${next.st.p.toFixed(1)}%`,
+                backgroundColor: pctColor(next.st.p),
+              }}
+            />
           </div>
         </div>
       )}

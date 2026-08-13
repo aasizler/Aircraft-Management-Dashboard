@@ -1,23 +1,33 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { AddAircraftButton } from "@/components/hangar/add-aircraft";
 
 // Hangar view. Middleware guarantees a session. Reads the fleet through RLS.
 export default async function Home() {
   const supabase = await createClient();
 
-  const { data: aircraft, error } = await supabase
-    .from("aircraft")
-    .select("id, reg, type, serial, airport")
-    .eq("archived", false)
-    .order("sort_order");
+  const [{ data: aircraft, error }, { data: membership }] = await Promise.all([
+    supabase
+      .from("aircraft")
+      .select("id, reg, type, serial, airport")
+      .eq("archived", false)
+      .order("sort_order"),
+    supabase.from("org_members").select("org_id").limit(1).maybeSingle(),
+  ]);
 
   return (
     <>
-      <div className="page-hd">
-        <div className="page-title">Hangar</div>
-        <div className="page-sub">
-          {aircraft?.length ?? 0} aircraft under management
+      <div
+        className="page-hd"
+        style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}
+      >
+        <div>
+          <div className="page-title">Hangar</div>
+          <div className="page-sub">
+            {aircraft?.length ?? 0} aircraft under management
+          </div>
         </div>
+        {membership?.org_id && <AddAircraftButton orgId={membership.org_id} />}
       </div>
 
       <div className="hangar-wrap">

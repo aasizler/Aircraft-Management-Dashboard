@@ -65,8 +65,8 @@ export function UtilizationTab({ data }: TabProps) {
               <div key={m.month} style={{ flex: 1, textAlign: "center" }}>
                 <div
                   style={{
-                    height: `${(m.hours / max) * 120}px`,
-                    background: "var(--accent)",
+                    height: `${((m.hours / max) * 120).toFixed(1)}px`,
+                    backgroundColor: "var(--accent)",
                     borderRadius: "4px 4px 0 0",
                     minHeight: 2,
                   }}
