@@ -1,5 +1,14 @@
+"use client";
+
+import dynamic from "next/dynamic";
 import type { FlightEntry } from "@/lib/aircraft";
 import type { TabProps } from "../detail-client";
+
+// Client-only — MapLibre needs window.
+const FlightMap = dynamic(
+  () => import("../flight-map").then((m) => m.FlightMap),
+  { ssr: false, loading: () => <div className="how-box">Loading map…</div> },
+);
 
 export function UtilizationTab({ data }: TabProps) {
   const flights = (data.flights ?? []) as FlightEntry[];
@@ -83,8 +92,9 @@ export function UtilizationTab({ data }: TabProps) {
 
       <div className="map-section">
         <div className="section-hd">
-          <span className="section-label">Airports</span>
+          <span className="section-label">Flight Map</span>
         </div>
+        <FlightMap flights={flights} />
         <div className="ap-chips">
           {airports.length === 0 ? (
             <span className="mono">No airports yet.</span>
@@ -96,10 +106,6 @@ export function UtilizationTab({ data }: TabProps) {
               </span>
             ))
           )}
-        </div>
-        <div className="how-box" style={{ marginTop: 12 }}>
-          <b>Flight map</b> — the interactive MapLibre map with the ADS-B track is
-          being ported from the original next.
         </div>
       </div>
     </div>
