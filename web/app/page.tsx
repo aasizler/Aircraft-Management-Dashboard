@@ -1,12 +1,10 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 
 // Authed home. Middleware guarantees a session by the time we get here.
-// Reads the fleet through RLS — the query returns only aircraft this user may
-// see, with no client-side filtering. Empty result is the pre-import state.
+// Reads the fleet through RLS — returns only aircraft this user may see.
 export default async function Home() {
   const supabase = await createClient();
-
-  const { data: { user } } = await supabase.auth.getUser();
 
   const { data: aircraft, error } = await supabase
     .from("aircraft")
@@ -15,41 +13,47 @@ export default async function Home() {
     .order("sort_order");
 
   return (
-    <main className="mx-auto max-w-4xl p-6">
+    <main className="mx-auto w-full max-w-5xl px-7 py-8">
       <header className="mb-6 flex items-baseline justify-between">
-        <h1 className="text-2xl font-semibold">Fleet</h1>
-        <span className="text-sm text-black/50 dark:text-white/50">
-          {user?.email}
-        </span>
+        <h1 className="at-title">Fleet</h1>
+        <span className="at-mono">{aircraft?.length ?? 0} aircraft</span>
       </header>
 
       {error ? (
-        <p className="rounded-md border border-amber-500/40 bg-amber-500/10 p-4 text-sm">
-          Could not load aircraft: {error.message}. If the v2 schema is not yet
-          deployed, this is expected — deploy{" "}
-          <code>supabase/schema_v2_tenancy.sql</code> first.
+        <p className="at-card" style={{ color: "var(--warn)" }}>
+          Could not load aircraft: {error.message}
         </p>
       ) : aircraft && aircraft.length > 0 ? (
-        <ul className="grid gap-3 sm:grid-cols-2">
+        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {aircraft.map((a) => (
-            <li
-              key={a.id}
-              className="rounded-lg border border-black/10 p-4 dark:border-white/15"
-            >
-              <div className="font-mono text-lg">{a.reg}</div>
-              <div className="text-sm text-black/60 dark:text-white/60">
-                {a.type ?? "—"} · {a.airport ?? "—"}
-              </div>
-              <div className="mt-2 text-xs text-black/45 dark:text-white/45">
-                maint: {a.maint_basis} · cost: {a.cost_basis}
-              </div>
+            <li key={a.id}>
+              <Link href={`/aircraft/${a.id}`} className="at-card at-card-hover block">
+                <div className="flex items-center gap-2">
+                  <span className="at-dot" />
+                  <span
+                    className="font-mono text-lg font-semibold"
+                    style={{ letterSpacing: "0.04em" }}
+                  >
+                    {a.reg}
+                  </span>
+                </div>
+                <div className="mt-1 text-sm" style={{ color: "var(--muted2)" }}>
+                  {a.type ?? "—"}
+                </div>
+                <div className="mt-0.5 text-sm" style={{ color: "var(--muted)" }}>
+                  {a.airport ?? "—"}
+                </div>
+                <div className="mt-3 flex gap-1.5">
+                  <span className="at-badge info">MAINT · {a.maint_basis}</span>
+                  <span className="at-badge info">COST · {a.cost_basis}</span>
+                </div>
+              </Link>
             </li>
           ))}
         </ul>
       ) : (
-        <p className="rounded-md border border-black/10 p-4 text-sm text-black/60 dark:border-white/15 dark:text-white/60">
-          No aircraft yet. Run the import script to bring the fleet over from the
-          legacy app.
+        <p className="at-card" style={{ color: "var(--muted2)" }}>
+          No aircraft yet. Run the import script to bring the fleet over.
         </p>
       )}
     </main>

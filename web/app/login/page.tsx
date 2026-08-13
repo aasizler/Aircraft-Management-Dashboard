@@ -31,13 +31,13 @@ export default function LoginPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center p-6">
-      <form
-        onSubmit={onSubmit}
-        className="w-full max-w-sm space-y-4 rounded-xl border border-black/10 p-6 dark:border-white/15"
-      >
+      <form onSubmit={onSubmit} className="at-card w-full max-w-sm space-y-4">
         <div>
-          <h1 className="text-xl font-semibold">AeroTrack</h1>
-          <p className="text-sm text-black/60 dark:text-white/60">
+          <h1 className="at-brand text-xl">
+            <span className="at-dot" />
+            AeroTrack
+          </h1>
+          <p className="mt-1 text-sm" style={{ color: "var(--muted2)" }}>
             Sign in to continue
           </p>
         </div>
@@ -48,7 +48,7 @@ export default function LoginPage() {
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full rounded-md border border-black/15 px-3 py-2 text-sm dark:border-white/20 dark:bg-transparent"
+          className="at-input"
         />
         <input
           type="password"
@@ -56,15 +56,19 @@ export default function LoginPage() {
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="w-full rounded-md border border-black/15 px-3 py-2 text-sm dark:border-white/20 dark:bg-transparent"
+          className="at-input"
         />
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && (
+          <p className="text-sm" style={{ color: "var(--danger)" }}>
+            {error}
+          </p>
+        )}
 
         <button
           type="submit"
           disabled={busy}
-          className="w-full rounded-md bg-black px-3 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-white dark:text-black"
+          className="at-btn primary w-full disabled:opacity-50"
         >
           {busy ? "Signing in…" : "Sign in"}
         </button>
