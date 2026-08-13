@@ -272,6 +272,14 @@ canvas.chart{display:block;width:100%;height:150px}
 .nav-user-email{font-size:11px;color:var(--muted2);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @keyframes spin{to{transform:rotate(360deg)}}
 @media(max-width:700px){.two-col,.stat-row{grid-template-columns:1fr}}
+/* TILE DOT MENU */
+.tile-dot-btn{width:24px;height:24px;border-radius:5px;border:1px solid var(--border2);background:var(--bg4);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:0;transition:all .15s;z-index:10}
+.tile-dot-btn:hover{border-color:var(--accent);background:var(--accent-dim)}
+.tile-dot-btn span{width:3px;height:3px;border-radius:50%;background:var(--muted2);display:block}
+.tile-dot-btn:hover span{background:var(--accent)}
+.tile-dot-menu{background:var(--bg2);border:1px solid var(--border2);border-radius:8px;min-width:160px;z-index:200;overflow:hidden;box-shadow:0 6px 24px rgba(0,0,0,.6)}
+.portal-item{width:100%;text-align:left;background:none;border:none;color:var(--muted3);font-size:12px;font-weight:500;padding:9px 12px;cursor:pointer;font-family:var(--body);transition:all .12s}
+.portal-item:hover{background:var(--bg4);color:var(--text)}
 /* ADS-B LIVE */
 .adsb-banner{margin:0 28px 14px;background:rgba(0,225,100,.06);border:1px solid rgba(0,225,100,.2);border-radius:10px;padding:12px 18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
 .adsb-banner.ground{background:var(--bg2);border-color:var(--border2)}
