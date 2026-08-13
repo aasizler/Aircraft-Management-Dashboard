@@ -9,6 +9,7 @@ import {
   type Meter,
   type V1Aircraft,
 } from "@/lib/aircraft";
+import { LiveBanner } from "./live-banner";
 import { DashboardTab } from "./tabs/dashboard";
 import { InspectionsTab } from "./tabs/inspections";
 import { OilTab } from "./tabs/oil";
@@ -105,6 +106,9 @@ export function AircraftDetailClient({
           {sync === "syncing" ? "Saving…" : sync === "error" ? "Error" : "Synced"}
         </span>
       </div>
+
+      {/* Live ADS-B (skipped in preview harness to avoid network polling) */}
+      {!previewSave && <LiveBanner reg={aircraft.reg} />}
 
       {/* Tab bar */}
       <div className="tabs">
