@@ -14,10 +14,17 @@ export function UtilizationTab({ data, aircraft }: TabProps) {
   const flights = (data.flights ?? []) as FlightEntry[];
 
   // Monthly hours: prefer stored monthlyHours, else derive from the flight log.
-  const stored = (data.monthlyHours as { month: string; hours: number }[]) ?? [];
+  // v1's monthlyHours shape varies, so read fields defensively — a missing
+  // `hours` must never reach `.toFixed()` and crash the tab.
+  const stored = Array.isArray(data.monthlyHours)
+    ? (data.monthlyHours as Record<string, unknown>[])
+    : [];
   let months: { month: string; hours: number }[];
   if (stored.length) {
-    months = stored.slice(-12);
+    months = stored.slice(-12).map((m) => ({
+      month: String(m.month ?? m.m ?? m.label ?? ""),
+      hours: Number(m.hours ?? m.h ?? m.value ?? 0) || 0,
+    }));
   } else {
     const agg: Record<string, number> = {};
     flights.forEach((f) => {
