@@ -35,9 +35,11 @@ type Sync = "synced" | "syncing" | "error";
 export function AircraftDetailClient({
   aircraft,
   meters,
+  previewSave,
 }: {
   aircraft: AircraftRow;
   meters: Meter[];
+  previewSave?: (next: V1Aircraft) => Promise<void>;
 }) {
   const [data, setData] = useState<V1Aircraft>(aircraft.data ?? {});
   const [tab, setTab] = useState<TabName>("Dashboard");
@@ -48,10 +50,15 @@ export function AircraftDetailClient({
 
   // The saveLS() replacement: persist the aircraft's data blob to ITS OWN ROW.
   // Per-aircraft rows mean concurrent edits touch disjoint rows — no more
-  // fleet-blob last-write-wins.
+  // fleet-blob last-write-wins. previewSave short-circuits DB writes for the
+  // mock harness.
   const save = useCallback(
     async (next: V1Aircraft) => {
       setData(next);
+      if (previewSave) {
+        await previewSave(next);
+        return;
+      }
       setSync("syncing");
       const supabase = createClient();
       const { error } = await supabase
@@ -60,7 +67,7 @@ export function AircraftDetailClient({
         .eq("id", aircraft.id);
       setSync(error ? "error" : "synced");
     },
-    [aircraft.id],
+    [aircraft.id, previewSave],
   );
 
   const ctx = { aircraft, data, meters, maintHrs, costHrs, save };
