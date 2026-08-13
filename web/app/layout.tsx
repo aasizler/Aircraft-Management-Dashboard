@@ -40,6 +40,13 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       className={`${inter.variable} ${mono.variable} ${syne.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
+        {/* Apply saved theme/accent before paint to avoid a flash. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "try{var t=localStorage.getItem('at_theme');if(t==='light')document.documentElement.classList.add('light');var a=localStorage.getItem('at_accent');if(a){var r=document.documentElement.style;r.setProperty('--accent',a);r.setProperty('--accent-dim',a+'1a');}}catch(e){}",
+          }}
+        />
         {user && (
           <nav className="nav">
             <Link href="/" className="nav-brand">
@@ -47,12 +54,12 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
               AeroTrack
             </Link>
             <div className="nav-right">
-              <span className="nav-user">
+              <Link href="/settings" className="nav-user" style={{ textDecoration: "none" }}>
                 <span className="nav-avatar">
                   {(user.email ?? "?")[0].toUpperCase()}
                 </span>
                 <span className="nav-user-email">{user.email}</span>
-              </span>
+              </Link>
               <SignOutButton />
             </div>
           </nav>
