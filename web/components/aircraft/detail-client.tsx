@@ -9,10 +9,13 @@ import {
   type Meter,
   type V1Aircraft,
 } from "@/lib/aircraft";
+import { DashboardTab } from "./tabs/dashboard";
 import { InspectionsTab } from "./tabs/inspections";
 import { OilTab } from "./tabs/oil";
+import { UtilizationTab } from "./tabs/utilization";
 import { FlightsTab } from "./tabs/flights";
 import { ScheduleTab } from "./tabs/schedule";
+import { DocumentsTab } from "./tabs/documents";
 import { InsuranceTab } from "./tabs/insurance";
 
 const TABS = [
@@ -37,7 +40,7 @@ export function AircraftDetailClient({
   meters: Meter[];
 }) {
   const [data, setData] = useState<V1Aircraft>(aircraft.data ?? {});
-  const [tab, setTab] = useState<TabName>("Inspections");
+  const [tab, setTab] = useState<TabName>("Dashboard");
   const [sync, setSync] = useState<Sync>("synced");
 
   const maintHrs = meterValue(meters, aircraft.maint_basis);
@@ -110,19 +113,14 @@ export function AircraftDetailClient({
       </div>
 
       <div className="tab-content">
+        {tab === "Dashboard" && <DashboardTab {...ctx} />}
         {tab === "Inspections" && <InspectionsTab {...ctx} />}
         {tab === "Oil" && <OilTab {...ctx} />}
+        {tab === "Utilization" && <UtilizationTab {...ctx} />}
         {tab === "Flights" && <FlightsTab {...ctx} />}
         {tab === "Schedule" && <ScheduleTab {...ctx} />}
+        {tab === "Documents" && <DocumentsTab {...ctx} />}
         {tab === "Insurance" && <InsuranceTab {...ctx} />}
-        {(tab === "Dashboard" ||
-          tab === "Utilization" ||
-          tab === "Documents") && (
-          <div className="how-box" style={{ marginTop: 18 }}>
-            <b>{tab}</b> — porting in progress. Inspections, Oil, Flights,
-            Schedule, and Insurance are live.
-          </div>
-        )}
       </div>
     </div>
   );

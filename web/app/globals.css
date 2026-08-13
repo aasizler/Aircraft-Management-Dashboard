@@ -24,7 +24,9 @@ html { color-scheme: dark; }
 body { background: var(--bg); color: var(--text); font-family: var(--body); min-height: 100vh; overflow-x: hidden; }
 html, body { height: 100%; }
 
-@layer components {
+/* Component classes are plain (not @layer) so they are ALWAYS emitted in dev and
+   prod — Tailwind tree-shakes @layer components by scan detection, which drops
+   classes built via template literals or in incrementally-compiled routes. */
 /* NAV */
 .nav{display:flex;align-items:center;padding:0 28px;height:60px;border-bottom:1px solid var(--border2);background:var(--bg);position:sticky;top:0;z-index:100}
 .nav-brand{font-family:var(--display);font-size:18px;font-weight:800;letter-spacing:.05em;display:flex;align-items:center;gap:8px;color:var(--text);text-decoration:none}
@@ -275,4 +277,3 @@ body.light{--bg:#f4f4f2;--bg2:#fff;--bg3:#eeeeec;--bg4:#e5e5e3;--bg5:#d8d8d6;--t
 body.light .nav{background:#f4f4f2}
 body.light .data-table tbody tr:nth-child(odd){background:#fafafa}
 body.light .data-table tbody tr:nth-child(even){background:#fff}
-}
