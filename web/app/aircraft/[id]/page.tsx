@@ -13,7 +13,7 @@ export default async function AircraftDetail({
 
   const { data: a } = await supabase
     .from("aircraft")
-    .select("id, reg, type, airport, serial, maint_basis, cost_basis, data")
+    .select("id, org_id, reg, type, airport, serial, maint_basis, cost_basis, data")
     .eq("id", id)
     .single();
 

@@ -10,6 +10,7 @@ import {
   type V1Aircraft,
 } from "@/lib/aircraft";
 import { LiveBanner } from "./live-banner";
+import { MeterCapture } from "./meter-capture";
 import { DashboardTab } from "./tabs/dashboard";
 import { InspectionsTab } from "./tabs/inspections";
 import { OilTab } from "./tabs/oil";
@@ -101,10 +102,13 @@ export function AircraftDetailClient({
             {aircraft.maint_basis} <b>{maintHrs.toFixed(1)}</b> hrs
           </span>
         </div>
-        <span className={`sync-badge ${sync}`}>
-          <span className="sync-dot" />
-          {sync === "syncing" ? "Saving…" : sync === "error" ? "Error" : "Synced"}
-        </span>
+        <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+          {!previewSave && <MeterCapture aircraft={aircraft} />}
+          <span className={`sync-badge ${sync}`}>
+            <span className="sync-dot" />
+            {sync === "syncing" ? "Saving…" : sync === "error" ? "Error" : "Synced"}
+          </span>
+        </div>
       </div>
 
       {/* Live ADS-B (skipped in preview harness to avoid network polling) */}

@@ -17,6 +17,8 @@ export function HangarGrid({ aircraft }: { aircraft: Tile[] }) {
   const router = useRouter();
   const [menu, setMenu] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [order, setOrder] = useState<Tile[]>(aircraft);
+  const [dragId, setDragId] = useState<string | null>(null);
 
   async function archive(id: string) {
     setBusy(true);
@@ -26,10 +28,33 @@ export function HangarGrid({ aircraft }: { aircraft: Tile[] }) {
     router.refresh();
   }
 
+  function onDrop(targetId: string) {
+    if (!dragId || dragId === targetId) return;
+    const next = [...order];
+    const from = next.findIndex((t) => t.id === dragId);
+    const to = next.findIndex((t) => t.id === targetId);
+    next.splice(to, 0, next.splice(from, 1)[0]);
+    setOrder(next);
+    setDragId(null);
+    // Persist sort_order for the whole list.
+    const supabase = createClient();
+    next.forEach((t, i) => {
+      supabase.from("aircraft").update({ sort_order: i }).eq("id", t.id);
+    });
+  }
+
   return (
     <div className="ac-cards">
-      {aircraft.map((a) => (
-        <div key={a.id} className="ac-tile" style={{ cursor: "default" }}>
+      {order.map((a) => (
+        <div
+          key={a.id}
+          className="ac-tile"
+          style={{ cursor: "default", opacity: dragId === a.id ? 0.4 : 1 }}
+          draggable
+          onDragStart={() => setDragId(a.id)}
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={() => onDrop(a.id)}
+        >
           <button
             className="tile-dot-btn"
             style={{ position: "absolute", top: 10, right: 10 }}

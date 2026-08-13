@@ -60,6 +60,7 @@ export type SchedEvent = {
 
 export type AircraftRow = {
   id: string;
+  org_id: string;
   reg: string;
   type: string | null;
   airport: string | null;

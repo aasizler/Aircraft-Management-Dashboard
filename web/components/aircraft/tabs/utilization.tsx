@@ -10,7 +10,7 @@ const FlightMap = dynamic(
   { ssr: false, loading: () => <div className="how-box">Loading map…</div> },
 );
 
-export function UtilizationTab({ data }: TabProps) {
+export function UtilizationTab({ data, aircraft }: TabProps) {
   const flights = (data.flights ?? []) as FlightEntry[];
 
   // Monthly hours: prefer stored monthlyHours, else derive from the flight log.
@@ -94,7 +94,7 @@ export function UtilizationTab({ data }: TabProps) {
         <div className="section-hd">
           <span className="section-label">Flight Map</span>
         </div>
-        <FlightMap flights={flights} />
+        <FlightMap flights={flights} reg={aircraft.reg} />
         <div className="ap-chips">
           {airports.length === 0 ? (
             <span className="mono">No airports yet.</span>

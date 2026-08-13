@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { FlightEntry } from "@/lib/aircraft";
+import { useLivePosition } from "@/lib/adsb";
 
 // Module-scoped airport cache so the (large) ourairports CSV loads at most once
 // per session — same source the original app used.
@@ -50,10 +51,12 @@ const BASEMAPS = {
   ],
 };
 
-export function FlightMap({ flights }: { flights: FlightEntry[] }) {
+export function FlightMap({ flights, reg }: { flights: FlightEntry[]; reg?: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
+  const loadedRef = useRef(false);
   const [basemap, setBasemap] = useState<"map" | "satellite">("map");
+  const { state: live } = useLivePosition(reg ?? "");
 
   useEffect(() => {
     if (!ref.current || mapRef.current) return;
@@ -75,6 +78,21 @@ export function FlightMap({ flights }: { flights: FlightEntry[] }) {
     mapRef.current = map;
 
     map.on("load", async () => {
+      loadedRef.current = true;
+      // Empty live-position source; updated by the effect below as ADS-B polls.
+      map.addSource("live", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      map.addLayer({
+        id: "live-dot",
+        type: "circle",
+        source: "live",
+        paint: {
+          "circle-radius": 7,
+          "circle-color": "#00e164",
+          "circle-stroke-color": "#04231a",
+          "circle-stroke-width": 2,
+        },
+      });
+
       const ap = await loadAirports();
       if (!ap) return;
 
@@ -157,6 +175,25 @@ export function FlightMap({ flights }: { flights: FlightEntry[] }) {
     const src = map.getSource("base") as maplibregl.RasterTileSource | undefined;
     if (src?.setTiles) src.setTiles(BASEMAPS[basemap]);
   }, [basemap]);
+
+  // Push the live ADS-B position to the map marker as it polls.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !loadedRef.current) return;
+    const src = map.getSource("live") as maplibregl.GeoJSONSource | undefined;
+    if (!src) return;
+    const features =
+      live && live.lat != null && live.lon != null
+        ? [
+            {
+              type: "Feature" as const,
+              geometry: { type: "Point" as const, coordinates: [live.lon, live.lat] },
+              properties: {},
+            },
+          ]
+        : [];
+    src.setData({ type: "FeatureCollection", features });
+  }, [live]);
 
   return (
     <div style={{ position: "relative", borderRadius: "var(--r)", overflow: "hidden", border: "1px solid var(--border2)" }}>
