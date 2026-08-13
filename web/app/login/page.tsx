@@ -30,17 +30,13 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center p-6">
-      <form onSubmit={onSubmit} className="at-card w-full max-w-sm space-y-4">
-        <div>
-          <h1 className="at-brand text-xl">
-            <span className="at-dot" />
-            AeroTrack
-          </h1>
-          <p className="mt-1 text-sm" style={{ color: "var(--muted2)" }}>
-            Sign in to continue
-          </p>
+    <div className="auth-screen">
+      <form onSubmit={onSubmit} className="auth-card">
+        <div className="auth-brand">
+          <span className="nav-dot" />
+          AeroTrack
         </div>
+        <div className="auth-sub">Sign in to continue</div>
 
         <input
           type="email"
@@ -48,7 +44,7 @@ export default function LoginPage() {
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="at-input"
+          className="auth-input"
         />
         <input
           type="password"
@@ -56,23 +52,15 @@ export default function LoginPage() {
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="at-input"
+          className="auth-input"
         />
 
-        {error && (
-          <p className="text-sm" style={{ color: "var(--danger)" }}>
-            {error}
-          </p>
-        )}
-
-        <button
-          type="submit"
-          disabled={busy}
-          className="at-btn primary w-full disabled:opacity-50"
-        >
+        <button type="submit" disabled={busy} className="auth-btn">
           {busy ? "Signing in…" : "Sign in"}
         </button>
+
+        <div className="auth-err">{error ?? ""}</div>
       </form>
-    </main>
+    </div>
   );
 }

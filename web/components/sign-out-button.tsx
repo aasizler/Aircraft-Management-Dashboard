@@ -11,7 +11,7 @@ export function SignOutButton() {
     router.refresh();
   }
   return (
-    <button onClick={onClick} className="at-btn">
+    <button onClick={onClick} className="btn sm">
       Sign out
     </button>
   );

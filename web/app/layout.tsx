@@ -41,13 +41,18 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="flex min-h-full flex-col">
         {user && (
-          <nav className="at-nav">
-            <Link href="/" className="at-brand">
-              <span className="at-dot" />
+          <nav className="nav">
+            <Link href="/" className="nav-brand">
+              <span className="nav-dot" />
               AeroTrack
             </Link>
-            <div className="ml-auto flex items-center gap-3">
-              <span className="at-mono hidden sm:inline">{user.email}</span>
+            <div className="nav-right">
+              <span className="nav-user">
+                <span className="nav-avatar">
+                  {(user.email ?? "?")[0].toUpperCase()}
+                </span>
+                <span className="nav-user-email">{user.email}</span>
+              </span>
               <SignOutButton />
             </div>
           </nav>
