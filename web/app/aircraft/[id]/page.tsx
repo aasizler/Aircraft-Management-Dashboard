@@ -19,15 +19,18 @@ export default async function AircraftDetail({
 
   if (!a) notFound();
 
-  const { data: meters } = await supabase
-    .from("aircraft_meters")
-    .select("kind, current, label")
-    .eq("aircraft_id", id);
+  const [{ data: meters }, { data: membership }] = await Promise.all([
+    supabase.from("aircraft_meters").select("kind, current, label").eq("aircraft_id", id),
+    supabase.from("org_members").select("role").eq("org_id", a.org_id).maybeSingle(),
+  ]);
+
+  const canManage = membership?.role === "admin" || membership?.role === "manager";
 
   return (
     <AircraftDetailClient
       aircraft={a as AircraftRow}
       meters={(meters ?? []) as Meter[]}
+      canManage={canManage}
     />
   );
 }

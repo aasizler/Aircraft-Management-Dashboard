@@ -11,6 +11,7 @@ import {
 } from "@/lib/aircraft";
 import { LiveBanner } from "./live-banner";
 import { MeterCapture } from "./meter-capture";
+import { ManageAccess } from "./manage-access";
 import { DashboardTab } from "./tabs/dashboard";
 import { InspectionsTab } from "./tabs/inspections";
 import { OilTab } from "./tabs/oil";
@@ -37,10 +38,12 @@ type Sync = "synced" | "syncing" | "error";
 export function AircraftDetailClient({
   aircraft,
   meters,
+  canManage,
   previewSave,
 }: {
   aircraft: AircraftRow;
   meters: Meter[];
+  canManage?: boolean;
   previewSave?: (next: V1Aircraft) => Promise<void>;
 }) {
   const [data, setData] = useState<V1Aircraft>(aircraft.data ?? {});
@@ -103,6 +106,9 @@ export function AircraftDetailClient({
           </span>
         </div>
         <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+          {!previewSave && canManage && (
+            <ManageAccess aircraftId={aircraft.id} orgId={aircraft.org_id} reg={aircraft.reg} />
+          )}
           {!previewSave && <MeterCapture aircraft={aircraft} />}
           <span className={`sync-badge ${sync}`}>
             <span className="sync-dot" />
