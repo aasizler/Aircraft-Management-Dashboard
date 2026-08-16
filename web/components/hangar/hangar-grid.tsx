@@ -7,6 +7,7 @@ import { useFleetAirborne } from "@/lib/adsb";
 import { ic, meterValue, type Insp, type Meter, type V1Aircraft } from "@/lib/aircraft";
 import { Confirm } from "@/components/ui/confirm";
 import { useToast } from "@/components/ui/toast";
+import { ROLE_LABELS, can, type AppRole } from "@/lib/permissions";
 import type { MeterKind } from "@/lib/types";
 
 export type Tile = {
@@ -18,7 +19,8 @@ export type Tile = {
   maint_basis: MeterKind;
   data: V1Aircraft;
   meters: Meter[];
-  role?: string | null;
+  /** Effective role for THIS aircraft, resolved server-side. */
+  appRole: AppRole;
 };
 
 export function HangarGrid({ aircraft }: { aircraft: Tile[] }) {
@@ -62,11 +64,20 @@ export function HangarGrid({ aircraft }: { aircraft: Tile[] }) {
 
   async function remove(t: Tile) {
     setBusy(true);
-    const { error } = await createClient().from("aircraft").delete().eq("id", t.id);
+    // .select() so we can see the rowcount. The delete policy is
+    // is_org_staff(), and RLS filters non-matching rows instead of raising —
+    // without this a refused delete looked identical to a successful one and
+    // the tile vanished locally until the next reload.
+    const { data, error } = await createClient()
+      .from("aircraft").delete().eq("id", t.id).select("id");
     setBusy(false);
     setConfirmTile(null);
     setMenu(null);
     if (error) { toast(`Delete failed: ${error.message}`, "danger"); return; }
+    if (!data?.length) {
+      toast("You don't have permission to delete this aircraft.", "danger");
+      return;
+    }
     setOrder((o) => o.filter((x) => x.id !== t.id));
     toast(`${t.reg} deleted`, "ok");
     router.refresh();
@@ -118,7 +129,7 @@ export function HangarGrid({ aircraft }: { aircraft: Tile[] }) {
             </div>
 
             <div className="ac-tile-foot" style={{ position: "relative" }}>
-              <span className="role-badge">{a.role ?? "Owner"}</span>
+              <span className="role-badge">{ROLE_LABELS[a.appRole]}</span>
               <button
                 className="tile-dot-btn"
                 title="Options"
@@ -149,13 +160,19 @@ export function HangarGrid({ aircraft }: { aircraft: Tile[] }) {
                   >
                     Manage Access
                   </button>
-                  <button
-                    className="row-dot-item danger-item"
-                    disabled={busy}
-                    onClick={() => { setMenu(null); setConfirmTile(a); }}
-                  >
-                    Delete Aircraft
-                  </button>
+                  {/* v1 omitted this entirely unless can('delete', id).
+                      Someone an aircraft was shared with must not be able to
+                      delete the owner's records — and RLS refuses them anyway,
+                      so showing the button only produced a silent no-op. */}
+                  {can(a.appRole, "delete") && (
+                    <button
+                      className="row-dot-item danger-item"
+                      disabled={busy}
+                      onClick={() => { setMenu(null); setConfirmTile(a); }}
+                    >
+                      Delete Aircraft
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -183,6 +200,7 @@ export function HangarGrid({ aircraft }: { aircraft: Tile[] }) {
             </>
           }
           confirmLabel="Delete Aircraft"
+          requireText={confirmTile.reg}
           busy={busy}
           onConfirm={() => remove(confirmTile)}
           onCancel={() => setConfirmTile(null)}

@@ -91,6 +91,13 @@ export function AircraftDetailClient({
 }) {
   const [data, setData] = useState<V1Aircraft>(aircraft.data ?? {});
   const [tab, setTab] = useState<TabName>("Dashboard");
+
+  // Insurance carries premiums, hull values and named pilots — v1 showed that
+  // tab only to roles with financial access. Deriving the active tab rather
+  // than storing it means a role that can't see Insurance can't be left
+  // stranded there by a deep link or a revocation mid-session.
+  const visibleTabs = TABS.filter((t) => t !== "Insurance" || can(role, "financial"));
+  const activeTab: TabName = visibleTabs.includes(tab) ? tab : "Dashboard";
   const [sync, setSync] = useState<Sync>("synced");
   const actionRef = useRef<PendingAction>(null);
   const [focusInsp, setFocusInsp] = useState<number | null>(null);
@@ -241,12 +248,14 @@ export function AircraftDetailClient({
         {/* Live ADS-B (skipped in preview harness to avoid network polling) */}
         {!previewSave && <LiveBanner reg={aircraft.reg} aircraftId={aircraft.id} data={data} save={save} />}
 
-        {/* Tab bar */}
+        {/* Tab bar. v1 hid the Insurance button outright for roles without
+            financial access and refused to navigate there; the port showed it
+            to everyone, including pilots and mechanics. */}
         <div className="tabs">
-          {TABS.map((t) => (
+          {visibleTabs.map((t) => (
             <button
               key={t}
-              className={`tab ${tab === t ? "active" : ""}`}
+              className={`tab ${activeTab === t ? "active" : ""}`}
               onClick={() => setTab(t)}
             >
               {t}
@@ -265,14 +274,14 @@ export function AircraftDetailClient({
         </div>
 
         <div className="tab-content">
-          {tab === "Dashboard" && <DashboardTab {...ctx} />}
-          {tab === "Inspections" && <InspectionsTab {...ctx} />}
-          {tab === "Oil and Fluids" && <OilTab {...ctx} />}
-          {tab === "Squawks" && <SquawksTab {...ctx} />}
-          {tab === "Utilization" && <UtilizationTab {...ctx} />}
-          {tab === "Schedule" && <ScheduleTab {...ctx} />}
-          {tab === "Documents" && <DocumentsTab {...ctx} />}
-          {tab === "Insurance" && <InsuranceTab {...ctx} />}
+          {activeTab === "Dashboard" && <DashboardTab {...ctx} />}
+          {activeTab === "Inspections" && <InspectionsTab {...ctx} />}
+          {activeTab === "Oil and Fluids" && <OilTab {...ctx} />}
+          {activeTab === "Squawks" && <SquawksTab {...ctx} />}
+          {activeTab === "Utilization" && <UtilizationTab {...ctx} />}
+          {activeTab === "Schedule" && <ScheduleTab {...ctx} />}
+          {activeTab === "Documents" && <DocumentsTab {...ctx} />}
+          {activeTab === "Insurance" && <InsuranceTab {...ctx} />}
         </div>
       </div>
     </AircraftCtx.Provider>
