@@ -128,14 +128,32 @@ export function AccessWatcher({
 
   if (!lost) return null;
 
+  // Clearing `lost` is what dismisses this. router.push alone didn't: the
+  // watcher is mounted in the root layout, so it survives the navigation and
+  // the dialog stayed up over the hangar.
+  const leave = () => {
+    setLost(null);
+    router.push("/");
+  };
+
   return (
-    <Modal title="Access removed" onClose={() => router.push("/")}>
+    <Modal
+      title="Access removed"
+      onClose={leave}
+      // The page behind is an aircraft this person may no longer see, and it
+      // could be the Insurance tab. A translucent backdrop would leave the
+      // numbers readable, so blur it out.
+      obscure
+      // No click-away or Escape — leaving the page is the only outcome, and a
+      // stray click shouldn't drop them back onto content they've lost.
+      dismissible={false}
+    >
       <div style={{ fontSize: 13, color: "var(--muted3)", lineHeight: 1.7 }}>
         Your access to <b>{lost}</b> has been revoked by the owner. You can no
         longer view its records.
       </div>
       <div className="form-actions">
-        <button className="btn primary" onClick={() => router.push("/")}>
+        <button className="btn primary" onClick={leave}>
           Return to Hangar
         </button>
       </div>
