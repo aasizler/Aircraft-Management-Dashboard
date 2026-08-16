@@ -11,16 +11,22 @@ import { setPendingInvites } from "@/lib/aircraft-perms";
 import type { CraftRole } from "@/lib/types";
 
 /**
- * localStorage, not sessionStorage: dismissing means "I've seen these", and
- * that shouldn't expire when the tab does. The ribbon returns only when the
- * set of invitations changes — the nav ⋮ and the hangar reminder are the ways
- * back in the meantime.
+ * The invitation ids the ribbon has been dismissed against.
+ *
+ * localStorage, not sessionStorage: dismissing means "I've seen these", which
+ * shouldn't expire when the tab does. The ribbon returns only when an id
+ * appears that isn't in this list — accepting or declining one of several
+ * leaves the rest dismissed, since nothing new has arrived.
  */
 const DISMISS_KEY = "aerotrack:invites-dismissed";
 
-/** Stable identity for a set of invitations, order-independent. */
-function inviteKey(rows: { id: string }[]): string {
-  return rows.map((r) => r.id).sort().join(",");
+function readDismissed(): Set<string> {
+  try {
+    const raw = localStorage.getItem(DISMISS_KEY);
+    return new Set(raw ? (JSON.parse(raw) as string[]) : []);
+  } catch {
+    return new Set();
+  }
 }
 
 type Invite = {
@@ -83,12 +89,13 @@ export function PendingInvites({ email }: { email: string }) {
     };
 
     const rows = (data ?? []) as unknown as Row[];
-    // Dismissal is recorded against the exact set of invite ids, so
-    // re-dismissing the same one sticks while a NEW arrival raises the ribbon
-    // again. Held in sessionStorage rather than state because this component
-    // remounts on navigation — as component state it reset on every route
-    // change and the ribbon came back after being dismissed.
-    setDismissed(!!rows.length && localStorage.getItem(DISMISS_KEY) === inviteKey(rows));
+    // Only an id that wasn't dismissed counts as new. Comparing the whole set
+    // meant declining one of several re-raised the ribbon for the others,
+    // which isn't a new invitation — it's the same ones, minus one.
+    const seen = readDismissed();
+    const arrived = rows.some((r) => !seen.has(r.id));
+    if (arrived) localStorage.removeItem(DISMISS_KEY);
+    setDismissed(!!rows.length && !arrived && seen.size > 0);
 
     setPendingInvites(rows.length);
     setInvites(
@@ -120,13 +127,10 @@ export function PendingInvites({ email }: { email: string }) {
   // The "Review" action on the invitation toast opens this. Un-dismisses the
   // banner too — having hidden it once shouldn't make the modal unreachable.
   useEffect(() => {
-    const open = () => {
-      // Opening deliberately clears the dismissal, so closing the modal
-      // doesn't drop straight back to a hidden ribbon.
-      localStorage.removeItem(DISMISS_KEY);
-      setDismissed(false);
-      setOpen(true);
-    };
+    // Deliberately does NOT clear the dismissal: reviewing the list and
+    // closing it shouldn't put the ribbon back. You dismissed it; looking at
+    // the invitations is not un-dismissing them.
+    const open = () => setOpen(true);
     window.addEventListener("aerotrack:pending-invites", open);
     return () => window.removeEventListener("aerotrack:pending-invites", open);
   }, []);
@@ -196,7 +200,7 @@ export function PendingInvites({ email }: { email: string }) {
         <button
           className="pending-x"
           onClick={() => {
-            localStorage.setItem(DISMISS_KEY, inviteKey(invites));
+            localStorage.setItem(DISMISS_KEY, JSON.stringify(invites.map((i) => i.id)));
             setDismissed(true);
           }}
           aria-label="Dismiss"
