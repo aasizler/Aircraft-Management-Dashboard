@@ -8,6 +8,7 @@ import { useToast } from "@/components/ui/toast";
 import { CRAFT_ROLE_COLORS, CRAFT_ROLE_LABELS } from "@/lib/permissions";
 import { useAccessChanges } from "@/lib/realtime";
 import { setPendingInvites } from "@/lib/aircraft-perms";
+import { markSelfInitiated } from "@/lib/access-events";
 import type { CraftRole } from "@/lib/types";
 
 /**
@@ -153,6 +154,10 @@ export function PendingInvites({ email }: { email: string }) {
 
   async function decline(inv: Invite) {
     setBusy(true);
+    // Declining and being revoked are the same DELETE on the wire. Without
+    // this the watcher also announced "Your access has been revoked" — two
+    // toasts for one action, one of them untrue.
+    markSelfInitiated(inv.id);
     const { data, error } = await createClient()
       .rpc("decline_aircraft_access", { p_access: inv.id });
     setBusy(false);

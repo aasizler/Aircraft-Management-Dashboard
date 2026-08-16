@@ -437,6 +437,8 @@ canvas.chart{display:block;width:100%;height:150px}
 .row-dot-menu{position:absolute;right:0;top:26px;background:var(--bg2);border:1px solid var(--border3);border-radius:8px;min-width:150px;z-index:900;overflow:hidden;box-shadow:0 8px 26px rgba(0,0,0,.6)}
 .row-dot-item{width:100%;text-align:left;background:none;border:none;color:var(--muted3);font-size:12px;font-weight:500;padding:9px 13px;cursor:pointer;font-family:var(--body);transition:all .12s}
 .row-dot-item:hover{background:var(--bg4);color:var(--text)}
+/* Destructive items read as destructive before you hover, not after. */
+.row-dot-item.danger-item{color:var(--danger)}
 .row-dot-item.danger-item:hover{background:var(--danger-dim);color:var(--danger)}
 /* CHARTS */
 .chart-empty{padding:34px 0;text-align:center;color:var(--muted2);font-size:12px}

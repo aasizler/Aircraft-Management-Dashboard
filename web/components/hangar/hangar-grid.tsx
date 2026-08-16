@@ -7,6 +7,7 @@ import { useFleetAirborne } from "@/lib/adsb";
 import { ic, meterValue, type Insp, type Meter, type V1Aircraft } from "@/lib/aircraft";
 import { Confirm } from "@/components/ui/confirm";
 import { useToast } from "@/components/ui/toast";
+import { markSelfInitiated } from "@/lib/access-events";
 import { CRAFT_ROLE_LABELS, ROLE_LABELS, can, type AppRole } from "@/lib/permissions";
 import type { CraftRole, MeterKind } from "@/lib/types";
 
@@ -130,6 +131,8 @@ export function HangarGrid({ aircraft }: { aircraft: Tile[] }) {
   async function leave(t: Tile) {
     if (!t.grantId) return;
     setBusy(true);
+    // Same reason as declining: you left, you weren't revoked.
+    markSelfInitiated(t.grantId);
     const { data, error } = await createClient()
       .rpc("decline_aircraft_access", { p_access: t.grantId });
     setBusy(false);

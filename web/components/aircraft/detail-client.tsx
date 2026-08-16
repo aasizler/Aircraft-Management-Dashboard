@@ -167,10 +167,20 @@ export function AircraftDetailClient({
 
   // Another manager editing this aircraft updates our copy live (v1
   // handleRealtimeFleetUpdate). Skipped in the preview harness.
-  const remoteRef = useRef((next: Record<string, unknown>) => {
+  //
+  // Postgres echoes your OWN update back down the channel, and the payload
+  // says nothing about who made it — so every save announced "Updated by
+  // another user" to the person who had just pressed save. v1 compared the
+  // incoming blob with the local one and returned early when they matched;
+  // same test here, against a ref so the callback always sees current data.
+  const dataRef = useRef(data);
+  dataRef.current = data;
+  const remoteRef = useRef<(next: Record<string, unknown>) => void>(() => {});
+  remoteRef.current = (next: Record<string, unknown>) => {
+    if (JSON.stringify(next) === JSON.stringify(dataRef.current)) return;
     setData(next as V1Aircraft);
     toast("Updated by another user", "info");
-  });
+  };
   useAircraftRealtime(previewSave ? "" : aircraft.id, (d) => remoteRef.current(d));
 
   const go = useCallback((t: TabName, a: PendingAction = null) => {

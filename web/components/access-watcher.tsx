@@ -136,8 +136,14 @@ export function AccessWatcher({
         const id = e.old?.id;
         const gone = (id ? cache.current.get(id) : null) ?? e.old ?? null;
         const reg = gone?.aircraft_reg ?? "an aircraft";
+        // Read once: the flag is consumed on read, and both branches need it.
+        // Declining or leaving is a delete you performed yourself — the client
+        // that did it has already said so, and shouldn't also be told it was
+        // revoked.
+        const selfInitiated = id ? wasSelfInitiated(id) : false;
 
         if (isMine(gone)) {
+          if (selfInitiated) { if (id) cache.current.delete(id); void refreshCache(); router.refresh(); return; }
           // My own access ended. If I'm reading that very aircraft, do NOT
           // refresh — the server component can no longer see the row and would
           // render a 404. Explain it instead.
@@ -163,7 +169,7 @@ export function AccessWatcher({
             },
             "warn",
           );
-        } else if (id && !wasSelfInitiated(id)) {
+        } else if (id && !selfInitiated) {
           // A grant I administer disappeared and I didn't remove it — they
           // declined or left. Revoking is the same DELETE on the wire, which
           // is what wasSelfInitiated() filters out.
