@@ -7,7 +7,7 @@ import { useAccessChanges } from "@/lib/realtime";
 import { markSelfInitiated } from "@/lib/access-events";
 import type { CraftRole } from "@/lib/types";
 
-type Grant = { id: string; invited_email: string | null; user_id: string | null; role: CraftRole; accepted: boolean };
+type Grant = { id: string; invited_email: string | null; user_id: string | null; role: CraftRole; accepted: boolean; user_name: string | null };
 type Assign = { id: string; invited_email: string | null; ends_at: string; starts_at: string };
 
 const ROLE_LABEL: Record<CraftRole, string> = {
@@ -47,7 +47,7 @@ export function ManageAccess({
   const load = useCallback(async () => {
     const s = createClient();
     const [{ data: g }, { data: a }] = await Promise.all([
-      s.from("aircraft_access").select("id, invited_email, user_id, role, accepted").eq("aircraft_id", aircraftId),
+      s.from("aircraft_access").select("id, invited_email, user_id, role, accepted, user_name").eq("aircraft_id", aircraftId),
       s
         .from("assignments")
         .select("id, invited_email, ends_at, starts_at")
@@ -181,7 +181,16 @@ export function ManageAccess({
               {grants.map((g) => (
                 <li className="doc-item" key={g.id}>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div className="doc-name">{g.invited_email ?? "(linked user)"}</div>
+                    {/* Name leads, address beneath — the granter still needs
+                        the address to be sure who this is, but a list of
+                        emails is unreadable once several people share one
+                        aircraft. */}
+                    <div className="doc-name">
+                      {g.user_name?.trim() || g.invited_email || "(linked user)"}
+                    </div>
+                    {g.user_name?.trim() && g.invited_email && (
+                      <div className="doc-meta">{g.invited_email}</div>
+                    )}
                     {/* v1's renderSharesList showed Active vs Pending
                         acceptance here. Without it the granter can't tell
                         whether the invite ever landed. */}

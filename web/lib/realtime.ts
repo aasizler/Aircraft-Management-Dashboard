@@ -99,6 +99,9 @@ export type AccessRow = {
   accepted: boolean;
   aircraft_reg: string | null;
   aircraft_type: string | null;
+  granted_by_name: string | null;
+  granted_by_email: string | null;
+  user_name: string | null;
 };
 
 export type AccessEvent = {

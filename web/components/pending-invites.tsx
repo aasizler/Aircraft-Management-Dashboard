@@ -85,6 +85,14 @@ export function PendingInvites({ email }: { email: string }) {
   // re-fires this effect, so the invite sat unseen until a manual reload.
   useAccessChanges(load);
 
+  // The "Review" action on the invitation toast opens this. Un-dismisses the
+  // banner too — having hidden it once shouldn't make the modal unreachable.
+  useEffect(() => {
+    const open = () => { setDismissed(false); setOpen(true); };
+    window.addEventListener("aerotrack:pending-invites", open);
+    return () => window.removeEventListener("aerotrack:pending-invites", open);
+  }, []);
+
   // Both go through RPCs. Writing aircraft_access directly matched zero rows —
   // the table's only write policy is is_org_staff() — and RLS filters rather
   // than raising, so the old code reported success while changing nothing.
@@ -113,10 +121,11 @@ export function PendingInvites({ email }: { email: string }) {
     router.refresh();
   }
 
-  if (!invites.length || dismissed) return null;
+  if (!invites.length) return null;
 
   return (
     <>
+      {!dismissed && (
       <div className="pending-banner">
         <span className="pending-icon">✉️</span>
         <div className="pending-main">
@@ -140,6 +149,7 @@ export function PendingInvites({ email }: { email: string }) {
           ×
         </button>
       </div>
+      )}
 
       {open && (
         <Modal title="Pending Invites" onClose={() => setOpen(false)}>

@@ -28,6 +28,11 @@ import { CRAFT_ROLE_LABELS } from "@/lib/permissions";
  * So every grant this session can see is cached by id, and a delete is resolved
  * against that cache. `old.id` is the one field always present.
  */
+/** Display name, falling back to the address when nobody set one. */
+function who(name?: string | null, email?: string | null): string {
+  return name?.trim() || email || "Someone";
+}
+
 export function AccessWatcher({
   userId,
   email,
@@ -48,7 +53,9 @@ export function AccessWatcher({
   const refreshCache = useCallback(async () => {
     const { data } = await createClient()
       .from("aircraft_access")
-      .select("id, aircraft_id, user_id, invited_email, role, accepted, aircraft_reg");
+      .select(
+        "id, aircraft_id, user_id, invited_email, role, accepted, aircraft_reg, granted_by_name, granted_by_email, user_name",
+      );
     cache.current = new Map(
       ((data ?? []) as Partial<AccessRow>[]).map((r) => [r.id as string, r]),
     );
@@ -69,7 +76,27 @@ export function AccessWatcher({
   const onAccess = useCallback(
     (e: AccessEvent) => {
       if (e.eventType === "INSERT" && isMine(e.new)) {
-        toast(`You've been invited to ${e.new?.aircraft_reg ?? "an aircraft"}`, "info");
+        const from = who(e.new?.granted_by_name, e.new?.granted_by_email);
+        toast(
+          {
+            title: from,
+            who: from,
+            reg: e.new?.aircraft_reg ?? undefined,
+            detail: `Invited you as ${
+              e.new?.role ? CRAFT_ROLE_LABELS[e.new.role] : "a collaborator"
+            }`,
+            actions: [
+              {
+                label: "Review",
+                primary: true,
+                // PendingInvites owns the modal; it listens for this.
+                onClick: () =>
+                  window.dispatchEvent(new Event("aerotrack:pending-invites")),
+              },
+            ],
+          },
+          "info",
+        );
       }
 
       if (e.eventType === "UPDATE") {
@@ -84,10 +111,21 @@ export function AccessWatcher({
         const wasAccepted = before ? !!before.accepted : !!e.old?.accepted;
         if (e.new?.accepted && !wasAccepted && !isMine(e.new)) {
           const role = e.new.role ? CRAFT_ROLE_LABELS[e.new.role] : "a collaborator";
+          const name = who(e.new.user_name, e.new.invited_email);
+          const craft = e.new.aircraft_id;
           toast(
-            `${e.new.invited_email ?? "Someone"} accepted your invitation for ${
-              e.new.aircraft_reg ?? "an aircraft"
-            } as ${role}`,
+            {
+              title: name,
+              who: name,
+              reg: e.new.aircraft_reg ?? undefined,
+              detail: `Accepted your invitation as ${role}`,
+              actions: craft
+                ? [{
+                    label: "Manage access",
+                    onClick: () => router.push(`/aircraft/${craft}?access=1`),
+                  }]
+                : undefined,
+            },
             "ok",
           );
         }
@@ -109,13 +147,24 @@ export function AccessWatcher({
             if (id) cache.current.delete(id);
             return;
           }
-          toast(`Your access to ${reg} has been revoked by the owner`, "warn");
+          toast(
+            {
+              title: "Access revoked",
+              reg,
+              detail: `${who(gone?.granted_by_name, gone?.granted_by_email)} removed your access.`,
+              actions: [
+                { label: "Go to hangar", primary: true, onClick: () => router.push("/") },
+              ],
+            },
+            "warn",
+          );
         } else if (id && !wasSelfInitiated(id)) {
           // A grant I administer disappeared and I didn't remove it — they
           // declined or left. Revoking is the same DELETE on the wire, which
           // is what wasSelfInitiated() filters out.
+          const name = who(gone?.user_name, gone?.invited_email);
           toast(
-            `${gone?.invited_email ?? "Someone"} declined your invitation for ${reg}`,
+            { title: name, who: name, reg, detail: "Declined your invitation" },
             "warn",
           );
         }
