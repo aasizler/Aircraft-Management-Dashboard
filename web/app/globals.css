@@ -202,11 +202,18 @@ canvas.chart{display:block;width:100%;height:150px}
 /* Every modal blurs its page rather than washing it out — enough that body
    text behind is unreadable, light enough that the app is still visible
    through it. */
-.modal-overlay{position:fixed;inset:0;background:rgba(8,9,12,.55);backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%);display:none;align-items:center;justify-content:center;z-index:1000;opacity:0;pointer-events:none;transition:opacity .2s}
+.modal-overlay{position:fixed;inset:0;background:rgba(8,9,12,.3);backdrop-filter:blur(22px) saturate(180%);-webkit-backdrop-filter:blur(22px) saturate(180%);display:none;align-items:center;justify-content:center;z-index:1000;opacity:0;pointer-events:none;transition:opacity .2s}
 .modal-overlay.open{display:flex;opacity:1;pointer-events:all}
 /* Heavier still, for a dialog that fires BECAUSE the viewer lost the right to
    what's underneath — see Modal's `obscure`. */
-.modal-overlay.obscured{background:rgba(6,7,10,.74);backdrop-filter:blur(30px) saturate(120%) brightness(.75);-webkit-backdrop-filter:blur(30px) saturate(120%) brightness(.75)}
+.modal-overlay.obscured{background:rgba(6,7,10,.34);backdrop-filter:blur(38px) saturate(170%);-webkit-backdrop-filter:blur(38px) saturate(170%)}
+/* Without backdrop-filter there is no blur to hide anything, so fall back to
+   a tint opaque enough to do the job on its own. Firefox pre-103 and any
+   browser with the feature disabled land here. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))){
+  .modal-overlay{background:rgba(8,9,12,.86)}
+  .modal-overlay.obscured{background:rgba(6,7,10,.96)}
+}
 .modal{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:26px;width:480px;max-width:95vw;max-height:90vh;overflow-y:auto}
 .modal h3{font-family:var(--display);font-size:18px;font-weight:800;margin-bottom:18px}
 .form-row{margin-bottom:13px}
