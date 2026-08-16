@@ -19,6 +19,23 @@
 -- Idempotent. Safe to re-run.
 -- ============================================================================
 
+-- v1's version still exists and returned boolean; CREATE OR REPLACE cannot
+-- change a return type. Drop whatever signatures are present rather than
+-- guessing at one — v1's took (lookup_email text), and a stale overload would
+-- make the call ambiguous even if the create succeeded.
+do $$
+declare r record;
+begin
+  for r in
+    select p.oid::regprocedure as sig
+      from pg_proc p
+      join pg_namespace n on n.oid = p.pronamespace
+     where n.nspname = 'public' and p.proname = 'check_user_exists'
+  loop
+    execute format('drop function %s', r.sig);
+  end loop;
+end $$;
+
 create or replace function public.check_user_exists(p_email text)
 returns jsonb language sql stable security definer set search_path = public as $$
   select coalesce(
