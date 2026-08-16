@@ -292,7 +292,7 @@ export function HangarGrid({ aircraft }: { aircraft: Tile[] }) {
                       longer want in their hangar. */}
                   {menuFor(a).leave && (
                     <button
-                      className="row-dot-item"
+                      className="row-dot-item danger-item"
                       disabled={busy}
                       onClick={() => { setMenu(null); setLeaveTile(a); }}
                     >

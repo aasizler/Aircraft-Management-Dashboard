@@ -97,7 +97,21 @@ export default async function Home() {
     <>
       <PageHeader
         title="My Hangar"
-        right={membership?.org_id ? <AddAircraftButton orgId={membership.org_id} /> : undefined}
+        // Someone with no org of their own still needs a way to make one, and
+        // the empty state used to be the only place it lived — so accepting a
+        // single shared aircraft filled the hangar, hid that state, and left
+        // the account permanently unable to create anything of its own.
+        right={
+          membership?.org_id ? (
+            <AddAircraftButton orgId={membership.org_id} />
+          ) : (
+            <CreateOrg
+              suggested={
+                (user?.user_metadata as { first_name?: string } | undefined)?.first_name
+              }
+            />
+          )
+        }
       />
 
       <div className="hangar-wrap">
@@ -121,17 +135,11 @@ export default async function Home() {
               // email, and signing up under a different one is the failure
               // people actually hit.
               <>
-                <div style={{ marginBottom: 12 }}>
-                  You don&apos;t have a hangar yet. Create one to start adding
-                  your own aircraft.
+                <div style={{ marginBottom: 8 }}>
+                  You don&apos;t have a hangar yet. Use <b>Create your hangar</b>{" "}
+                  above to start adding your own aircraft.
                 </div>
-                <CreateOrg
-                  suggested={
-                    (user?.user_metadata as { first_name?: string } | undefined)
-                      ?.first_name
-                  }
-                />
-                <div style={{ marginTop: 14, fontSize: 12, color: "var(--muted2)" }}>
+                <div style={{ fontSize: 12, color: "var(--muted2)" }}>
                   Aircraft shared with you appear here too — ask whoever manages
                   one to grant <b>{user?.email}</b> under Manage Access.
                 </div>
