@@ -199,10 +199,14 @@ canvas.chart{display:block;width:100%;height:150px}
 .ac-tile-serial{font-size:11px;color:var(--muted);margin-top:2px;font-family:var(--mono)}
 .ac-tile-foot{display:flex;align-items:center;justify-content:space-between;padding:6px 13px 11px;flex-shrink:0}
 /* MODALS */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.78);display:none;align-items:center;justify-content:center;z-index:1000;opacity:0;pointer-events:none;transition:opacity .2s}
+/* Every modal blurs its page rather than washing it out — enough that body
+   text behind is unreadable, light enough that the app is still visible
+   through it. */
+.modal-overlay{position:fixed;inset:0;background:rgba(8,9,12,.55);backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%);display:none;align-items:center;justify-content:center;z-index:1000;opacity:0;pointer-events:none;transition:opacity .2s}
 .modal-overlay.open{display:flex;opacity:1;pointer-events:all}
-/* Used when the page behind must not stay readable — see Modal's `obscure`. */
-.modal-overlay.obscured{background:rgba(0,0,0,.93);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+/* Heavier still, for a dialog that fires BECAUSE the viewer lost the right to
+   what's underneath — see Modal's `obscure`. */
+.modal-overlay.obscured{background:rgba(6,7,10,.74);backdrop-filter:blur(30px) saturate(120%) brightness(.75);-webkit-backdrop-filter:blur(30px) saturate(120%) brightness(.75)}
 .modal{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:26px;width:480px;max-width:95vw;max-height:90vh;overflow-y:auto}
 .modal h3{font-family:var(--display);font-size:18px;font-weight:800;margin-bottom:18px}
 .form-row{margin-bottom:13px}

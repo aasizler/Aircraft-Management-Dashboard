@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useAccessChanges, type AccessEvent, type AccessRow } from "@/lib/realtime";
@@ -39,6 +39,10 @@ export function AccessWatcher({
   const pathname = usePathname();
   const toast = useToast();
   const [lost, setLost] = useState<string | null>(null);
+  const [leaving, startLeaving] = useTransition();
+  // Where they were standing when access was pulled. The dialog comes down
+  // only once the route has actually changed.
+  const lostAt = useRef<string | null>(null);
   const cache = useRef<Map<string, Partial<AccessRow>>>(new Map());
 
   const refreshCache = useCallback(async () => {
@@ -100,6 +104,7 @@ export function AccessWatcher({
           // refresh — the server component can no longer see the row and would
           // render a 404. Explain it instead.
           if (gone?.aircraft_id && pathname === `/aircraft/${gone.aircraft_id}`) {
+            lostAt.current = pathname;
             setLost(reg);
             if (id) cache.current.delete(id);
             return;
@@ -126,15 +131,19 @@ export function AccessWatcher({
 
   useAccessChanges(onAccess);
 
+  // Clearing `lost` in the click handler tore the dialog — and its blur — down
+  // while the hangar was still loading, flashing the aircraft they had just
+  // lost access to. Wait for the navigation to commit instead.
+  useEffect(() => {
+    if (lost && lostAt.current && pathname !== lostAt.current) {
+      lostAt.current = null;
+      setLost(null);
+    }
+  }, [pathname, lost]);
+
   if (!lost) return null;
 
-  // Clearing `lost` is what dismisses this. router.push alone didn't: the
-  // watcher is mounted in the root layout, so it survives the navigation and
-  // the dialog stayed up over the hangar.
-  const leave = () => {
-    setLost(null);
-    router.push("/");
-  };
+  const leave = () => startLeaving(() => router.push("/"));
 
   return (
     <Modal
@@ -153,8 +162,8 @@ export function AccessWatcher({
         longer view its records.
       </div>
       <div className="form-actions">
-        <button className="btn primary" onClick={leave}>
-          Return to Hangar
+        <button className="btn primary" onClick={leave} disabled={leaving}>
+          {leaving ? "Returning…" : "Return to Hangar"}
         </button>
       </div>
     </Modal>
