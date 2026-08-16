@@ -343,6 +343,9 @@ canvas.chart{display:block;width:100%;height:150px}
 .invite-meta.mono{font-family:var(--mono);margin-bottom:10px}
 .invite-actions{display:flex;gap:8px}
 /* Typed delete confirmation — v1's promptDeleteAircraft() field. */
+/* v1 marked shared aircraft on the hero; the hangar needs it more, since two
+   orgs may each hold a record for the same registration. */
+.tile-shared{font-family:var(--mono);font-size:9px;letter-spacing:.1em;padding:3px 7px;border-radius:4px;background:rgba(45,212,160,.08);border:1px solid rgba(45,212,160,.22);color:var(--ok);margin-left:6px;white-space:nowrap}
 .confirm-type-lbl{margin:12px 0 6px;font-size:11px;color:var(--muted);font-family:var(--mono)}
 .confirm-type-lbl b{color:var(--text)}
 .confirm-type-input{width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:7px;padding:9px 12px;color:var(--text);font-family:var(--mono);font-size:13px;outline:none;letter-spacing:.08em;text-transform:uppercase}

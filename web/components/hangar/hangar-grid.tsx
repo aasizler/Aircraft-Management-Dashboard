@@ -25,6 +25,10 @@ export type Tile = {
   grantId: string | null;
   /** That grant's role, shown on the badge. Null for org staff. */
   craftRole: CraftRole | null;
+  /** Belongs to another org — someone else's record, shared with you. */
+  shared: boolean;
+  /** Who shared it, when known. */
+  sharedBy: string | null;
 };
 
 export function HangarGrid({ aircraft }: { aircraft: Tile[] }) {
@@ -187,6 +191,14 @@ export function HangarGrid({ aircraft }: { aircraft: Tile[] }) {
               <span className="role-badge">
                 {a.craftRole ? CRAFT_ROLE_LABELS[a.craftRole] : ROLE_LABELS[a.appRole]}
               </span>
+              {a.shared && (
+                <span
+                  className="tile-shared"
+                  title={a.sharedBy ? `Shared by ${a.sharedBy}` : "Shared with you"}
+                >
+                  SHARED
+                </span>
+              )}
               {Object.values(menuFor(a)).some(Boolean) && (
                 <button
                   className="tile-dot-btn"

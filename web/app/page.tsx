@@ -18,7 +18,7 @@ export default async function Home() {
     await Promise.all([
       supabase
         .from("aircraft")
-        .select("id, reg, type, serial, airport, maint_basis, data")
+        .select("id, org_id, reg, type, serial, airport, maint_basis, data")
         // Nothing in the app sets `archived` any more — kept only so a row
         // archived by an earlier build stays hidden.
         .eq("archived", false)
@@ -31,7 +31,7 @@ export default async function Home() {
       // returned the share's role rather than a single global one.
       supabase
         .from("aircraft_access")
-        .select("id, aircraft_id, role, user_id, invited_email")
+        .select("id, aircraft_id, role, user_id, invited_email, granted_by_name, granted_by_email")
         .eq("accepted", true),
     ]);
 
@@ -41,6 +41,8 @@ export default async function Home() {
     role: CraftRole;
     user_id: string | null;
     invited_email: string | null;
+    granted_by_name: string | null;
+    granted_by_email: string | null;
   };
 
   // The `access read` policy also returns OTHER people's grants on aircraft
@@ -61,7 +63,11 @@ export default async function Home() {
       .filter((m) => m.aircraft_id === id)
       .map(({ kind, current, label }) => ({ kind, current, label }));
 
-  const tiles: Tile[] = ((aircraft ?? []) as Omit<Tile, "meters" | "appRole">[]).map((a) => ({
+  const tiles: Tile[] = (
+    (aircraft ?? []) as (Omit<Tile, "meters" | "appRole" | "shared" | "sharedBy"> & {
+      org_id: string;
+    })[]
+  ).map((a) => ({
     ...a,
     meters: metersFor(a.id),
     // The effective role for THIS aircraft. The tile badge and the delete gate
@@ -75,6 +81,15 @@ export default async function Home() {
     // Present only when this user reaches the aircraft through a grant of
     // their own — which is the only thing they can hand back.
     grantId: grantFor(a.id)?.id ?? null,
+    // Nothing stops two orgs holding a record for the same airframe, and a
+    // registration is only unique WITHIN an org — so two tiles can legitimately
+    // read N137BF. Mark the ones that aren't yours, as v1's hero did with its
+    // SHARED / LOCAL badge, or they're indistinguishable.
+    shared: !membership?.org_id || a.org_id !== membership.org_id,
+    sharedBy:
+      grantFor(a.id)?.granted_by_name?.trim() ||
+      grantFor(a.id)?.granted_by_email ||
+      null,
   }));
 
   return (
