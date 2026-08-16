@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Modal } from "@/components/ui/modal";
@@ -9,6 +9,14 @@ import { CRAFT_ROLE_COLORS, CRAFT_ROLE_LABELS } from "@/lib/permissions";
 import { useAccessChanges } from "@/lib/realtime";
 import { setPendingInvites } from "@/lib/aircraft-perms";
 import type { CraftRole } from "@/lib/types";
+
+/** Survives the remount this component takes on every route change. */
+const DISMISS_KEY = "aerotrack:invites-dismissed";
+
+/** Stable identity for a set of invitations, order-independent. */
+function inviteKey(rows: { id: string }[]): string {
+  return rows.map((r) => r.id).sort().join(",");
+}
 
 type Invite = {
   id: string;
@@ -40,11 +48,6 @@ export function PendingInvites({ email }: { email: string }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [dismissed, setDismissed] = useState(false);
-  // Which invite ids the ribbon was dismissed against. Comparing the set means
-  // a NEW invitation re-raises it while re-dismissing the same one doesn't —
-  // v1 got this free because checkPendingInvites() re-showed the banner every
-  // time it ran.
-  const dismissedFor = useRef<string>("");
 
   const load = useCallback(async () => {
     const supabase = createClient();
@@ -72,8 +75,12 @@ export function PendingInvites({ email }: { email: string }) {
     };
 
     const rows = (data ?? []) as unknown as Row[];
-    const key = rows.map((r) => r.id).sort().join(",");
-    if (key !== dismissedFor.current) setDismissed(false);
+    // Dismissal is recorded against the exact set of invite ids, so
+    // re-dismissing the same one sticks while a NEW arrival raises the ribbon
+    // again. Held in sessionStorage rather than state because this component
+    // remounts on navigation — as component state it reset on every route
+    // change and the ribbon came back after being dismissed.
+    setDismissed(!!rows.length && sessionStorage.getItem(DISMISS_KEY) === inviteKey(rows));
 
     setPendingInvites(rows.length);
     setInvites(
@@ -105,7 +112,13 @@ export function PendingInvites({ email }: { email: string }) {
   // The "Review" action on the invitation toast opens this. Un-dismisses the
   // banner too — having hidden it once shouldn't make the modal unreachable.
   useEffect(() => {
-    const open = () => { setDismissed(false); setOpen(true); };
+    const open = () => {
+      // Opening deliberately clears the dismissal, so closing the modal
+      // doesn't drop straight back to a hidden ribbon.
+      sessionStorage.removeItem(DISMISS_KEY);
+      setDismissed(false);
+      setOpen(true);
+    };
     window.addEventListener("aerotrack:pending-invites", open);
     return () => window.removeEventListener("aerotrack:pending-invites", open);
   }, []);
@@ -161,7 +174,7 @@ export function PendingInvites({ email }: { email: string }) {
         <button
           className="pending-x"
           onClick={() => {
-            dismissedFor.current = invites.map((i) => i.id).sort().join(",");
+            sessionStorage.setItem(DISMISS_KEY, inviteKey(invites));
             setDismissed(true);
           }}
           aria-label="Dismiss"
