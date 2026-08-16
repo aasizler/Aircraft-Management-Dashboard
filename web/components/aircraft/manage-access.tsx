@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Modal } from "@/components/ui/modal";
 import type { CraftRole } from "@/lib/types";
 
-type Grant = { id: string; invited_email: string | null; user_id: string | null; role: CraftRole };
+type Grant = { id: string; invited_email: string | null; user_id: string | null; role: CraftRole; accepted: boolean };
 type Assign = { id: string; invited_email: string | null; ends_at: string; starts_at: string };
 
 const ROLE_LABEL: Record<CraftRole, string> = {
@@ -16,8 +16,10 @@ const ROLE_LABEL: Record<CraftRole, string> = {
 
 // Manage who can see/log this aircraft. Standing grants (owner/manager/pilot)
 // live in aircraft_access; date-windowed contract pilots live in assignments.
-// Access resolves the moment the invitee signs in with the granted email —
-// no accept step needed (RLS matches on the JWT email).
+// A standing grant lands as an invitation: it shows "Pending acceptance" until
+// the invitee accepts it, and confers nothing before that. Assignments differ
+// on purpose — dispatch shouldn't wait on a contract pilot to accept, and the
+// grant expires with its date window.
 export function ManageAccess({
   aircraftId,
   orgId,
@@ -43,7 +45,7 @@ export function ManageAccess({
   const load = useCallback(async () => {
     const s = createClient();
     const [{ data: g }, { data: a }] = await Promise.all([
-      s.from("aircraft_access").select("id, invited_email, user_id, role").eq("aircraft_id", aircraftId),
+      s.from("aircraft_access").select("id, invited_email, user_id, role, accepted").eq("aircraft_id", aircraftId),
       s
         .from("assignments")
         .select("id, invited_email, ends_at, starts_at")
@@ -148,7 +150,13 @@ export function ManageAccess({
                 <li className="doc-item" key={g.id}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div className="doc-name">{g.invited_email ?? "(linked user)"}</div>
-                    <div className="doc-meta">{ROLE_LABEL[g.role]}</div>
+                    {/* v1's renderSharesList showed Active vs Pending
+                        acceptance here. Without it the granter can't tell
+                        whether the invite ever landed. */}
+                    <div className="doc-meta">
+                      {ROLE_LABEL[g.role]} ·{" "}
+                      {g.accepted ? "Active" : "Pending acceptance"}
+                    </div>
                   </div>
                   <button className="action-btn del" onClick={() => revokeGrant(g.id)}>
                     Revoke
