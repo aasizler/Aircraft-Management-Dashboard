@@ -33,6 +33,20 @@ export function HangarGrid({ aircraft }: { aircraft: Tile[] }) {
   const [menu, setMenu] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [order, setOrder] = useState<Tile[]>(aircraft);
+
+  // The server owns the tile list; `order` is only a local overlay so dragging
+  // feels instant. useState seeds once, so without this every later payload was
+  // thrown away: a role change left the badge reading Pilot after a promotion
+  // to Owner, and a grant or revocation didn't add or remove a tile until a
+  // full reload. AccessWatcher's router.refresh() was working the whole time —
+  // its results just had nowhere to land.
+  useEffect(() => {
+    setOrder(aircraft);
+    // Props from a server component keep their identity until a new payload
+    // arrives, so this runs when the data actually changed and not on every
+    // client re-render.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+  }, [aircraft]);
   const [dragId, setDragId] = useState<string | null>(null);
   const [confirmTile, setConfirmTile] = useState<Tile | null>(null);
   const [leaveTile, setLeaveTile] = useState<Tile | null>(null);
