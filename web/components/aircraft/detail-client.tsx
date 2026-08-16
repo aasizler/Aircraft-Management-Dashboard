@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/ui/toast";
@@ -13,6 +13,7 @@ import {
 } from "@/lib/aircraft";
 import { can, type AppRole, type Permission } from "@/lib/permissions";
 import { useAircraftRealtime } from "@/lib/realtime";
+import { setAircraftPerms } from "@/lib/aircraft-perms";
 import { LiveBanner } from "./live-banner";
 import { MeterCapture } from "./meter-capture";
 import { ManageAccess } from "./manage-access";
@@ -98,6 +99,19 @@ export function AircraftDetailClient({
   // stranded there by a deep link or a revocation mid-session.
   const visibleTabs = TABS.filter((t) => t !== "Insurance" || can(role, "financial"));
   const activeTab: TabName = visibleTabs.includes(tab) ? tab : "Dashboard";
+
+  // Tell the nav ⋮ menu what this viewer may do here. It lives in the root
+  // layout, so without this it can't tell a manager from a pilot and offered
+  // Aircraft Settings to both — dispatching an event at a modal that only
+  // mounts for edit_settings. Retracted on unmount so the hangar's menu
+  // doesn't inherit the last aircraft's answer.
+  useEffect(() => {
+    setAircraftPerms({
+      editSettings: can(role, "edit_settings"),
+      manageAccess: can(role, "manage_access"),
+    });
+    return () => setAircraftPerms(null);
+  }, [role]);
   const [sync, setSync] = useState<Sync>("synced");
   const actionRef = useRef<PendingAction>(null);
   const [focusInsp, setFocusInsp] = useState<number | null>(null);

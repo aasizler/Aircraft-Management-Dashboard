@@ -55,6 +55,21 @@ export function HangarGrid({ aircraft }: { aircraft: Tile[] }) {
     return () => document.removeEventListener("keydown", onKey);
   }, [rearrange]);
 
+  /**
+   * Which ⋮ items this role gets. Someone reaching an aircraft through an
+   * assignment rather than a grant qualifies for none of them, and an empty
+   * popup is worse than no button.
+   */
+  function menuFor(t: Tile) {
+    const access = can(t.appRole, "manage_access");
+    return {
+      settings: can(t.appRole, "edit_settings"),
+      access,
+      remove: can(t.appRole, "delete"),
+      leave: !access && !!t.grantId,
+    };
+  }
+
   /** Health dot, exactly as v1 computed it: red overdue, amber due-soon, else green. */
   function statusDot(t: Tile) {
     const hrs = meterValue(t.meters, t.maint_basis);
@@ -154,17 +169,19 @@ export function HangarGrid({ aircraft }: { aircraft: Tile[] }) {
 
             <div className="ac-tile-foot" style={{ position: "relative" }}>
               <span className="role-badge">{ROLE_LABELS[a.appRole]}</span>
-              <button
-                className="tile-dot-btn"
-                title="Options"
-                aria-label={`Options for ${a.reg}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setMenu(menu === a.id ? null : a.id);
-                }}
-              >
-                <span /><span /><span />
-              </button>
+              {Object.values(menuFor(a)).some(Boolean) && (
+                <button
+                  className="tile-dot-btn"
+                  title="Options"
+                  aria-label={`Options for ${a.reg}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMenu(menu === a.id ? null : a.id);
+                  }}
+                >
+                  <span /><span /><span />
+                </button>
+              )}
 
               {menu === a.id && (
                 <div
@@ -172,17 +189,25 @@ export function HangarGrid({ aircraft }: { aircraft: Tile[] }) {
                   style={{ position: "absolute", right: 0, bottom: 32 }}
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <button
-                    className="row-dot-item"
-                    onClick={() => router.push(`/aircraft/${a.id}?settings=1`)}
-                  >
-                    Aircraft Settings
-                  </button>
+                  {/* v1 listed this unconditionally, but v1's settings modal
+                      also opened for anyone — openSettingsModal() had no
+                      guard. v2 mounts it only for edit_settings, which is the
+                      stricter and better call, so the menu item has to follow
+                      or a pilot gets sent to the aircraft with nothing to
+                      show for it. */}
+                  {menuFor(a).settings && (
+                    <button
+                      className="row-dot-item"
+                      onClick={() => router.push(`/aircraft/${a.id}?settings=1`)}
+                    >
+                      Aircraft Settings
+                    </button>
+                  )}
                   {/* ?access=1 only opens anything for a role that passes
                       can(role,'manage_access') in the detail page — showing it
                       to everyone meant a shared user clicked it and just
                       landed on the aircraft with no modal. */}
-                  {can(a.appRole, "manage_access") && (
+                  {menuFor(a).access && (
                     <button
                       className="row-dot-item"
                       onClick={() => router.push(`/aircraft/${a.id}?access=1`)}
@@ -195,7 +220,7 @@ export function HangarGrid({ aircraft }: { aircraft: Tile[] }) {
                       equivalent — v1 only let the granter revoke — but without
                       it a shared user has no way to clear an aircraft they no
                       longer want in their hangar. */}
-                  {!can(a.appRole, "manage_access") && a.grantId && (
+                  {menuFor(a).leave && (
                     <button
                       className="row-dot-item"
                       disabled={busy}
@@ -208,7 +233,7 @@ export function HangarGrid({ aircraft }: { aircraft: Tile[] }) {
                       Someone an aircraft was shared with must not be able to
                       delete the owner's records — and RLS refuses them anyway,
                       so showing the button only produced a silent no-op. */}
-                  {can(a.appRole, "delete") && (
+                  {menuFor(a).remove && (
                     <button
                       className="row-dot-item danger-item"
                       disabled={busy}

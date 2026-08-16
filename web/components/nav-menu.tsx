@@ -1,8 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import {
+  getAircraftPerms,
+  getServerAircraftPerms,
+  subscribeAircraftPerms,
+} from "@/lib/aircraft-perms";
 
 /**
  * Nav ⋮ menu, ported from v1's toggleDotMenu()/closeDotMenus(). v1 showed
@@ -16,6 +21,14 @@ export function NavMenu({ email }: { email?: string | null }) {
   const router = useRouter();
   const pathname = usePathname();
   const onDetail = pathname?.startsWith("/aircraft/");
+
+  // Published by the open aircraft's detail page. Null on the hangar and
+  // during SSR, so the aircraft-scoped items simply don't render there.
+  const perms = useSyncExternalStore(
+    subscribeAircraftPerms,
+    getAircraftPerms,
+    getServerAircraftPerms,
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -54,13 +67,15 @@ export function NavMenu({ email }: { email?: string | null }) {
 
       {open && (
         <div className="dot-menu">
-          {onDetail && (
+          {onDetail && perms?.editSettings && (
             <button
               className="dot-menu-item"
               onClick={() => {
                 setOpen(false);
                 // The settings modal lives inside AircraftDetailClient; v1 called
-                // openSettingsModal() directly, so bridge with an event.
+                // openSettingsModal() directly, so bridge with an event. The
+                // modal only mounts for roles with edit_settings, hence the
+                // perms check — otherwise this fired at nothing.
                 window.dispatchEvent(new Event("aerotrack:aircraft-settings"));
               }}
             >
