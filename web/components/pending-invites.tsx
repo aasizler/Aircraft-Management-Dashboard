@@ -16,7 +16,9 @@ type Invite = {
   invited_email: string | null;
   reg?: string | null;
   type?: string | null;
-  from?: string | null;
+  /** Who sent it. Name leads; the address is the confirmation. */
+  fromName?: string | null;
+  fromEmail?: string | null;
 };
 
 /**
@@ -47,7 +49,7 @@ export function PendingInvites({ email }: { email: string }) {
     const { data } = await supabase
       .from("aircraft_access")
       .select(
-        "id, aircraft_id, role, invited_email, aircraft_reg, aircraft_type, granted_by_email",
+        "id, aircraft_id, role, invited_email, aircraft_reg, aircraft_type, granted_by_name, granted_by_email",
       )
       .eq("accepted", false)
       .ilike("invited_email", email);
@@ -59,6 +61,7 @@ export function PendingInvites({ email }: { email: string }) {
       invited_email: string | null;
       aircraft_reg: string | null;
       aircraft_type: string | null;
+      granted_by_name: string | null;
       granted_by_email: string | null;
     };
 
@@ -70,7 +73,8 @@ export function PendingInvites({ email }: { email: string }) {
         invited_email: r.invited_email,
         reg: r.aircraft_reg,
         type: r.aircraft_type,
-        from: r.granted_by_email,
+        fromName: r.granted_by_name,
+        fromEmail: r.granted_by_email,
       })),
     );
   }, [email]);
@@ -164,10 +168,18 @@ export function PendingInvites({ email }: { email: string }) {
                     ? `${inv.reg} — ${inv.type}`
                     : inv.reg ?? "Aircraft invitation"}
                 </div>
-                {inv.from && (
-                  <div className="invite-meta">
-                    From: <b>{inv.from}</b>
-                  </div>
+                {(inv.fromName || inv.fromEmail) && (
+                  <>
+                    <div className="invite-meta">
+                      From: <b>{inv.fromName?.trim() || inv.fromEmail}</b>
+                    </div>
+                    {/* The address only when it isn't already the headline —
+                        quieter, but there so you can be sure who this is
+                        before accepting. */}
+                    {inv.fromName?.trim() && inv.fromEmail && (
+                      <div className="invite-email">{inv.fromEmail}</div>
+                    )}
+                  </>
                 )}
                 <div className="invite-meta mono">
                   Role:{" "}
