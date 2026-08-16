@@ -436,12 +436,24 @@ create index if not exists meter_readings_pending_idx on public.meter_readings (
 -- Commit a confirmed reading to the aircraft's hours.
 -- SECURITY DEFINER so a pilot/owner can advance hours through this ONE narrow,
 -- validated path while aircraft UPDATE stays manager-only for everything else.
-create or replace function public.apply_meter_reading(p_reading uuid)
+-- NOTE: the live definition of this function is maintained in
+-- migrate_meter_confirm_and_realtime.sql, which supersedes the original >50hr
+-- rejection. Kept here so a fresh project gets the current behaviour:
+--   * first reading for a meter is the baseline and is accepted as-is
+--   * an advance over meter_confirm_threshold() (10 hrs) is NOT rejected — it
+--     returns needs_confirmation and the client asks the user to vouch for it
+--   * a reading below the current value is still refused
+create or replace function public.meter_confirm_threshold()
+returns numeric language sql immutable as $$ select 10::numeric $$;
+
+create or replace function public.apply_meter_reading(p_reading uuid, p_confirm boolean)
 returns jsonb language plpgsql security definer set search_path = public as $$
 declare
   r public.meter_readings;
   k text; v numeric; cur numeric; delta numeric;
-  applied jsonb := '{}'::jsonb;
+  applied  jsonb := '{}'::jsonb;
+  needs    jsonb := '[]'::jsonb;
+  threshold numeric := public.meter_confirm_threshold();
 begin
   select * into r from public.meter_readings where id = p_reading;
   if not found then raise exception 'reading not found'; end if;
@@ -450,22 +462,37 @@ begin
     raise exception 'no confirmed values';
   end if;
 
-  -- Validate EVERY meter before writing ANY of them: a capture is applied whole
-  -- or not at all, so a bad tach read can't leave flight time half-committed.
   for k, v in select key, value::text::numeric from jsonb_each(r.values_final) loop
     cur := public.meter_value(r.aircraft_id, k::meter_kind);
+
+    if cur is null or cur = 0 then
+      applied := applied || jsonb_build_object(k, jsonb_build_object('from', cur, 'to', v, 'first', true));
+      continue;
+    end if;
+
     delta := v - cur;
+
     if delta < 0 then
       return jsonb_build_object('ok', false, 'reason', 'below_current',
                                 'meter', k, 'current', cur, 'read', v);
     end if;
-    -- A single capture should not advance a meter by a fleet-year of flying.
-    if delta > 50 then
-      return jsonb_build_object('ok', false, 'reason', 'implausible_delta',
-                                'meter', k, 'delta', delta);
+
+    if delta > threshold and not p_confirm then
+      needs := needs || jsonb_build_array(
+        jsonb_build_object('meter', k, 'current', cur, 'read', v, 'delta', delta)
+      );
     end if;
+
     applied := applied || jsonb_build_object(k, jsonb_build_object('from', cur, 'to', v));
   end loop;
+
+  if jsonb_array_length(needs) > 0 then
+    update public.meter_readings
+       set flagged = true, flag_reason = 'large_delta'
+     where id = p_reading;
+    return jsonb_build_object('ok', false, 'reason', 'needs_confirmation',
+                              'threshold', threshold, 'meters', needs);
+  end if;
 
   for k, v in select key, value::text::numeric from jsonb_each(r.values_final) loop
     insert into public.aircraft_meters (aircraft_id, kind, current, updated_at)
@@ -475,11 +502,19 @@ begin
   end loop;
 
   update public.meter_readings
-     set status = 'confirmed', confirmed_by = auth.uid(), confirmed_at = now()
+     set status = 'confirmed', confirmed_by = auth.uid(), confirmed_at = now(),
+         flagged = flagged or p_confirm,
+         flag_reason = case when p_confirm then coalesce(flag_reason, 'large_delta_confirmed')
+                            else flag_reason end
    where id = p_reading;
 
   return jsonb_build_object('ok', true, 'applied', applied);
 end $$;
+
+create or replace function public.apply_meter_reading(p_reading uuid)
+returns jsonb language sql security definer set search_path = public as $$
+  select public.apply_meter_reading(p_reading, false)
+$$;
 
 
 -- ============================================================================
