@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 import { CRAFT_ROLE_COLORS, CRAFT_ROLE_LABELS } from "@/lib/permissions";
 import { useAccessChanges } from "@/lib/realtime";
+import { setPendingInvites } from "@/lib/aircraft-perms";
 import type { CraftRole } from "@/lib/types";
 
 type Invite = {
@@ -39,6 +40,11 @@ export function PendingInvites({ email }: { email: string }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [dismissed, setDismissed] = useState(false);
+  // Which invite ids the ribbon was dismissed against. Comparing the set means
+  // a NEW invitation re-raises it while re-dismissing the same one doesn't —
+  // v1 got this free because checkPendingInvites() re-showed the banner every
+  // time it ran.
+  const dismissedFor = useRef<string>("");
 
   const load = useCallback(async () => {
     const supabase = createClient();
@@ -65,8 +71,13 @@ export function PendingInvites({ email }: { email: string }) {
       granted_by_email: string | null;
     };
 
+    const rows = (data ?? []) as unknown as Row[];
+    const key = rows.map((r) => r.id).sort().join(",");
+    if (key !== dismissedFor.current) setDismissed(false);
+
+    setPendingInvites(rows.length);
     setInvites(
-      ((data ?? []) as unknown as Row[]).map((r) => ({
+      rows.map((r) => ({
         id: r.id,
         aircraft_id: r.aircraft_id,
         role: r.role,
@@ -88,6 +99,8 @@ export function PendingInvites({ email }: { email: string }) {
   // AccessWatcher's router.refresh() re-runs server components but never
   // re-fires this effect, so the invite sat unseen until a manual reload.
   useAccessChanges(load);
+
+  useEffect(() => () => setPendingInvites(0), []);
 
   // The "Review" action on the invitation toast opens this. Un-dismisses the
   // banner too — having hidden it once shouldn't make the modal unreachable.
@@ -147,7 +160,10 @@ export function PendingInvites({ email }: { email: string }) {
         <button className="btn sm primary" onClick={() => setOpen(true)}>Review</button>
         <button
           className="pending-x"
-          onClick={() => setDismissed(true)}
+          onClick={() => {
+            dismissedFor.current = invites.map((i) => i.id).sort().join(",");
+            setDismissed(true);
+          }}
           aria-label="Dismiss"
         >
           ×

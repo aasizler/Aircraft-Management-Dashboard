@@ -5,8 +5,11 @@ import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
   getAircraftPerms,
+  getPendingInvites,
   getServerAircraftPerms,
+  getServerPendingInvites,
   subscribeAircraftPerms,
+  subscribePendingInvites,
 } from "@/lib/aircraft-perms";
 
 /**
@@ -28,6 +31,12 @@ export function NavMenu({ email }: { email?: string | null }) {
     subscribeAircraftPerms,
     getAircraftPerms,
     getServerAircraftPerms,
+  );
+
+  const pending = useSyncExternalStore(
+    subscribePendingInvites,
+    getPendingInvites,
+    getServerPendingInvites,
   );
 
   useEffect(() => {
@@ -67,6 +76,20 @@ export function NavMenu({ email }: { email?: string | null }) {
 
       {open && (
         <div className="dot-menu">
+          {/* Only when something is waiting. The ribbon can be dismissed and
+              the toast expires, so without this an invitation could not be
+              reached again until a reload. */}
+          {pending > 0 && (
+            <button
+              className="dot-menu-item"
+              onClick={() => {
+                setOpen(false);
+                window.dispatchEvent(new Event("aerotrack:pending-invites"));
+              }}
+            >
+              Pending invitations ({pending})
+            </button>
+          )}
           {onDetail && perms?.editSettings && (
             <button
               className="dot-menu-item"

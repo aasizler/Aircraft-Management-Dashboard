@@ -2,7 +2,6 @@ import { createClient } from "@/lib/supabase/server";
 import { AddAircraftButton } from "@/components/hangar/add-aircraft";
 import { HangarGrid, type Tile } from "@/components/hangar/hangar-grid";
 import { PageHeader } from "@/components/ui/page-header";
-import { PendingInvites } from "@/components/pending-invites";
 import type { Meter } from "@/lib/aircraft";
 import { resolveRole } from "@/lib/permissions";
 import type { CraftRole } from "@/lib/types";
@@ -80,8 +79,6 @@ export default async function Home() {
 
   return (
     <>
-      {user?.email && <PendingInvites email={user.email} />}
-
       <PageHeader
         title="My Hangar"
         right={membership?.org_id ? <AddAircraftButton orgId={membership.org_id} /> : undefined}

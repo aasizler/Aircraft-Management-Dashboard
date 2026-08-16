@@ -5,6 +5,7 @@ import "./globals.css";
 import { createClient } from "@/lib/supabase/server";
 import { NavMenu } from "@/components/nav-menu";
 import { AccessWatcher } from "@/components/access-watcher";
+import { PendingInvites } from "@/components/pending-invites";
 import { ToastProvider } from "@/components/ui/toast";
 
 const inter = Inter({
@@ -65,6 +66,10 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
             </Link>
             <NavMenu email={user.email} />
           </nav>
+          {/* Mounted here rather than on the hangar so the ribbon, and the
+              modal the nav ⋮ opens, exist on every page. Hangar-only meant
+              "Pending invitations" dispatched at nothing from anywhere else. */}
+          {user.email && <PendingInvites email={user.email} />}
           </>
         )}
         {children}

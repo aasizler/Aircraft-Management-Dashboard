@@ -58,3 +58,34 @@ export function getAircraftPerms(): AircraftPerms {
 export function getServerAircraftPerms(): AircraftPerms {
   return null;
 }
+
+
+/**
+ * How many invitations are waiting.
+ *
+ * The nav ⋮ lives in the root layout and can't see PendingInvites' state, but
+ * it needs to offer a way back to them: the ribbon can be dismissed, and once
+ * the accompanying toast expires an invitation would otherwise be unreachable
+ * until a reload. Same store pattern, same reason — no mount-order race.
+ */
+let pending = 0;
+const pendingSubs = new Set<() => void>();
+
+export function setPendingInvites(n: number) {
+  if (pending === n) return;
+  pending = n;
+  pendingSubs.forEach((fn) => fn());
+}
+
+export function subscribePendingInvites(fn: () => void) {
+  pendingSubs.add(fn);
+  return () => { pendingSubs.delete(fn); };
+}
+
+export function getPendingInvites(): number {
+  return pending;
+}
+
+export function getServerPendingInvites(): number {
+  return 0;
+}
