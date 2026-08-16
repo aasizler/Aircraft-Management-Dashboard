@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { AddAircraftButton } from "@/components/hangar/add-aircraft";
 import { HangarGrid, type Tile } from "@/components/hangar/hangar-grid";
 import { PageHeader } from "@/components/ui/page-header";
+import { CreateOrg } from "@/components/hangar/create-org";
 import type { Meter } from "@/lib/aircraft";
 import { resolveRole } from "@/lib/permissions";
 import type { CraftRole } from "@/lib/types";
@@ -120,9 +121,20 @@ export default async function Home() {
               // email, and signing up under a different one is the failure
               // people actually hit.
               <>
-                No aircraft yet. Aircraft show up here as soon as someone shares
-                one with you — ask them to grant <b>{user?.email}</b> under
-                Manage Access.
+                <div style={{ marginBottom: 12 }}>
+                  You don&apos;t have a hangar yet. Create one to start adding
+                  your own aircraft.
+                </div>
+                <CreateOrg
+                  suggested={
+                    (user?.user_metadata as { first_name?: string } | undefined)
+                      ?.first_name
+                  }
+                />
+                <div style={{ marginTop: 14, fontSize: 12, color: "var(--muted2)" }}>
+                  Aircraft shared with you appear here too — ask whoever manages
+                  one to grant <b>{user?.email}</b> under Manage Access.
+                </div>
               </>
             )}
           </div>
