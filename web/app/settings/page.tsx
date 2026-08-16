@@ -17,6 +17,9 @@ export default async function SettingsPage() {
     .maybeSingle();
 
   const orgName = (membership?.orgs as { name?: string } | null)?.name ?? "—";
+  const meta = user?.user_metadata as
+    | { first_name?: string; last_name?: string; full_name?: string }
+    | undefined;
 
   return (
     <main className="mx-auto w-full max-w-3xl px-7 py-8">
@@ -33,7 +36,9 @@ export default async function SettingsPage() {
         <ThemeControls />
 
         <DisplayName
-          initial={(user?.user_metadata as { full_name?: string } | undefined)?.full_name}
+          firstInitial={meta?.first_name}
+          lastInitial={meta?.last_name}
+          fullInitial={meta?.full_name}
         />
 
         <div className="panel">

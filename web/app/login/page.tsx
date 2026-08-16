@@ -15,7 +15,8 @@ export default function LoginPage() {
   const [mode, setMode] = useState<Mode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
+  const [first, setFirst] = useState("");
+  const [last, setLast] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -43,11 +44,21 @@ export default function LoginPage() {
     }
 
     if (mode === "signup") {
+      const f = first.trim();
+      const l = last.trim();
+      if (!f || !l) {
+        setBusy(false);
+        setError("Enter your first and last name.");
+        return;
+      }
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: { full_name: name.trim() || null },
+          // full_name stays the display value everything else reads —
+          // grant stamping, initials, the access list — with the parts kept
+          // alongside so they can be edited separately later.
+          data: { first_name: f, last_name: l, full_name: `${f} ${l}` },
           emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
       });
@@ -100,13 +111,27 @@ export default function LoginPage() {
         </div>
 
         {mode === "signup" && (
-          <input
-            placeholder="Full name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="auth-input"
-            autoComplete="name"
-          />
+          // Split and required. A single optional box left accounts with no
+          // name at all, and those read as a bare email address to everyone
+          // they share an aircraft with.
+          <div className="auth-split">
+            <input
+              required
+              placeholder="First name"
+              value={first}
+              onChange={(e) => setFirst(e.target.value)}
+              className="auth-input"
+              autoComplete="given-name"
+            />
+            <input
+              required
+              placeholder="Last name"
+              value={last}
+              onChange={(e) => setLast(e.target.value)}
+              className="auth-input"
+              autoComplete="family-name"
+            />
+          </div>
         )}
 
         <input
