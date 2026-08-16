@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { ThemeControls } from "@/components/settings/theme-controls";
 import { ChangePassword } from "@/components/settings/change-password";
+import { DisplayName } from "@/components/settings/display-name";
 import { SignOutButton } from "@/components/sign-out-button";
 
 export default async function SettingsPage() {
@@ -30,6 +31,10 @@ export default async function SettingsPage() {
 
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         <ThemeControls />
+
+        <DisplayName
+          initial={(user?.user_metadata as { full_name?: string } | undefined)?.full_name}
+        />
 
         <div className="panel">
           <div className="panel-title">Account</div>
