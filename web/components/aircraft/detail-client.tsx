@@ -134,14 +134,25 @@ export function AircraftDetailClient({
       }
       setSync("syncing");
       const supabase = createClient();
-      const { error } = await supabase
+      // .select() to see the rowcount. RLS filters rows rather than raising, so
+      // an update the policy refuses returns no error at all — which is how a
+      // grant without write access could log a squawk, be told it synced, and
+      // find it gone on reload.
+      const { data: rows, error } = await supabase
         .from("aircraft")
         .update({ data: next })
-        .eq("id", aircraft.id);
+        .eq("id", aircraft.id)
+        .select("id");
       if (error) {
         setSync("error");
         setData(prev);
         toast(`Save failed: ${error.message}`, "danger");
+        return;
+      }
+      if (!rows?.length) {
+        setSync("error");
+        setData(prev);
+        toast("You don't have permission to change this aircraft.", "danger");
         return;
       }
       setSync("synced");

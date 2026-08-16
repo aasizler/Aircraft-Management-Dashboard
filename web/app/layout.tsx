@@ -57,7 +57,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <ToastProvider>
         {user && (
           <>
-          <AccessWatcher />
+          <AccessWatcher userId={user.id} email={user.email} />
           <nav className="nav">
             <Link href="/" className="nav-brand">
               <span className="nav-dot" />

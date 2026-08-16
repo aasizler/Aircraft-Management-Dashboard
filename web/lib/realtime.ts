@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import type { CraftRole } from "@/lib/types";
 
 /**
  * Live sync, ported from v1's initRealtime() / handleRealtimeFleetUpdate() /
@@ -88,6 +89,24 @@ export function useAccessRealtime() {
   useAccessChanges(useCallback(() => router.refresh(), [router]));
 }
 
+/** The aircraft_access columns a change event carries. */
+export type AccessRow = {
+  id: string;
+  aircraft_id: string;
+  user_id: string | null;
+  invited_email: string | null;
+  role: CraftRole;
+  accepted: boolean;
+  aircraft_reg: string | null;
+  aircraft_type: string | null;
+};
+
+export type AccessEvent = {
+  eventType: "INSERT" | "UPDATE" | "DELETE";
+  new: Partial<AccessRow> | null;
+  old: Partial<AccessRow> | null;
+};
+
 /**
  * Runs `onChange` whenever any aircraft_access row this user can see changes.
  *
@@ -97,7 +116,7 @@ export function useAccessRealtime() {
  * until a manual reload. v1 re-ran checkPendingInvites() straight from its
  * realtime handler on aircraft_shares; this is the same idea.
  */
-export function useAccessChanges(onChange: () => void) {
+export function useAccessChanges(onChange: (e: AccessEvent) => void) {
   const cb = useRef(onChange);
   cb.current = onChange;
 
@@ -120,7 +139,16 @@ export function useAccessChanges(onChange: () => void) {
         .on(
           "postgres_changes",
           { event: "*", schema: "public", table: "aircraft_access" },
-          () => cb.current(),
+          (payload) =>
+            cb.current({
+              eventType: payload.eventType as AccessEvent["eventType"],
+              new: (payload.new ?? null) as Partial<AccessRow> | null,
+              // DELETE only carries the full old row because the migration set
+              // REPLICA IDENTITY FULL on aircraft_access; without it this would
+              // be the primary key alone and the toasts would have nothing to
+              // name.
+              old: (payload.old ?? null) as Partial<AccessRow> | null,
+            }),
         )
         .subscribe((status, err) => {
           if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {

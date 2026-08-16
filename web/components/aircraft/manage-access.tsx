@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Modal } from "@/components/ui/modal";
+import { useAccessChanges } from "@/lib/realtime";
+import { markSelfInitiated } from "@/lib/access-events";
 import type { CraftRole } from "@/lib/types";
 
 type Grant = { id: string; invited_email: string | null; user_id: string | null; role: CraftRole; accepted: boolean };
@@ -62,6 +64,12 @@ export function ManageAccess({
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (open) load();
   }, [open, load]);
+
+  // Accepts, declines and departures should land in the open list without a
+  // reload — v1 re-ran renderSharesList() from its realtime handler. This
+  // component loads its rows in an effect, so router.refresh() never reached
+  // it.
+  useAccessChanges(useCallback(() => { if (open) load(); }, [open, load]));
 
   // Opened from the hangar tile menu via ?access=1 and from the nav ⋮ menu.
   useEffect(() => {
@@ -136,6 +144,10 @@ export function ManageAccess({
   }
 
   async function revokeGrant(id: string) {
+    // Flag it before the delete: the realtime echo can't tell a revoke from a
+    // decline, and without this revoking someone immediately toasted that they
+    // had declined. v1 kept the same flag as _revokedByUs.
+    markSelfInitiated(id);
     await createClient().from("aircraft_access").delete().eq("id", id);
     load();
   }
@@ -170,9 +182,6 @@ export function ManageAccess({
                 <li className="doc-item" key={g.id}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div className="doc-name">{g.invited_email ?? "(linked user)"}</div>
-                    {/* v1's renderSharesList showed Active vs Pending
-                        acceptance here. Without it the granter can't tell
-                        whether the invite ever landed. */}
                     {/* v1's renderSharesList showed Active vs Pending
                         acceptance here. Without it the granter can't tell
                         whether the invite ever landed. */}
