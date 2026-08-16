@@ -15,7 +15,21 @@ import type { MeterKind } from "@/lib/types";
 
 const METERS: MeterKind[] = ["hobbs", "tach", "flight", "total"];
 
-export function AddAircraftButton({ orgId }: { orgId: string }) {
+/**
+ * A hangar is an org with one member in it, and a solo owner never needs to
+ * hear that word. When they have no org yet, pressing Add Aircraft creates one
+ * named after them first — no extra step, no vocabulary to learn. The concept
+ * only surfaces once they invite somebody or group aircraft into a fleet.
+ */
+export function AddAircraftButton({
+  orgId,
+  hangarName,
+}: {
+  /** Absent for an account that hasn't got a hangar yet. */
+  orgId?: string | null;
+  /** Used to name the hangar created on first use. */
+  hangarName?: string | null;
+}) {
   const router = useRouter();
   const toast = useToast();
   const [open, setOpen] = useState(false);
@@ -43,6 +57,19 @@ export function AddAircraftButton({ orgId }: { orgId: string }) {
     setBusy(true);
     setErr(null);
     const supabase = createClient();
+
+    // First aircraft on a new account: make the hangar it goes in. Silently —
+    // create_org does the org and the membership together, because the two
+    // policies deadlock for someone who isn't a member yet.
+    let org = orgId;
+    if (!org) {
+      const { data: created, error: orgErr } = await supabase.rpc("create_org", {
+        p_name: hangarName?.trim() ? `${hangarName.trim()}'s Hangar` : "My Hangar",
+      });
+      if (orgErr) { setErr(orgErr.message); setBusy(false); return; }
+      org = created as string;
+    }
+
     const hrs = f.hours ? Number(f.hours) : 0;
 
     // v1's saveAircraft() seeded the regulatory inspection set and the TBO /
@@ -78,7 +105,7 @@ export function AddAircraftButton({ orgId }: { orgId: string }) {
     const { data: ac, error } = await supabase
       .from("aircraft")
       .insert({
-        org_id: orgId,
+        org_id: org,
         reg: f.reg.trim().toUpperCase(),
         type: f.type.trim() || null,
         serial: f.serial.trim() || null,

@@ -2,7 +2,6 @@ import { createClient } from "@/lib/supabase/server";
 import { AddAircraftButton } from "@/components/hangar/add-aircraft";
 import { HangarGrid, type Tile } from "@/components/hangar/hangar-grid";
 import { PageHeader } from "@/components/ui/page-header";
-import { CreateOrg } from "@/components/hangar/create-org";
 import type { Meter } from "@/lib/aircraft";
 import { resolveRole } from "@/lib/permissions";
 import type { CraftRole } from "@/lib/types";
@@ -97,20 +96,17 @@ export default async function Home() {
     <>
       <PageHeader
         title="My Hangar"
-        // Someone with no org of their own still needs a way to make one, and
-        // the empty state used to be the only place it lived — so accepting a
-        // single shared aircraft filled the hangar, hid that state, and left
-        // the account permanently unable to create anything of its own.
+        // Always offered. An account with no hangar gets one made on first use
+        // rather than being sent through a separate "create an organisation"
+        // step — the org is plumbing, not a concept the owner of one aeroplane
+        // should have to meet.
         right={
-          membership?.org_id ? (
-            <AddAircraftButton orgId={membership.org_id} />
-          ) : (
-            <CreateOrg
-              suggested={
-                (user?.user_metadata as { first_name?: string } | undefined)?.first_name
-              }
-            />
-          )
+          <AddAircraftButton
+            orgId={membership?.org_id}
+            hangarName={
+              (user?.user_metadata as { first_name?: string } | undefined)?.first_name
+            }
+          />
         }
       />
 
@@ -136,8 +132,7 @@ export default async function Home() {
               // people actually hit.
               <>
                 <div style={{ marginBottom: 8 }}>
-                  You don&apos;t have a hangar yet. Use <b>Create your hangar</b>{" "}
-                  above to start adding your own aircraft.
+                  No aircraft yet. Use <b>+ Add Aircraft</b> to get started.
                 </div>
                 <div style={{ fontSize: 12, color: "var(--muted2)" }}>
                   Aircraft shared with you appear here too — ask whoever manages

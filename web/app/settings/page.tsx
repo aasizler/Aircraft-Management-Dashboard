@@ -48,7 +48,9 @@ export default async function SettingsPage() {
             <span className="ins-field-value">{user?.email}</span>
           </div>
           <div className="ins-field">
-            <span className="ins-field-label">Organization</span>
+            {/* "Hangar" everywhere the owner can see. The org only earns its own
+                name once there is more than one person in it. */}
+            <span className="ins-field-label">Hangar</span>
             <span className="ins-field-value">{orgName}</span>
           </div>
           <div className="ins-field">
