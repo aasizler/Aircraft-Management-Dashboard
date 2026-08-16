@@ -78,11 +78,13 @@ export function AddAircraftButton({
       // membership were both created, the id never reached the insert, and the
       // aircraft went in with org_id null — surfacing as an RLS violation that
       // pointed at the wrong thing entirely.
-      const { data: auth } = await supabase.auth.getUser();
+      // No user filter needed — the members read policy already scopes this to
+      // orgs you belong to, and depending on getUser() here just adds another
+      // way for it to come back empty.
       const { data: m } = await supabase
         .from("org_members")
         .select("org_id")
-        .eq("user_id", auth.user?.id ?? "")
+        .limit(1)
         .maybeSingle();
       org = m?.org_id;
     }
@@ -141,6 +143,19 @@ export function AddAircraftButton({
       .single();
 
     if (error || !ac) {
+      // "violates row-level security policy" names the table and tells you
+      // nothing about why. The only insert policy here is is_org_staff(org_id),
+      // so ask it directly and say which of the two things actually went wrong.
+      if (error && /row-level security/i.test(error.message)) {
+        const { data: staff } = await supabase.rpc("is_org_staff", { p_org: org });
+        setErr(
+          staff
+            ? `The database refused this even though you administer hangar ${org}. Reload and try again.`
+            : `You don't have permission to add aircraft to hangar ${org ?? "(none)"}.`,
+        );
+        setBusy(false);
+        return;
+      }
       setErr(error?.message ?? "Could not create aircraft.");
       setBusy(false);
       return;
