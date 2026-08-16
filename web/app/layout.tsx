@@ -3,7 +3,9 @@ import { Inter, IBM_Plex_Mono, Syne } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
 import { createClient } from "@/lib/supabase/server";
-import { SignOutButton } from "@/components/sign-out-button";
+import { NavMenu } from "@/components/nav-menu";
+import { AccessWatcher } from "@/components/access-watcher";
+import { ToastProvider } from "@/components/ui/toast";
 
 const inter = Inter({
   variable: "--font-body",
@@ -44,27 +46,29 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "try{var t=localStorage.getItem('at_theme');if(t==='light')document.documentElement.classList.add('light');var a=localStorage.getItem('at_accent');if(a){var r=document.documentElement.style;r.setProperty('--accent',a);r.setProperty('--accent-dim',a+'1a');}}catch(e){}",
+              "try{var A={blue:'#3b9eff',cyan:'#22d3ee',green:'#2dd4a0',mint:'#34d399',purple:'#a855f7',red:'#f04b4b',amber:'#f59e0b',slate:'#94a3b8'};" +
+              "var t=localStorage.getItem('at_theme')||'dark';" +
+              "var light=t==='light'||(t==='system'&&window.matchMedia('(prefers-color-scheme: light)').matches);" +
+              "if(light)document.documentElement.classList.add('light');" +
+              "var a=localStorage.getItem('at_accent');if(a){var h=A[a]||(a.charAt(0)==='#'?a:null);" +
+              "if(h){var r=document.documentElement.style;r.setProperty('--accent',h);r.setProperty('--accent-dim',h+'1a');}}}catch(e){}",
           }}
         />
+        <ToastProvider>
         {user && (
+          <>
+          <AccessWatcher />
           <nav className="nav">
             <Link href="/" className="nav-brand">
               <span className="nav-dot" />
               AeroTrack
             </Link>
-            <div className="nav-right">
-              <Link href="/settings" className="nav-user" style={{ textDecoration: "none" }}>
-                <span className="nav-avatar">
-                  {(user.email ?? "?")[0].toUpperCase()}
-                </span>
-                <span className="nav-user-email">{user.email}</span>
-              </Link>
-              <SignOutButton />
-            </div>
+            <NavMenu email={user.email} />
           </nav>
+          </>
         )}
         {children}
+        </ToastProvider>
       </body>
     </html>
   );
