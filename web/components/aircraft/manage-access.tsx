@@ -27,14 +27,27 @@ export function ManageAccess({
   orgId,
   reg,
   hidden,
+  readOnly,
+  open: controlledOpen,
+  onClose,
 }: {
   aircraftId: string;
   orgId: string;
   reg: string;
   /** Render only the modal — the trigger lives in the hangar tile menu. */
   hidden?: boolean;
+  /** Viewer can see who has access but not change it. */
+  readOnly?: boolean;
+  /** Controlled from the hangar, where the modal opens in place. */
+  open?: boolean;
+  onClose?: () => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = (v: boolean) => {
+    if (controlledOpen === undefined) setInternalOpen(v);
+    else if (!v) onClose?.();
+  };
   const [grants, setGrants] = useState<Grant[]>([]);
   const [assigns, setAssigns] = useState<Assign[]>([]);
   const [email, setEmail] = useState("");
@@ -197,7 +210,9 @@ export function ManageAccess({
           </div>
           {empty ? (
             <div style={{ color: "var(--muted2)", fontSize: 13, padding: "4px 0 10px" }}>
-              Only org managers can see this aircraft. Grant access below.
+              {readOnly
+              ? "Nobody else has been given access to this aircraft."
+              : "Only org managers can see this aircraft. Grant access below."}
             </div>
           ) : (
             <ul className="doc-list" style={{ marginBottom: 8 }}>
@@ -225,6 +240,9 @@ export function ManageAccess({
                       Revoke as the only option, so fixing a wrong role meant
                       revoking and re-inviting — which throws away their
                       acceptance. */}
+                  {readOnly ? (
+                    <span className="grant-role-static">{ROLE_LABEL[g.role]}</span>
+                  ) : (
                   <select
                     className="grant-role"
                     value={g.role}
@@ -235,9 +253,12 @@ export function ManageAccess({
                       <option key={r} value={r}>{ROLE_LABEL[r]}</option>
                     ))}
                   </select>
-                  <button className="action-btn del" onClick={() => revokeGrant(g.id)}>
-                    Revoke
-                  </button>
+                  )}
+                  {!readOnly && (
+                    <button className="action-btn del" onClick={() => revokeGrant(g.id)}>
+                      Revoke
+                    </button>
+                  )}
                 </li>
               ))}
               {assigns.map((a) => (
@@ -248,15 +269,19 @@ export function ManageAccess({
                       Contract pilot · until {a.ends_at.slice(0, 10)}
                     </div>
                   </div>
-                  <button className="action-btn del" onClick={() => revokeAssign(a.id)}>
-                    End
-                  </button>
+                  {!readOnly && (
+                    <button className="action-btn del" onClick={() => revokeAssign(a.id)}>
+                      End
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>
           )}
 
-          {/* Grant form */}
+          {/* Grant form — managers only. A viewer sees who has access, not a
+              way to change it. */}
+          {!readOnly && (<>
           <div className="form-divider">Grant access</div>
           <div className="form-row">
             <label>Email</label>
@@ -302,11 +327,14 @@ export function ManageAccess({
             />
             One-off contract pilot (access expires automatically)
           </label>
+          </>)}
           <div className="form-actions">
             <button className="btn-cancel" onClick={() => setOpen(false)}>Close</button>
-            <button className="btn-save" onClick={grant} disabled={busy}>
-              {busy ? "Granting…" : "Grant Access"}
-            </button>
+            {!readOnly && (
+              <button className="btn-save" onClick={grant} disabled={busy}>
+                {busy ? "Granting…" : "Grant Access"}
+              </button>
+            )}
           </div>
         </Modal>
       )}

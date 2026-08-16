@@ -19,7 +19,7 @@ export default async function Home() {
     await Promise.all([
       supabase
         .from("aircraft")
-        .select("id, org_id, reg, type, serial, airport, maint_basis, data")
+        .select("id, org_id, reg, type, serial, airport, maint_basis, cost_basis, data")
         // Nothing in the app sets `archived` any more — kept only so a row
         // archived by an earlier build stays hidden.
         .eq("archived", false)

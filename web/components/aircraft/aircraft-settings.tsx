@@ -29,6 +29,8 @@ export function AircraftSettings({
   data,
   save,
   hidden,
+  open: controlledOpen,
+  onClose,
 }: {
   aircraft: AircraftRow;
   meters: Meter[];
@@ -36,10 +38,18 @@ export function AircraftSettings({
   save: (next: V1Aircraft) => Promise<void>;
   /** Render only the modal — the trigger lives in the nav ⋮ menu. */
   hidden?: boolean;
+  /** Controlled from the hangar, where the modal opens in place. */
+  open?: boolean;
+  onClose?: () => void;
 }) {
   const router = useRouter();
   const toast = useToast();
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = (v: boolean) => {
+    if (controlledOpen === undefined) setInternalOpen(v);
+    else if (!v) onClose?.();
+  };
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 

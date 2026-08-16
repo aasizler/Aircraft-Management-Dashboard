@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useFleetAirborne } from "@/lib/adsb";
-import { ic, meterValue, type Insp, type Meter, type V1Aircraft } from "@/lib/aircraft";
+import { ic, meterValue, type AircraftRow, type Insp, type Meter, type V1Aircraft } from "@/lib/aircraft";
+import { ManageAccess } from "@/components/aircraft/manage-access";
+import { AircraftSettings } from "@/components/aircraft/aircraft-settings";
 import { Confirm } from "@/components/ui/confirm";
 import { useToast } from "@/components/ui/toast";
 import { markSelfInitiated } from "@/lib/access-events";
@@ -13,6 +15,8 @@ import type { CraftRole, MeterKind } from "@/lib/types";
 
 export type Tile = {
   id: string;
+  org_id: string;
+  cost_basis: MeterKind;
   reg: string;
   type: string | null;
   serial: string | null;
@@ -55,6 +59,11 @@ export function HangarGrid({ aircraft }: { aircraft: Tile[] }) {
   const [dragId, setDragId] = useState<string | null>(null);
   const [confirmTile, setConfirmTile] = useState<Tile | null>(null);
   const [leaveTile, setLeaveTile] = useState<Tile | null>(null);
+  // Opened in place. These used to router.push to the aircraft with ?access=1
+  // or ?settings=1, so asking who had access dragged you out of the hangar and
+  // into the aircraft's records — a detour you never asked for.
+  const [accessTile, setAccessTile] = useState<Tile | null>(null);
+  const [settingsTile, setSettingsTile] = useState<Tile | null>(null);
   // v1 gated reordering behind an explicit mode; tiles only drag once it's on,
   // and a plain click opens the aircraft rather than starting a drag.
   const [rearrange, setRearrange] = useState(false);
@@ -88,6 +97,9 @@ export function HangarGrid({ aircraft }: { aircraft: Tile[] }) {
       access,
       remove: can(t.appRole, "delete"),
       leave: !access && !!t.grantId,
+      // Everyone with any relationship may see WHO else has access; only a
+      // manager may change it.
+      viewAccess: !access,
     };
   }
 
@@ -142,6 +154,22 @@ export function HangarGrid({ aircraft }: { aircraft: Tile[] }) {
     if (!data) { toast("You no longer have a grant on this aircraft.", "danger"); router.refresh(); return; }
     setOrder((o) => o.filter((x) => x.id !== t.id));
     toast(`Left ${t.reg}`, "ok");
+    router.refresh();
+  }
+
+  /**
+   * Settings edits the aircraft's data blob. On the detail page that is the
+   * page's own save(); here the hangar owns it, and checks the rowcount for the
+   * same reason — RLS refusals return no error.
+   */
+  async function saveData(t: Tile, next: V1Aircraft) {
+    const { data, error } = await createClient()
+      .from("aircraft").update({ data: next }).eq("id", t.id).select("id");
+    if (error) { toast(`Save failed: ${error.message}`, "danger"); return; }
+    if (!data?.length) {
+      toast("You don't have permission to change this aircraft.", "danger");
+      return;
+    }
     router.refresh();
   }
 
@@ -231,7 +259,7 @@ export function HangarGrid({ aircraft }: { aircraft: Tile[] }) {
                   {menuFor(a).settings && (
                     <button
                       className="row-dot-item"
-                      onClick={() => router.push(`/aircraft/${a.id}?settings=1`)}
+                      onClick={() => { setMenu(null); setSettingsTile(a); }}
                     >
                       Aircraft Settings
                     </button>
@@ -243,9 +271,18 @@ export function HangarGrid({ aircraft }: { aircraft: Tile[] }) {
                   {menuFor(a).access && (
                     <button
                       className="row-dot-item"
-                      onClick={() => router.push(`/aircraft/${a.id}?access=1`)}
+                      onClick={() => { setMenu(null); setAccessTile(a); }}
                     >
                       Manage Access
+                    </button>
+                  )}
+
+                  {menuFor(a).viewAccess && (
+                    <button
+                      className="row-dot-item"
+                      onClick={() => { setMenu(null); setAccessTile(a); }}
+                    >
+                      View Access
                     </button>
                   )}
 
@@ -290,6 +327,30 @@ export function HangarGrid({ aircraft }: { aircraft: Tile[] }) {
             <button className="btn primary sm" onClick={() => setRearrange(false)}>Done</button>
           </div>
         </>
+      )}
+
+      {accessTile && (
+        <ManageAccess
+          aircraftId={accessTile.id}
+          orgId={accessTile.org_id}
+          reg={accessTile.reg}
+          hidden
+          open
+          readOnly={!can(accessTile.appRole, "manage_access")}
+          onClose={() => setAccessTile(null)}
+        />
+      )}
+
+      {settingsTile && (
+        <AircraftSettings
+          aircraft={settingsTile as unknown as AircraftRow}
+          meters={settingsTile.meters}
+          data={settingsTile.data}
+          save={(next) => saveData(settingsTile, next)}
+          hidden
+          open
+          onClose={() => setSettingsTile(null)}
+        />
       )}
 
       {leaveTile && (
