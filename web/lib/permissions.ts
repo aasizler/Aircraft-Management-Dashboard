@@ -57,6 +57,27 @@ export const ROLE_COLORS: Record<AppRole, string> = {
   viewer: "var(--muted2)",
 };
 
+/**
+ * What a GRANT is called — always the wording the granter chose in Manage
+ * Access.
+ *
+ * The AppRole labels above name a permission set, not a grant. Running an
+ * invite through resolveRole() first meant someone granted "Pilot" was told
+ * they'd been invited as "Mechanic", because that is the v1 permission bucket
+ * pilot maps onto. Anywhere we describe a grant, use these.
+ */
+export const CRAFT_ROLE_LABELS: Record<CraftRole, string> = {
+  owner: "Owner",
+  manager: "Manager",
+  pilot: "Pilot",
+};
+
+export const CRAFT_ROLE_COLORS: Record<CraftRole, string> = {
+  owner: "var(--ok)",
+  manager: "var(--accent)",
+  pilot: "var(--warn)",
+};
+
 /** Resolves the effective app role from the org membership + aircraft grant. */
 export function resolveRole(
   orgRole: string | null | undefined,

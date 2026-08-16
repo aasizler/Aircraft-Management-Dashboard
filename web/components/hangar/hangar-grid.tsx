@@ -7,8 +7,8 @@ import { useFleetAirborne } from "@/lib/adsb";
 import { ic, meterValue, type Insp, type Meter, type V1Aircraft } from "@/lib/aircraft";
 import { Confirm } from "@/components/ui/confirm";
 import { useToast } from "@/components/ui/toast";
-import { ROLE_LABELS, can, type AppRole } from "@/lib/permissions";
-import type { MeterKind } from "@/lib/types";
+import { CRAFT_ROLE_LABELS, ROLE_LABELS, can, type AppRole } from "@/lib/permissions";
+import type { CraftRole, MeterKind } from "@/lib/types";
 
 export type Tile = {
   id: string;
@@ -23,6 +23,8 @@ export type Tile = {
   appRole: AppRole;
   /** This user's own aircraft_access row, when they got here via a grant. */
   grantId: string | null;
+  /** That grant's role, shown on the badge. Null for org staff. */
+  craftRole: CraftRole | null;
 };
 
 export function HangarGrid({ aircraft }: { aircraft: Tile[] }) {
@@ -168,7 +170,9 @@ export function HangarGrid({ aircraft }: { aircraft: Tile[] }) {
             </div>
 
             <div className="ac-tile-foot" style={{ position: "relative" }}>
-              <span className="role-badge">{ROLE_LABELS[a.appRole]}</span>
+              <span className="role-badge">
+                {a.craftRole ? CRAFT_ROLE_LABELS[a.craftRole] : ROLE_LABELS[a.appRole]}
+              </span>
               {Object.values(menuFor(a)).some(Boolean) && (
                 <button
                   className="tile-dot-btn"

@@ -69,6 +69,10 @@ export default async function Home() {
     // both read it; previously the badge was a flat Owner/Shared guess and
     // nothing gated delete at all.
     appRole: resolveRole(membership?.role, grantFor(a.id)?.role),
+    // The grant's own role, for the badge. appRole names a permission set, so
+    // a Pilot grant renders as "Mechanic" through it — the wrong word to show
+    // someone whose granter picked "Pilot".
+    craftRole: grantFor(a.id)?.role ?? null,
     // Present only when this user reaches the aircraft through a grant of
     // their own — which is the only thing they can hand back.
     grantId: grantFor(a.id)?.id ?? null,

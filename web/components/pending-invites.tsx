@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
-import { ROLE_COLORS, ROLE_LABELS, resolveRole } from "@/lib/permissions";
+import { CRAFT_ROLE_COLORS, CRAFT_ROLE_LABELS } from "@/lib/permissions";
+import { useAccessChanges } from "@/lib/realtime";
 import type { CraftRole } from "@/lib/types";
 
 type Invite = {
@@ -79,6 +80,11 @@ export function PendingInvites({ email }: { email: string }) {
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, [load]);
 
+  // A grant made while this tab is open should raise the banner on its own.
+  // AccessWatcher's router.refresh() re-runs server components but never
+  // re-fires this effect, so the invite sat unseen until a manual reload.
+  useAccessChanges(load);
+
   // Both go through RPCs. Writing aircraft_access directly matched zero rows —
   // the table's only write policy is is_org_staff() — and RLS filters rather
   // than raising, so the old code reported success while changing nothing.
@@ -121,7 +127,7 @@ export function PendingInvites({ email }: { email: string }) {
           </div>
           <div className="pending-sub">
             {invites.length === 1
-              ? `As ${ROLE_LABELS[resolveRole(null, invites[0].role)]}`
+              ? `As ${CRAFT_ROLE_LABELS[invites[0].role]}`
               : "Review who has invited you"}
           </div>
         </div>
@@ -140,9 +146,7 @@ export function PendingInvites({ email }: { email: string }) {
           {/* Card per invite, laid out as v1's openPendingInvitesModal did:
               heading, REG — TYPE in accent mono, who sent it, then the role in
               its own colour. */}
-          {invites.map((inv) => {
-            const appRole = resolveRole(null, inv.role);
-            return (
+          {invites.map((inv) => (
               <div className="invite-card" key={inv.id}>
                 <div className="invite-head">Aircraft Invitation</div>
                 <div className="invite-craft">
@@ -157,7 +161,9 @@ export function PendingInvites({ email }: { email: string }) {
                 )}
                 <div className="invite-meta mono">
                   Role:{" "}
-                  <b style={{ color: ROLE_COLORS[appRole] }}>{ROLE_LABELS[appRole]}</b>
+                  <b style={{ color: CRAFT_ROLE_COLORS[inv.role] }}>
+                    {CRAFT_ROLE_LABELS[inv.role]}
+                  </b>
                 </div>
                 <div className="invite-actions">
                   <button className="btn sm primary" disabled={busy} onClick={() => accept(inv)}>
@@ -168,8 +174,7 @@ export function PendingInvites({ email }: { email: string }) {
                   </button>
                 </div>
               </div>
-            );
-          })}
+          ))}
           <div className="form-actions">
             <button className="btn-cancel" onClick={() => setOpen(false)}>Close</button>
           </div>

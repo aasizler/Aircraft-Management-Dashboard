@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
@@ -85,6 +85,22 @@ export function useAircraftRealtime(
  */
 export function useAccessRealtime() {
   const router = useRouter();
+  useAccessChanges(useCallback(() => router.refresh(), [router]));
+}
+
+/**
+ * Runs `onChange` whenever any aircraft_access row this user can see changes.
+ *
+ * router.refresh() alone isn't enough for everything: it re-runs server
+ * components, but a client component that loaded its own rows in an effect
+ * never hears about it, which is why a new invitation didn't raise the banner
+ * until a manual reload. v1 re-ran checkPendingInvites() straight from its
+ * realtime handler on aircraft_shares; this is the same idea.
+ */
+export function useAccessChanges(onChange: () => void) {
+  const cb = useRef(onChange);
+  cb.current = onChange;
+
   useEffect(() => {
     const supabase = createClient();
     let channel: ReturnType<typeof supabase.channel> | null = null;
@@ -104,7 +120,7 @@ export function useAccessRealtime() {
         .on(
           "postgres_changes",
           { event: "*", schema: "public", table: "aircraft_access" },
-          () => router.refresh(),
+          () => cb.current(),
         )
         .subscribe((status, err) => {
           if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
@@ -122,5 +138,7 @@ export function useAccessRealtime() {
       cancelled = true;
       if (channel) supabase.removeChannel(channel);
     };
-  }, [router]);
+    // cb is a ref — resubscribing whenever the caller re-renders would thrash
+    // the websocket for no gain.
+  }, []);
 }

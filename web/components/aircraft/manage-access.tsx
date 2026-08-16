@@ -115,6 +115,26 @@ export function ManageAccess({
     setBusy(false);
   }
 
+  /**
+   * Change an existing grant's role in place, as v1's changeRole() did from
+   * the select in renderSharesList. Without it the only way to correct a
+   * mistaken role was to revoke and re-invite, which drops the person's
+   * acceptance and makes them go through the invite again.
+   */
+  async function changeRole(id: string, next: CraftRole) {
+    setErr(null);
+    const { data, error } = await createClient()
+      .from("aircraft_access")
+      .update({ role: next })
+      .eq("id", id)
+      .select("id");
+    if (error) { setErr(error.message); return; }
+    // The write policy is is_org_staff(); RLS filters rather than raising, so
+    // a refused update would otherwise look like it worked.
+    if (!data?.length) { setErr("You don't have permission to change that role."); return; }
+    load();
+  }
+
   async function revokeGrant(id: string) {
     await createClient().from("aircraft_access").delete().eq("id", id);
     load();
@@ -153,11 +173,27 @@ export function ManageAccess({
                     {/* v1's renderSharesList showed Active vs Pending
                         acceptance here. Without it the granter can't tell
                         whether the invite ever landed. */}
+                    {/* v1's renderSharesList showed Active vs Pending
+                        acceptance here. Without it the granter can't tell
+                        whether the invite ever landed. */}
                     <div className="doc-meta">
-                      {ROLE_LABEL[g.role]} ·{" "}
                       {g.accepted ? "Active" : "Pending acceptance"}
                     </div>
                   </div>
+                  {/* v1 put a role select on every share row; the port left
+                      Revoke as the only option, so fixing a wrong role meant
+                      revoking and re-inviting — which throws away their
+                      acceptance. */}
+                  <select
+                    className="grant-role"
+                    value={g.role}
+                    aria-label={`Role for ${g.invited_email ?? "this user"}`}
+                    onChange={(e) => changeRole(g.id, e.target.value as CraftRole)}
+                  >
+                    {(Object.keys(ROLE_LABEL) as CraftRole[]).map((r) => (
+                      <option key={r} value={r}>{ROLE_LABEL[r]}</option>
+                    ))}
+                  </select>
                   <button className="action-btn del" onClick={() => revokeGrant(g.id)}>
                     Revoke
                   </button>
