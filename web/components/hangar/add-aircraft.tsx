@@ -127,9 +127,21 @@ export function AddAircraftButton({
       lastUpdated: "Not yet updated",
     };
 
-    const { data: ac, error } = await supabase
+    // The id is generated here rather than returned by the insert, and that is
+    // load-bearing. .select() after an insert compiles to INSERT … RETURNING,
+    // and Postgres applies the SELECT policy to the returned row as well as the
+    // WITH CHECK. That policy is can_read_aircraft(id), which re-queries the
+    // aircraft table for the row still being inserted by the same command — it
+    // finds nothing, denies the read, and the whole statement fails as
+    // "new row violates row-level security policy for table aircraft". Adding
+    // an aircraft through the UI has never worked; the existing fleet arrived
+    // through the SQL import.
+    const id = crypto.randomUUID();
+
+    const { error } = await supabase
       .from("aircraft")
       .insert({
+        id,
         org_id: org,
         reg: f.reg.trim().toUpperCase(),
         type: f.type.trim() || null,
@@ -138,11 +150,9 @@ export function AddAircraftButton({
         maint_basis: f.maint_basis,
         cost_basis: f.cost_basis,
         data,
-      })
-      .select("id")
-      .single();
+      });
 
-    if (error || !ac) {
+    if (error) {
       // "violates row-level security policy" names the table and tells you
       // nothing about why. The only insert policy here is is_org_staff(org_id),
       // so ask it directly and say which of the two things actually went wrong.
@@ -165,7 +175,7 @@ export function AddAircraftButton({
     const kinds = Array.from(new Set([f.maint_basis, f.cost_basis]));
     await supabase
       .from("aircraft_meters")
-      .insert(kinds.map((kind) => ({ aircraft_id: ac.id, kind, current: hrs })));
+      .insert(kinds.map((kind) => ({ aircraft_id: id, kind, current: hrs })));
 
     const reg = f.reg.trim().toUpperCase();
     setBusy(false);
