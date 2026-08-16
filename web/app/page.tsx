@@ -104,7 +104,13 @@ export default async function Home() {
           <AddAircraftButton
             orgId={membership?.org_id}
             hangarName={
-              (user?.user_metadata as { first_name?: string } | undefined)?.first_name
+              (() => {
+                const m = user?.user_metadata as
+                  | { first_name?: string; full_name?: string }
+                  | undefined;
+                // Accounts predating the first/last split carry only full_name.
+                return m?.first_name || m?.full_name?.split(/\s+/)[0] || null;
+              })()
             }
           />
         }

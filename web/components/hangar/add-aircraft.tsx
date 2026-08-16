@@ -61,13 +61,36 @@ export function AddAircraftButton({
     // First aircraft on a new account: make the hangar it goes in. Silently —
     // create_org does the org and the membership together, because the two
     // policies deadlock for someone who isn't a member yet.
-    let org = orgId;
+    let org: string | null | undefined = orgId;
     if (!org) {
-      const { data: created, error: orgErr } = await supabase.rpc("create_org", {
+      const { error: orgErr } = await supabase.rpc("create_org", {
         p_name: hangarName?.trim() ? `${hangarName.trim()}'s Hangar` : "My Hangar",
       });
-      if (orgErr) { setErr(orgErr.message); setBusy(false); return; }
-      org = created as string;
+      // "already belong" isn't a failure here — it means this page was rendered
+      // before the hangar existed and its orgId prop is simply stale.
+      if (orgErr && !/already belong/i.test(orgErr.message)) {
+        setErr(orgErr.message);
+        setBusy(false);
+        return;
+      }
+      // Read the membership back rather than trusting the call's return value.
+      // Taking the returned id on faith is what broke this: the hangar and the
+      // membership were both created, the id never reached the insert, and the
+      // aircraft went in with org_id null — surfacing as an RLS violation that
+      // pointed at the wrong thing entirely.
+      const { data: auth } = await supabase.auth.getUser();
+      const { data: m } = await supabase
+        .from("org_members")
+        .select("org_id")
+        .eq("user_id", auth.user?.id ?? "")
+        .maybeSingle();
+      org = m?.org_id;
+    }
+
+    if (!org) {
+      setErr("Could not find your hangar. Reload the page and try again.");
+      setBusy(false);
+      return;
     }
 
     const hrs = f.hours ? Number(f.hours) : 0;
