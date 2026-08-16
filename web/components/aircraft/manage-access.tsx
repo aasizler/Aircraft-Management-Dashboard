@@ -42,7 +42,10 @@ export function ManageAccess({
   const [contract, setContract] = useState(false);
   const [ends, setEnds] = useState("");
   const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
+  // v1 wrote status straight under the invite field — "Verifying…", then the
+  // outcome in green or amber. Kept, because the useful answer here is not
+  // just failure but WHO was found before you hand over an aircraft.
+  const [notice, setNotice] = useState<{ text: string; kind: "ok" | "warn" | "info" } | null>(null);
 
   const load = useCallback(async () => {
     const s = createClient();
@@ -85,12 +88,29 @@ export function ManageAccess({
   async function grant() {
     const e = email.trim().toLowerCase();
     if (!e) {
-      setErr("Enter an email address.");
+      setNotice({ text: "Enter an email address.", kind: "warn" });
       return;
     }
     setBusy(true);
-    setErr(null);
     const s = createClient();
+
+    // Confirm the account exists first, as v1 did. Without it a typo produced
+    // a grant that matched nobody, sat as "Pending acceptance" forever, and
+    // never hinted that it was addressed into the void.
+    setNotice({ text: "Verifying…", kind: "info" });
+    const { data: lookup, error: lookupErr } = await s.rpc("check_user_exists", { p_email: e });
+    if (lookupErr) {
+      setNotice({ text: lookupErr.message, kind: "warn" });
+      setBusy(false);
+      return;
+    }
+    const found = lookup as { found?: boolean; name?: string | null } | null;
+    if (!found?.found) {
+      setNotice({ text: "No AeroTrack account found for that email.", kind: "warn" });
+      setBusy(false);
+      return;
+    }
+
     const { error } = contract
       ? await s.from("assignments").insert({
           org_id: orgId,
@@ -108,14 +128,14 @@ export function ManageAccess({
           role,
         });
     if (error) {
-      setErr(
-        error.code === "23505"
-          ? "That person already has access."
-          : error.message,
-      );
+      setNotice({
+        text: error.code === "23505" ? "That person already has access." : error.message,
+        kind: "warn",
+      });
       setBusy(false);
       return;
     }
+    setNotice({ text: `Invitation sent to ${found.name?.trim() || e}`, kind: "ok" });
     setEmail("");
     setEnds("");
     setContract(false);
@@ -130,16 +150,19 @@ export function ManageAccess({
    * acceptance and makes them go through the invite again.
    */
   async function changeRole(id: string, next: CraftRole) {
-    setErr(null);
+    setNotice(null);
     const { data, error } = await createClient()
       .from("aircraft_access")
       .update({ role: next })
       .eq("id", id)
       .select("id");
-    if (error) { setErr(error.message); return; }
+    if (error) { setNotice({ text: error.message, kind: "warn" }); return; }
     // The write policy is is_org_staff(); RLS filters rather than raising, so
     // a refused update would otherwise look like it worked.
-    if (!data?.length) { setErr("You don't have permission to change that role."); return; }
+    if (!data?.length) {
+      setNotice({ text: "You don't have permission to change that role.", kind: "warn" });
+      return;
+    }
     load();
   }
 
@@ -240,10 +263,11 @@ export function ManageAccess({
             <input
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => { setEmail(e.target.value); setNotice(null); }}
               placeholder="person@example.com"
             />
           </div>
+          {notice && <div className={`grant-msg ${notice.kind}`}>{notice.text}</div>}
           {!contract ? (
             <div className="form-row">
               <label>Role</label>
@@ -278,7 +302,6 @@ export function ManageAccess({
             />
             One-off contract pilot (access expires automatically)
           </label>
-          {err && <div className="auth-err">{err}</div>}
           <div className="form-actions">
             <button className="btn-cancel" onClick={() => setOpen(false)}>Close</button>
             <button className="btn-save" onClick={grant} disabled={busy}>
