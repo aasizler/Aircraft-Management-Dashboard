@@ -21,6 +21,8 @@ export type Tile = {
   meters: Meter[];
   /** Effective role for THIS aircraft, resolved server-side. */
   appRole: AppRole;
+  /** This user's own aircraft_access row, when they got here via a grant. */
+  grantId: string | null;
 };
 
 export function HangarGrid({ aircraft }: { aircraft: Tile[] }) {
@@ -31,6 +33,7 @@ export function HangarGrid({ aircraft }: { aircraft: Tile[] }) {
   const [order, setOrder] = useState<Tile[]>(aircraft);
   const [dragId, setDragId] = useState<string | null>(null);
   const [confirmTile, setConfirmTile] = useState<Tile | null>(null);
+  const [leaveTile, setLeaveTile] = useState<Tile | null>(null);
   // v1 gated reordering behind an explicit mode; tiles only drag once it's on,
   // and a plain click opens the aircraft rather than starting a drag.
   const [rearrange, setRearrange] = useState(false);
@@ -80,6 +83,27 @@ export function HangarGrid({ aircraft }: { aircraft: Tile[] }) {
     }
     setOrder((o) => o.filter((x) => x.id !== t.id));
     toast(`${t.reg} deleted`, "ok");
+    router.refresh();
+  }
+
+  /**
+   * Hand back your own grant. Goes through the same RPC as declining an
+   * invite — both are "drop my aircraft_access row" — because the table's
+   * only write policy is is_org_staff(), so a direct delete would match zero
+   * rows and report success while changing nothing.
+   */
+  async function leave(t: Tile) {
+    if (!t.grantId) return;
+    setBusy(true);
+    const { data, error } = await createClient()
+      .rpc("decline_aircraft_access", { p_access: t.grantId });
+    setBusy(false);
+    setLeaveTile(null);
+    setMenu(null);
+    if (error) { toast(`Could not leave: ${error.message}`, "danger"); return; }
+    if (!data) { toast("You no longer have a grant on this aircraft.", "danger"); router.refresh(); return; }
+    setOrder((o) => o.filter((x) => x.id !== t.id));
+    toast(`Left ${t.reg}`, "ok");
     router.refresh();
   }
 
@@ -154,12 +178,32 @@ export function HangarGrid({ aircraft }: { aircraft: Tile[] }) {
                   >
                     Aircraft Settings
                   </button>
-                  <button
-                    className="row-dot-item"
-                    onClick={() => router.push(`/aircraft/${a.id}?access=1`)}
-                  >
-                    Manage Access
-                  </button>
+                  {/* ?access=1 only opens anything for a role that passes
+                      can(role,'manage_access') in the detail page — showing it
+                      to everyone meant a shared user clicked it and just
+                      landed on the aircraft with no modal. */}
+                  {can(a.appRole, "manage_access") && (
+                    <button
+                      className="row-dot-item"
+                      onClick={() => router.push(`/aircraft/${a.id}?access=1`)}
+                    >
+                      Manage Access
+                    </button>
+                  )}
+
+                  {/* Someone here on a grant can hand it back. There is no v1
+                      equivalent — v1 only let the granter revoke — but without
+                      it a shared user has no way to clear an aircraft they no
+                      longer want in their hangar. */}
+                  {!can(a.appRole, "manage_access") && a.grantId && (
+                    <button
+                      className="row-dot-item"
+                      disabled={busy}
+                      onClick={() => { setMenu(null); setLeaveTile(a); }}
+                    >
+                      Leave Aircraft
+                    </button>
+                  )}
                   {/* v1 omitted this entirely unless can('delete', id).
                       Someone an aircraft was shared with must not be able to
                       delete the owner's records — and RLS refuses them anyway,
@@ -188,6 +232,22 @@ export function HangarGrid({ aircraft }: { aircraft: Tile[] }) {
             <button className="btn primary sm" onClick={() => setRearrange(false)}>Done</button>
           </div>
         </>
+      )}
+
+      {leaveTile && (
+        <Confirm
+          title="Leave aircraft"
+          message={
+            <>
+              Remove <b>{leaveTile.reg}</b> from your hangar? You will lose
+              access to its records. The owner can invite you again later.
+            </>
+          }
+          confirmLabel="Leave Aircraft"
+          busy={busy}
+          onConfirm={() => leave(leaveTile)}
+          onCancel={() => setLeaveTile(null)}
+        />
       )}
 
       {confirmTile && (

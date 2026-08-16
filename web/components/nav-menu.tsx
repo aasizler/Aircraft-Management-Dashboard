@@ -67,17 +67,13 @@ export function NavMenu({ email }: { email?: string | null }) {
               Aircraft Settings
             </button>
           )}
-          {onDetail && (
-            <button
-              className="dot-menu-item"
-              onClick={() => {
-                setOpen(false);
-                window.dispatchEvent(new Event("aerotrack:manage-access"));
-              }}
-            >
-              Manage Access
-            </button>
-          )}
+          {/* No Manage Access here. v1's detail menu was Aircraft Settings /
+              App Settings / Sign Out; this item was added in the port, and the
+              nav has no idea what role the viewer holds — so for anyone who
+              can't manage access it dispatched an event that nothing was
+              listening for and the menu just closed. The detail page renders
+              its own Manage Access button behind can(role,'manage_access'),
+              and the hangar tile menu gates the same way. */}
           {!onDetail && (
             <button
               className="dot-menu-item"

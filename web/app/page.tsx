@@ -30,12 +30,32 @@ export default async function Home() {
       // membership alone can't: a shared aircraft carries a craft role that
       // decides whether this user may delete it, exactly as v1's getRole(id)
       // returned the share's role rather than a single global one.
-      supabase.from("aircraft_access").select("aircraft_id, role").eq("accepted", true),
+      supabase
+        .from("aircraft_access")
+        .select("id, aircraft_id, role, user_id, invited_email")
+        .eq("accepted", true),
     ]);
 
-  const grantFor = (id: string): CraftRole | null =>
-    ((grants ?? []) as { aircraft_id: string; role: CraftRole }[])
-      .find((g) => g.aircraft_id === id)?.role ?? null;
+  type GrantRow = {
+    id: string;
+    aircraft_id: string;
+    role: CraftRole;
+    user_id: string | null;
+    invited_email: string | null;
+  };
+
+  // The `access read` policy also returns OTHER people's grants on aircraft
+  // this user administers, so narrow to their own before resolving a role or
+  // offering to surrender one — otherwise a manager's tile could pick up a
+  // co-owner's row.
+  const mine = ((grants ?? []) as GrantRow[]).filter(
+    (g) =>
+      (user?.id && g.user_id === user.id) ||
+      (user?.email &&
+        g.invited_email?.toLowerCase() === user.email.toLowerCase()),
+  );
+  const grantFor = (id: string): GrantRow | undefined =>
+    mine.find((g) => g.aircraft_id === id);
 
   const metersFor = (id: string): Meter[] =>
     ((meters ?? []) as (Meter & { aircraft_id: string })[])
@@ -48,7 +68,10 @@ export default async function Home() {
     // The effective role for THIS aircraft. The tile badge and the delete gate
     // both read it; previously the badge was a flat Owner/Shared guess and
     // nothing gated delete at all.
-    appRole: resolveRole(membership?.role, grantFor(a.id)),
+    appRole: resolveRole(membership?.role, grantFor(a.id)?.role),
+    // Present only when this user reaches the aircraft through a grant of
+    // their own — which is the only thing they can hand back.
+    grantId: grantFor(a.id)?.id ?? null,
   }));
 
   return (
