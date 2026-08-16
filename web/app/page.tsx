@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { AddAircraftButton } from "@/components/hangar/add-aircraft";
-import { HangarGrid, type Tile } from "@/components/hangar/hangar-grid";
+import { NewFleetButton } from "@/components/hangar/new-fleet";
+import { HangarGrid, type Fleet, type Tile } from "@/components/hangar/hangar-grid";
 import { PageHeader } from "@/components/ui/page-header";
 import type { Meter } from "@/lib/aircraft";
 import { resolveRole } from "@/lib/permissions";
@@ -14,11 +15,17 @@ export default async function Home() {
   // airworthiness dot, exactly as v1's renderHangar did.
   const { data: { user } } = await supabase.auth.getUser();
 
-  const [{ data: aircraft, error }, { data: membership }, { data: meters }, { data: grants }] =
+  const [
+    { data: aircraft, error },
+    { data: membership },
+    { data: meters },
+    { data: grants },
+    { data: fleets },
+  ] =
     await Promise.all([
       supabase
         .from("aircraft")
-        .select("id, org_id, reg, type, serial, airport, maint_basis, cost_basis, data")
+        .select("id, org_id, fleet_id, reg, type, serial, airport, maint_basis, cost_basis, data")
         // Nothing in the app sets `archived` any more — kept only so a row
         // archived by an earlier build stays hidden.
         .eq("archived", false)
@@ -33,6 +40,9 @@ export default async function Home() {
         .from("aircraft_access")
         .select("id, aircraft_id, role, user_id, invited_email, granted_by_name, granted_by_email")
         .eq("accepted", true),
+      // Fleets are sections in the hangar, so they're needed to render it —
+      // not just to edit one.
+      supabase.from("fleets").select("id, name, org_id").order("name"),
     ]);
 
   type GrantRow = {
@@ -64,9 +74,10 @@ export default async function Home() {
       .map(({ kind, current, label }) => ({ kind, current, label }));
 
   const tiles: Tile[] = (
-    (aircraft ?? []) as (Omit<Tile, "meters" | "appRole" | "shared" | "sharedBy"> & {
-      org_id: string;
-    })[]
+    (aircraft ?? []) as (Omit<
+      Tile,
+      "meters" | "appRole" | "shared" | "sharedBy" | "fleetId"
+    > & { org_id: string; fleet_id: string | null })[]
   ).map((a) => ({
     ...a,
     meters: metersFor(a.id),
@@ -78,6 +89,7 @@ export default async function Home() {
     // a Pilot grant renders as "Mechanic" through it — the wrong word to show
     // someone whose granter picked "Pilot".
     craftRole: grantFor(a.id)?.role ?? null,
+    fleetId: a.fleet_id ?? null,
     // Present only when this user reaches the aircraft through a grant of
     // their own — which is the only thing they can hand back.
     grantId: grantFor(a.id)?.id ?? null,
@@ -101,6 +113,12 @@ export default async function Home() {
         // step — the org is plumbing, not a concept the owner of one aeroplane
         // should have to meet.
         right={
+          <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            {/* Staff only — fleets write is is_org_staff(). Someone with one
+                aeroplane never needs a fleet, so this sits beside Add Aircraft
+                rather than competing with it. */}
+            {(membership?.role === "admin" || membership?.role === "manager") &&
+              membership?.org_id && <NewFleetButton orgId={membership.org_id} />}
           <AddAircraftButton
             orgId={membership?.org_id}
             hangarName={
@@ -113,19 +131,17 @@ export default async function Home() {
               })()
             }
           />
+          </span>
         }
       />
 
       <div className="hangar-wrap">
-        <div className="section-lbl">Active Aircraft</div>
-        <div className="section-sub">All aircraft you currently own or are managing.</div>
-
         {error ? (
           <div className="how-box" style={{ color: "var(--warn)" }}>
             Could not load aircraft: {error.message}
           </div>
         ) : tiles.length > 0 ? (
-          <HangarGrid aircraft={tiles} />
+          <HangarGrid aircraft={tiles} fleets={(fleets ?? []) as Fleet[]} />
         ) : (
           <div className="how-box">
             {membership?.org_id ? (

@@ -69,7 +69,23 @@ export function AircraftSettings({
     cost_basis: aircraft.cost_basis,
     maintHrs: String(meterOf(aircraft.maint_basis)),
     costHrs: String(meterOf(aircraft.cost_basis)),
+    fleet_id: aircraft.fleet_id ?? "",
   });
+
+  // Fleets in this aircraft's org. Empty for a personal hangar that has never
+  // made one, in which case the field stays hidden rather than offering a
+  // choice of nothing.
+  const [fleets, setFleets] = useState<{ id: string; name: string }[]>([]);
+  useEffect(() => {
+    if (!open) return;
+    createClient()
+      .from("fleets")
+      .select("id, name")
+      .eq("org_id", aircraft.org_id)
+      .order("name")
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      .then(({ data }) => setFleets(data ?? []));
+  }, [open, aircraft.org_id]);
 
   const set = (k: keyof typeof f, v: string) => setF((p) => ({ ...p, [k]: v }));
 
@@ -100,6 +116,8 @@ export function AircraftSettings({
         airport: f.airport.trim() || null,
         maint_basis: f.maint_basis,
         cost_basis: f.cost_basis,
+        // "" is the no-fleet option; the column is nullable, not empty-string.
+        fleet_id: f.fleet_id || null,
       })
       .eq("id", aircraft.id);
 

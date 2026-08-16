@@ -158,6 +158,8 @@ export type AircraftRow = {
   serial: string | null;
   maint_basis: MeterKind;
   cost_basis: MeterKind;
+  /** Section of the hangar it files under. Null = ungrouped. */
+  fleet_id?: string | null;
   data: V1Aircraft;
 };
 

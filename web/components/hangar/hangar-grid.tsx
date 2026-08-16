@@ -34,9 +34,19 @@ export type Tile = {
   shared: boolean;
   /** Who shared it, when known. */
   sharedBy: string | null;
+  /** Which fleet section it sits under. Null = ungrouped. */
+  fleetId: string | null;
 };
 
-export function HangarGrid({ aircraft }: { aircraft: Tile[] }) {
+export type Fleet = { id: string; name: string; org_id: string };
+
+export function HangarGrid({
+  aircraft,
+  fleets = [],
+}: {
+  aircraft: Tile[];
+  fleets?: Fleet[];
+}) {
   const router = useRouter();
   const toast = useToast();
   const [menu, setMenu] = useState<string | null>(null);
@@ -175,6 +185,13 @@ export function HangarGrid({ aircraft }: { aircraft: Tile[] }) {
 
   async function onDrop(targetId: string) {
     if (!dragId || dragId === targetId) return;
+    // Dragging is reordering, not re-filing. Moving between fleets is a
+    // deliberate change made in Aircraft Settings, not something that should
+    // happen because a tile was dropped one section over.
+    const from0 = order.find((t) => t.id === dragId);
+    const to0 = order.find((t) => t.id === targetId);
+    if (!from0 || !to0 || from0.fleetId !== to0.fleetId) { setDragId(null); return; }
+
     const next = [...order];
     const from = next.findIndex((t) => t.id === dragId);
     const to = next.findIndex((t) => t.id === targetId);
@@ -189,10 +206,34 @@ export function HangarGrid({ aircraft }: { aircraft: Tile[] }) {
     if (results.some((r) => r.error)) toast("Could not save the new order", "danger");
   }
 
+  // A fleet is a section. Ungrouped aircraft keep the original heading and sit
+  // at the bottom, so a hangar with no fleets looks exactly as it always did.
+  const sections: { key: string; label: string; sub?: string; tiles: Tile[] }[] = [
+    ...fleets
+      .map((f) => ({
+        key: f.id,
+        label: f.name,
+        tiles: order.filter((t) => t.fleetId === f.id),
+      }))
+      .filter((s) => s.tiles.length > 0),
+    {
+      key: "__none__",
+      label: "Active Aircraft",
+      sub: "All aircraft you currently own or are managing.",
+      tiles: order.filter(
+        (t) => !t.fleetId || !fleets.some((f) => f.id === t.fleetId),
+      ),
+    },
+  ].filter((s) => s.tiles.length > 0);
+
   return (
     <>
-      <div className={`ac-cards${rearrange ? " rearrange-mode" : ""}`}>
-        {order.map((a) => (
+      {sections.map((section) => (
+        <div key={section.key}>
+          <div className="section-lbl">{section.label}</div>
+          {section.sub && <div className="section-sub">{section.sub}</div>}
+          <div className={`ac-cards${rearrange ? " rearrange-mode" : ""}`}>
+        {section.tiles.map((a) => (
           <div
             key={a.id}
             className="ac-tile"
@@ -317,7 +358,9 @@ export function HangarGrid({ aircraft }: { aircraft: Tile[] }) {
             </div>
           </div>
         ))}
-      </div>
+          </div>
+        </div>
+      ))}
 
       {rearrange && (
         <>
@@ -343,7 +386,7 @@ export function HangarGrid({ aircraft }: { aircraft: Tile[] }) {
 
       {settingsTile && (
         <AircraftSettings
-          aircraft={settingsTile as unknown as AircraftRow}
+          aircraft={{ ...settingsTile, fleet_id: settingsTile.fleetId } as unknown as AircraftRow}
           meters={settingsTile.meters}
           data={settingsTile.data}
           save={(next) => saveData(settingsTile, next)}
