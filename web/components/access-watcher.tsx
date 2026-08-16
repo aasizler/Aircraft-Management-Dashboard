@@ -147,11 +147,16 @@ export function AccessWatcher({
             if (id) cache.current.delete(id);
             return;
           }
+          // Deliberately impersonal — no name, no initials. An aircraft can
+          // have several owners and managers, and telling someone WHO removed
+          // them turns an administrative act into a personal one. The person
+          // who did it knows; the person who lost access only needs to know
+          // that they did, and where to go next.
           toast(
             {
               title: "Access revoked",
               reg,
-              detail: `${who(gone?.granted_by_name, gone?.granted_by_email)} removed your access.`,
+              detail: "You no longer have access to this aircraft.",
               actions: [
                 { label: "Go to hangar", primary: true, onClick: () => router.push("/") },
               ],
@@ -207,8 +212,8 @@ export function AccessWatcher({
       dismissible={false}
     >
       <div style={{ fontSize: 13, color: "var(--muted3)", lineHeight: 1.7 }}>
-        Your access to <b>{lost}</b> has been revoked by the owner. You can no
-        longer view its records.
+        Your access to <b>{lost}</b> has been removed. You can no longer view
+        its records.
       </div>
       <div className="form-actions">
         <button className="btn primary" onClick={leave} disabled={leaving}>
