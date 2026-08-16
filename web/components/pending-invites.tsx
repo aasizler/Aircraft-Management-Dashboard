@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
@@ -10,7 +10,12 @@ import { useAccessChanges } from "@/lib/realtime";
 import { setPendingInvites } from "@/lib/aircraft-perms";
 import type { CraftRole } from "@/lib/types";
 
-/** Survives the remount this component takes on every route change. */
+/**
+ * localStorage, not sessionStorage: dismissing means "I've seen these", and
+ * that shouldn't expire when the tab does. The ribbon returns only when the
+ * set of invitations changes — the nav ⋮ and the hangar reminder are the ways
+ * back in the meantime.
+ */
 const DISMISS_KEY = "aerotrack:invites-dismissed";
 
 /** Stable identity for a set of invitations, order-independent. */
@@ -43,6 +48,9 @@ type Invite = {
  */
 export function PendingInvites({ email }: { email: string }) {
   const router = useRouter();
+  // Mounted in the root layout so the modal is reachable everywhere, but the
+  // reminder belongs on the hangar only.
+  const onHangar = usePathname() === "/";
   const toast = useToast();
   const [invites, setInvites] = useState<Invite[]>([]);
   const [open, setOpen] = useState(false);
@@ -80,7 +88,7 @@ export function PendingInvites({ email }: { email: string }) {
     // again. Held in sessionStorage rather than state because this component
     // remounts on navigation — as component state it reset on every route
     // change and the ribbon came back after being dismissed.
-    setDismissed(!!rows.length && sessionStorage.getItem(DISMISS_KEY) === inviteKey(rows));
+    setDismissed(!!rows.length && localStorage.getItem(DISMISS_KEY) === inviteKey(rows));
 
     setPendingInvites(rows.length);
     setInvites(
@@ -115,7 +123,7 @@ export function PendingInvites({ email }: { email: string }) {
     const open = () => {
       // Opening deliberately clears the dismissal, so closing the modal
       // doesn't drop straight back to a hidden ribbon.
-      sessionStorage.removeItem(DISMISS_KEY);
+      localStorage.removeItem(DISMISS_KEY);
       setDismissed(false);
       setOpen(true);
     };
@@ -153,8 +161,22 @@ export function PendingInvites({ email }: { email: string }) {
 
   if (!invites.length) return null;
 
+  const count = invites.length;
+
   return (
     <>
+      {/* Dismissing the ribbon shouldn't mean forgetting. A quiet line on the
+          hangar keeps the invitations one click away without putting the full
+          banner back every time you return to the page. */}
+      {dismissed && onHangar && (
+        <div className="pending-hint">
+          You have {count} pending invitation{count > 1 ? "s" : ""} ·{" "}
+          <button className="auth-link" onClick={() => setOpen(true)}>
+            Review
+          </button>
+        </div>
+      )}
+
       {!dismissed && (
       <div className="pending-banner">
         <span className="pending-icon">✉️</span>
@@ -174,7 +196,7 @@ export function PendingInvites({ email }: { email: string }) {
         <button
           className="pending-x"
           onClick={() => {
-            sessionStorage.setItem(DISMISS_KEY, inviteKey(invites));
+            localStorage.setItem(DISMISS_KEY, inviteKey(invites));
             setDismissed(true);
           }}
           aria-label="Dismiss"
