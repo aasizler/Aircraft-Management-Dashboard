@@ -83,11 +83,16 @@ export function AircraftDetailClient({
   aircraft,
   meters,
   role = "owner",
+  shared,
+  sharedBy,
   previewSave,
 }: {
   aircraft: AircraftRow;
   meters: Meter[];
   role?: AppRole;
+  /** Belongs to another org — someone else's record, shared with you. */
+  shared?: boolean;
+  sharedBy?: string | null;
   previewSave?: (next: V1Aircraft) => Promise<void>;
 }) {
   const [data, setData] = useState<V1Aircraft>(aircraft.data ?? {});
@@ -208,6 +213,18 @@ export function AircraftDetailClient({
         {/* Hero banner */}
         <div className="hero-banner" style={{ marginTop: 12 }}>
           <span className="hero-reg-sm">{aircraft.reg}</span>
+          {/* v1's renderHero() badged every aircraft SHARED or LOCAL. Only the
+              shared case is worth the space — a registration is unique within
+              an org, not across them, so two aircraft can read the same tail
+              and this is what tells them apart once you've clicked in. */}
+          {shared && (
+            <span
+              className="hero-badge shared"
+              title={sharedBy ? `Shared by ${sharedBy}` : "Shared with you"}
+            >
+              SHARED
+            </span>
+          )}
           <span className="hero-divider" />
           <div className="hero-chips">
             <span className="hero-chip">
