@@ -2,56 +2,94 @@
 
 import { useEffect, useState } from "react";
 
-const ACCENTS = ["#3b9eff", "#2dd4a0", "#f59e0b", "#f04b4b", "#a855f7", "#ec4899"];
+// v1 offered Dark / Light / System and eight accents, storing the accent by
+// NAME ('blue'). The first port dropped System, shipped six accents and stored
+// raw hex — so an existing at_accent value no longer resolved.
+type Theme = "dark" | "light" | "system";
+
+const ACCENTS: [string, string][] = [
+  ["blue", "#3b9eff"],
+  ["cyan", "#22d3ee"],
+  ["green", "#2dd4a0"],
+  ["mint", "#34d399"],
+  ["purple", "#a855f7"],
+  ["red", "#f04b4b"],
+  ["amber", "#f59e0b"],
+  ["slate", "#94a3b8"],
+];
+
+const hexOf = (name: string) =>
+  ACCENTS.find(([n]) => n === name)?.[1] ??
+  (name.startsWith("#") ? name : ACCENTS[0][1]);
 
 export function ThemeControls() {
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
-  const [accent, setAccent] = useState<string>(ACCENTS[0]);
+  // `null` until mounted — the DOM/localStorage are the source of truth and are
+  // only readable on the client, so the first paint defers to the inline script
+  // in layout.tsx rather than guessing.
+  const [theme, setTheme] = useState<Theme | null>(null);
+  const [accent, setAccent] = useState<string | null>(null);
 
-  // Read current state on mount (the layout init script already applied it).
+  // Must be an effect, not a lazy initializer: this renders on the server too,
+  // where localStorage does not exist, so reading it during render would cause
+  // a hydration mismatch. One post-mount sync is the intended trade.
   useEffect(() => {
-    setTheme(document.documentElement.classList.contains("light") ? "light" : "dark");
-    const a = localStorage.getItem("at_accent");
-    if (a) setAccent(a);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setTheme((localStorage.getItem("at_theme") as Theme) ?? "dark");
+    setAccent(localStorage.getItem("at_accent") ?? "blue");
   }, []);
 
-  function applyTheme(next: "dark" | "light") {
+  function applyTheme(next: Theme) {
     setTheme(next);
-    document.documentElement.classList.toggle("light", next === "light");
     localStorage.setItem("at_theme", next);
+    const dark =
+      next === "dark" ||
+      (next === "system" &&
+        !window.matchMedia("(prefers-color-scheme: light)").matches);
+    document.documentElement.classList.toggle("light", !dark);
   }
 
-  function applyAccent(hex: string) {
-    setAccent(hex);
+  function applyAccent(name: string) {
+    setAccent(name);
+    localStorage.setItem("at_accent", name);
+    const hex = hexOf(name);
     const r = document.documentElement.style;
     r.setProperty("--accent", hex);
     r.setProperty("--accent-dim", hex + "1a");
-    localStorage.setItem("at_accent", hex);
   }
 
   return (
     <div className="panel">
       <div className="panel-title">Appearance</div>
 
-      <div className="ins-field" style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+      <div
+        className="ins-field"
+        style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}
+      >
         <span className="ins-field-value">Theme</span>
         <div className="seg">
-          <button className={theme === "dark" ? "on" : ""} onClick={() => applyTheme("dark")}>Dark</button>
-          <button className={theme === "light" ? "on" : ""} onClick={() => applyTheme("light")}>Light</button>
+          {(["dark", "light", "system"] as Theme[]).map((t) => (
+            <button key={t} className={theme === t ? "on" : ""} onClick={() => applyTheme(t)}>
+              {t[0].toUpperCase() + t.slice(1)}
+            </button>
+          ))}
         </div>
       </div>
 
-      <div className="ins-field" style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+      <div
+        className="ins-field"
+        style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}
+      >
         <span className="ins-field-value">Accent</span>
-        <div style={{ display: "flex", gap: 10 }}>
-          {ACCENTS.map((hex) => (
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          {ACCENTS.map(([name, hex]) => (
             <span
-              key={hex}
-              className={`accent-swatch ${accent === hex ? "active" : ""}`}
+              key={name}
+              className={`accent-swatch ${accent === name ? "active" : ""}`}
               style={{ "--sw": hex } as React.CSSProperties}
-              onClick={() => applyAccent(hex)}
+              onClick={() => applyAccent(name)}
               role="button"
-              aria-label={`Accent ${hex}`}
+              aria-label={`Accent ${name}`}
+              title={name}
             />
           ))}
         </div>

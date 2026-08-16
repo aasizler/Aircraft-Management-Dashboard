@@ -2,58 +2,93 @@
 
 import { useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { newId, today, type DocEntry } from "@/lib/aircraft";
 import type { TabProps } from "../detail-client";
+import { Confirm } from "@/components/ui/confirm";
+import { useToast } from "@/components/ui/toast";
 
-type Doc = { name: string; size?: number; uploadedOn?: string; storagePath: string };
+const MAX_MB = 25;
 
-export function DocumentsTab({ aircraft, data, save }: TabProps) {
-  const docs = (data.documents as Doc[]) ?? [];
+export function DocumentsTab({ aircraft, data, save, allow }: TabProps) {
+  const docs = (data.documents ?? []) as DocEntry[];
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [drag, setDrag] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
+  const [confirmDoc, setConfirmDoc] = useState<DocEntry | null>(null);
+  const toast = useToast();
 
   async function upload(file: File) {
+    if (file.size > MAX_MB * 1024 * 1024) {
+      toast(`${file.name} is over ${MAX_MB}MB.`, "warn");
+      return;
+    }
+    // iPhone uploads arrive as HEIC, which browsers can't display. v1 converted
+    // via heic2any; flag it rather than storing a file nobody can open.
+    const isHeic = /\.hei[cf]$/i.test(file.name) || /hei[cf]/i.test(file.type);
+
     setBusy(true);
-    setErr(null);
     const supabase = createClient();
-    const path = `${aircraft.id}/${Date.now()}_${file.name}`;
+    const path = `${aircraft.id}/${newId("doc")}_${file.name}`;
     const { error } = await supabase.storage
       .from("documents")
-      .upload(path, file, { upsert: false });
+      .upload(path, file, { upsert: false, contentType: file.type || undefined });
     if (error) {
-      setErr(error.message);
+      toast(`Upload failed: ${error.message}`, "danger");
       setBusy(false);
       return;
     }
-    const entry: Doc = {
+    const entry: DocEntry = {
       name: file.name,
       size: file.size,
-      uploadedOn: new Date().toISOString().slice(0, 10),
+      uploadedOn: today(),
       storagePath: path,
     };
     await save({ ...data, documents: [entry, ...docs] });
     setBusy(false);
+    toast(
+      isHeic
+        ? `${file.name} uploaded — HEIC may not preview in-browser`
+        : `${file.name} uploaded`,
+      isHeic ? "warn" : "ok",
+    );
   }
 
-  async function view(d: Doc) {
-    const supabase = createClient();
-    const { data: signed } = await supabase.storage
-      .from("documents")
+  async function view(d: DocEntry) {
+    const { data: signed, error } = await createClient()
+      .storage.from("documents")
       .createSignedUrl(d.storagePath, 3600);
-    if (signed?.signedUrl) window.open(signed.signedUrl, "_blank");
+    if (error || !signed?.signedUrl) {
+      toast("Could not open document.", "danger");
+      return;
+    }
+    window.open(signed.signedUrl, "_blank");
   }
 
-  async function remove(d: Doc) {
+  async function remove(d: DocEntry) {
     setBusy(true);
-    const supabase = createClient();
-    await supabase.storage.from("documents").remove([d.storagePath]);
+    const { error } = await createClient().storage.from("documents").remove([d.storagePath]);
+    if (error) {
+      toast(`Delete failed: ${error.message}`, "danger");
+      setBusy(false);
+      return;
+    }
     await save({ ...data, documents: docs.filter((x) => x.storagePath !== d.storagePath) });
     setBusy(false);
+    setConfirmDoc(null);
+    toast("Document deleted", "ok");
   }
 
   return (
-    <div style={{ paddingTop: 18 }}>
+    <div style={{ paddingTop: 16 }}>
+      <div style={{ marginBottom: 16 }}>
+        <div className="section-label" style={{ marginBottom: 4 }}>Logbooks and Documents</div>
+        <div style={{ fontSize: 11, color: "var(--muted)" }}>
+          Upload PDFs — logbooks, annual paperwork, 337s, STCs, maintenance records.
+          Documents are stored securely in the cloud.
+        </div>
+      </div>
+
+      {allow("upload_doc") && (
       <div
         className={`pdf-drop ${drag ? "drag" : ""}`}
         onClick={() => inputRef.current?.click()}
@@ -65,23 +100,23 @@ export function DocumentsTab({ aircraft, data, save }: TabProps) {
           if (e.dataTransfer.files[0]) upload(e.dataTransfer.files[0]);
         }}
       >
-        <div className="pdf-drop-icon">⬆</div>
-        <div className="pdf-drop-title">{busy ? "Uploading…" : "Upload a document"}</div>
-        <div className="pdf-drop-sub">Drag &amp; drop or click to browse</div>
+        <div className="pdf-drop-icon">＋</div>
+        <div className="pdf-drop-title">{busy ? "Working…" : "Drop file here or click to browse"}</div>
+        <div className="pdf-drop-sub">PDF, JPG, PNG, HEIC — logbooks, maintenance records, STCs, photos</div>
         <input
           ref={inputRef}
           type="file"
+          accept=".pdf,image/*,.heic,.HEIC"
           style={{ display: "none" }}
           onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])}
         />
       </div>
-
-      {err && <div className="auth-err">{err}</div>}
+      )}
 
       <ul className="doc-list">
         {docs.length === 0 ? (
-          <li className="doc-item" style={{ color: "var(--muted2)" }}>
-            No documents.
+          <li style={{ color: "var(--muted2)", fontSize: 12, padding: "6px 0" }}>
+            No documents uploaded yet.
           </li>
         ) : (
           docs.map((d, idx) => (
@@ -96,13 +131,25 @@ export function DocumentsTab({ aircraft, data, save }: TabProps) {
                   {d.size ? ` · ${Math.round(d.size / 1024)} KB` : ""}
                 </div>
               </div>
-              <button className="action-btn del" onClick={() => remove(d)} disabled={busy}>
-                Delete
-              </button>
+              {allow("upload_doc") && (
+                <button className="action-btn del" onClick={() => setConfirmDoc(d)} disabled={busy}>
+                  Delete
+                </button>
+              )}
             </li>
           ))
         )}
       </ul>
+
+      {confirmDoc && (
+        <Confirm
+          title="Delete document"
+          message={<>Permanently delete <b>{confirmDoc.name}</b> from storage? This cannot be undone.</>}
+          busy={busy}
+          onConfirm={() => remove(confirmDoc)}
+          onCancel={() => setConfirmDoc(null)}
+        />
+      )}
     </div>
   );
 }

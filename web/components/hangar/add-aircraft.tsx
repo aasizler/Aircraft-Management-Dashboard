@@ -4,12 +4,20 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Modal } from "@/components/ui/modal";
+import { useToast } from "@/components/ui/toast";
+import {
+  AirportAutocomplete,
+  EngineAutocomplete,
+  TypeAutocomplete,
+} from "@/components/ui/autocomplete";
+import { makeCoreInspections, type V1Aircraft } from "@/lib/aircraft";
 import type { MeterKind } from "@/lib/types";
 
 const METERS: MeterKind[] = ["hobbs", "tach", "flight", "total"];
 
 export function AddAircraftButton({ orgId }: { orgId: string }) {
   const router = useRouter();
+  const toast = useToast();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -18,21 +26,55 @@ export function AddAircraftButton({ orgId }: { orgId: string }) {
     type: "",
     serial: "",
     airport: "",
+    engineType: "",
     maint_basis: "hobbs" as MeterKind,
     cost_basis: "hobbs" as MeterKind,
     hours: "",
+    engineSMOH: "",
+    tbo: "1700",
+    oilInterval: "50",
   });
 
   const set = (k: keyof typeof f, v: string) => setF((p) => ({ ...p, [k]: v }));
 
   async function submit() {
-    if (!f.reg.trim()) {
-      setErr("Registration is required.");
-      return;
-    }
+    if (!f.reg.trim()) { setErr("Registration is required."); return; }
+    if (!f.type.trim()) { setErr("Aircraft Type / Model is required."); return; }
     setBusy(true);
     setErr(null);
     const supabase = createClient();
+    const hrs = f.hours ? Number(f.hours) : 0;
+
+    // v1's saveAircraft() seeded the regulatory inspection set and the TBO /
+    // oil-interval defaults. The first port inserted `data: {}`, leaving a new
+    // aircraft with no inspections and no way to add any.
+    const data: V1Aircraft = {
+      inspections: makeCoreInspections(),
+      oil: [],
+      squawks: [],
+      squawkArchive: [],
+      flights: [],
+      flightRoutes: [],
+      maintCosts: [],
+      schedule: [],
+      documents: [],
+      monthlyHours: [0, 0, 0, 0, 0, 0],
+      oilByMonth: [0, 0, 0, 0, 0, 0],
+      airportData: null,
+      insurance: {
+        provider: "", policy: "", effective: "", expiration: "",
+        hull: 0, liability: "", deductible: "", pilots: [], documents: [],
+      },
+      engineType: f.engineType.trim() || null,
+      tt: hrs,
+      engineSMOH: Number(f.engineSMOH) || 0,
+      tbo: Number(f.tbo) || 1700,
+      oilInterval: Number(f.oilInterval) || 50,
+      oilHobbs: hrs,
+      oilChangeDate: "",
+      lastUpdated: "Not yet updated",
+    };
+
     const { data: ac, error } = await supabase
       .from("aircraft")
       .insert({
@@ -43,7 +85,7 @@ export function AddAircraftButton({ orgId }: { orgId: string }) {
         airport: f.airport.trim() || null,
         maint_basis: f.maint_basis,
         cost_basis: f.cost_basis,
-        data: {},
+        data,
       })
       .select("id")
       .single();
@@ -56,14 +98,19 @@ export function AddAircraftButton({ orgId }: { orgId: string }) {
 
     // Seed the meters the airframe carries (maint + cost bases; deduped).
     const kinds = Array.from(new Set([f.maint_basis, f.cost_basis]));
-    const hrs = f.hours ? Number(f.hours) : 0;
     await supabase
       .from("aircraft_meters")
       .insert(kinds.map((kind) => ({ aircraft_id: ac.id, kind, current: hrs })));
 
+    const reg = f.reg.trim().toUpperCase();
     setBusy(false);
     setOpen(false);
-    setF({ reg: "", type: "", serial: "", airport: "", maint_basis: "hobbs", cost_basis: "hobbs", hours: "" });
+    setF({
+      reg: "", type: "", serial: "", airport: "", engineType: "",
+      maint_basis: "hobbs", cost_basis: "hobbs", hours: "",
+      engineSMOH: "", tbo: "1700", oilInterval: "50",
+    });
+    toast(`${reg} added to the hangar`, "ok");
     router.refresh();
   }
 
@@ -77,22 +124,61 @@ export function AddAircraftButton({ orgId }: { orgId: string }) {
         <Modal title="Add Aircraft" onClose={() => setOpen(false)}>
           <div className="form-grid">
             <div className="form-row">
-              <label>Registration *</label>
-              <input value={f.reg} onChange={(e) => set("reg", e.target.value)} placeholder="N137BF" />
+              <label>Registration</label>
+              <input value={f.reg} onChange={(e) => set("reg", e.target.value)} placeholder="e.g. N12345" />
             </div>
             <div className="form-row">
-              <label>Serial</label>
-              <input value={f.serial} onChange={(e) => set("serial", e.target.value)} placeholder="E-3999" />
+              <label>Serial Number</label>
+              <input value={f.serial} onChange={(e) => set("serial", e.target.value)} placeholder="e.g. U-8472" />
             </div>
           </div>
+
           <div className="form-row">
-            <label>Type</label>
-            <input value={f.type} onChange={(e) => set("type", e.target.value)} placeholder="Beechcraft Bonanza G36" />
+            <label>Aircraft Type / Model</label>
+            <TypeAutocomplete value={f.type} onChange={(v) => set("type", v)} />
           </div>
+
           <div className="form-row">
-            <label>Base Airport</label>
-            <input value={f.airport} onChange={(e) => set("airport", e.target.value)} placeholder="KPIE" />
+            <label>Engine Type</label>
+            <EngineAutocomplete
+              value={f.engineType}
+              onChange={(v) => set("engineType", v)}
+              onResolve={(e) => setF((p) => ({ ...p, tbo: String(e.tbo) }))}
+            />
           </div>
+
+          <div className="form-grid">
+            <div className="form-row">
+              <label>Total Airframe Hours</label>
+              <input type="number" step="0.1" value={f.hours} onChange={(e) => set("hours", e.target.value)} placeholder="1243" />
+            </div>
+            <div className="form-row">
+              <label>Engine SMOH Hours</label>
+              <input type="number" step="0.1" value={f.engineSMOH} onChange={(e) => set("engineSMOH", e.target.value)} placeholder="441" />
+            </div>
+          </div>
+
+          <div className="form-grid">
+            <div className="form-row">
+              <label>Engine TBO (hrs)</label>
+              <input type="number" value={f.tbo} onChange={(e) => set("tbo", e.target.value)} />
+              <div style={{ fontSize: 10, color: "var(--muted2)", marginTop: 4 }}>
+                Auto-filled from engine type — adjust as needed
+              </div>
+            </div>
+            <div className="form-row">
+              <label>Oil Change Interval (hrs)</label>
+              <input type="number" value={f.oilInterval} onChange={(e) => set("oilInterval", e.target.value)} />
+            </div>
+          </div>
+
+          <div className="form-row">
+            <label>Home Airport</label>
+            <AirportAutocomplete value={f.airport} onChange={(v) => set("airport", v)} />
+          </div>
+
+          {/* Meters have no v1 equivalent — v2 tracks which clock drives what. */}
+          <div className="form-divider">Meters</div>
           <div className="form-grid">
             <div className="form-row">
               <label>Maintenance clock</label>
@@ -107,10 +193,7 @@ export function AddAircraftButton({ orgId }: { orgId: string }) {
               </select>
             </div>
           </div>
-          <div className="form-row">
-            <label>Current hours</label>
-            <input type="number" step="0.1" value={f.hours} onChange={(e) => set("hours", e.target.value)} placeholder="1243" />
-          </div>
+
           {err && <div className="auth-err">{err}</div>}
           <div className="form-actions">
             <button className="btn-cancel" onClick={() => setOpen(false)}>Cancel</button>

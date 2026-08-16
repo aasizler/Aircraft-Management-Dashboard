@@ -22,10 +22,13 @@ export function ManageAccess({
   aircraftId,
   orgId,
   reg,
+  hidden,
 }: {
   aircraftId: string;
   orgId: string;
   reg: string;
+  /** Render only the modal — the trigger lives in the hangar tile menu. */
+  hidden?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [grants, setGrants] = useState<Grant[]>([]);
@@ -52,9 +55,22 @@ export function ManageAccess({
     setAssigns((a as Assign[]) ?? []);
   }, [aircraftId]);
 
+  // Loads grants when the modal opens; the setState is the payload.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (open) load();
   }, [open, load]);
+
+  // Opened from the hangar tile menu via ?access=1 and from the nav ⋮ menu.
+  useEffect(() => {
+    const openIt = () => setOpen(true);
+    window.addEventListener("aerotrack:manage-access", openIt);
+    if (new URLSearchParams(window.location.search).has("access")) {
+      openIt();
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+    return () => window.removeEventListener("aerotrack:manage-access", openIt);
+  }, []);
 
   async function grant() {
     const e = email.trim().toLowerCase();
@@ -110,9 +126,11 @@ export function ManageAccess({
 
   return (
     <>
-      <button className="btn sm" onClick={() => setOpen(true)}>
-        Manage Access
-      </button>
+      {!hidden && (
+        <button className="btn sm" onClick={() => setOpen(true)}>
+          Manage Access
+        </button>
+      )}
 
       {open && (
         <Modal title={`Access · ${reg}`} onClose={() => setOpen(false)}>

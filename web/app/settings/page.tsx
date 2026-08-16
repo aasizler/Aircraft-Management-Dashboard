@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { ThemeControls } from "@/components/settings/theme-controls";
+import { ChangePassword } from "@/components/settings/change-password";
 import { SignOutButton } from "@/components/sign-out-button";
 
 export default async function SettingsPage() {
@@ -21,9 +22,11 @@ export default async function SettingsPage() {
       <Link href="/" className="mono" style={{ color: "var(--muted2)" }}>
         ← Hangar
       </Link>
-      <h1 className="at-title page-title" style={{ margin: "12px 0 20px" }}>
+      <h1 className="at-title page-title" style={{ margin: "12px 0 2px" }}>
         Settings
       </h1>
+      <div className="mono" style={{ marginBottom: 2 }}>AeroTrack</div>
+      <div className="page-sub" style={{ marginBottom: 20 }}>App preferences</div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         <ThemeControls />
@@ -44,8 +47,9 @@ export default async function SettingsPage() {
               {membership?.role ?? "—"}
             </span>
           </div>
-          <div style={{ marginTop: 12 }}>
+          <div style={{ marginTop: 12, display: "flex", gap: 8, alignItems: "center" }}>
             <SignOutButton />
+            <ChangePassword />
           </div>
         </div>
 
