@@ -58,7 +58,20 @@ export default async function Home() {
           <HangarGrid aircraft={tiles} />
         ) : (
           <div className="how-box">
-            No aircraft yet. Use <b>+ Add Aircraft</b> to get started.
+            {membership?.org_id ? (
+              <>No aircraft yet. Use <b>+ Add Aircraft</b> to get started.</>
+            ) : (
+              // A brand-new account belongs to no org, so AddAircraftButton is
+              // not rendered — telling them to press it was a dead end. Show
+              // the address a grant has to match instead: invites are keyed on
+              // email, and signing up under a different one is the failure
+              // people actually hit.
+              <>
+                No aircraft yet. Aircraft show up here as soon as someone shares
+                one with you — ask them to grant <b>{user?.email}</b> under
+                Manage Access.
+              </>
+            )}
           </div>
         )}
       </div>

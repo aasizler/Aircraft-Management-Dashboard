@@ -43,7 +43,7 @@ export default function LoginPage() {
     }
 
     if (mode === "signup") {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -53,6 +53,15 @@ export default function LoginPage() {
       });
       setBusy(false);
       if (error) { setError(error.message); return; }
+      // When "Confirm email" is off, signUp hands back a live session and no
+      // mail is ever sent. Telling those users to check their inbox stranded
+      // them at the login form waiting on an email that never arrives, so go
+      // by whether a session actually came back rather than assuming.
+      if (data.session) {
+        router.push("/");
+        router.refresh();
+        return;
+      }
       setNotice("Account created. Check your email to confirm, then sign in.");
       setMode("login");
       return;

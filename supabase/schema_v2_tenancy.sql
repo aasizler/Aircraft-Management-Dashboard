@@ -376,7 +376,10 @@ create table if not exists public.expenses (
   vendor        text,
   memo          text,
   receipt_path  text,                    -- Supabase Storage key
-  submitted_by  uuid not null default auth.uid() references auth.users(id) on delete set null,
+  -- Nullable on purpose: the FK sets it null when the submitter's account is
+  -- deleted, and `not null` here made that impossible — Postgres refused the
+  -- user deletion outright rather than forgetting who filed the expense.
+  submitted_by  uuid default auth.uid() references auth.users(id) on delete set null,
   status        text not null default 'submitted',  -- submitted | approved | rejected
   reviewed_by   uuid references auth.users(id) on delete set null,
   reviewed_at   timestamptz,
@@ -423,7 +426,9 @@ create table if not exists public.meter_readings (
   flagged        boolean not null default false,    -- failed a sanity guard
   flag_reason    text,
 
-  submitted_by   uuid not null default auth.uid() references auth.users(id) on delete set null,
+  -- Nullable for the same reason as expenses.submitted_by: `not null` plus
+  -- `on delete set null` is self-contradictory and blocks deleting the user.
+  submitted_by   uuid default auth.uid() references auth.users(id) on delete set null,
   confirmed_by   uuid references auth.users(id) on delete set null,
   confirmed_at   timestamptz,
   flight_id      uuid references public.flights(id) on delete set null,
