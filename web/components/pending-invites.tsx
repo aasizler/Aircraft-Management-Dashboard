@@ -44,6 +44,12 @@ type Invite = {
   type?: string | null;
   /** Set when the invitation is to a whole fleet rather than one aircraft. */
   fleetName?: string | null;
+  /**
+   * You can already reach this aircraft another way — usually a fleet you've
+   * accepted that contains it. Named when that path is a fleet.
+   */
+  alreadyVia?: string | null;
+  already?: boolean;
   /** Who sent it. Name leads; the address is the confirmation. */
   fromName?: string | null;
   fromEmail?: string | null;
@@ -107,6 +113,32 @@ export function PendingInvites({ email }: { email: string }) {
     if (arrived) localStorage.removeItem(DISMISS_KEY);
     setDismissed(!!rows.length && !arrived && seen.size > 0);
 
+    // Which of these aircraft are already reachable. An unaccepted invitation
+    // grants nothing, so if the aircraft row reads back at all the access is
+    // coming from somewhere else — a fleet, or org membership.
+    //
+    // Matched on aircraft_id, never on registration: a registration is unique
+    // only within an org, so two orgs can each hold an "N137BF", and treating
+    // those as the same aeroplane would be wrong in the worst possible way.
+    const craftIds = rows.map((r) => r.aircraft_id).filter(Boolean) as string[];
+    const already: Record<string, string | null> = {};
+    if (craftIds.length) {
+      const { data: visible } = await supabase
+        .from("aircraft")
+        .select("id, fleet_id")
+        .in("id", craftIds);
+      const fleetIds = [
+        ...new Set((visible ?? []).map((v) => v.fleet_id).filter(Boolean)),
+      ] as string[];
+      const { data: fl } = fleetIds.length
+        ? await supabase.from("fleets").select("id, name").in("id", fleetIds)
+        : { data: [] as { id: string; name: string }[] };
+      const names = Object.fromEntries((fl ?? []).map((f) => [f.id, f.name]));
+      for (const v of visible ?? []) {
+        already[v.id] = v.fleet_id ? names[v.fleet_id] ?? null : null;
+      }
+    }
+
     setPendingInvites(rows.length);
     setInvites(
       rows.map((r) => ({
@@ -117,6 +149,8 @@ export function PendingInvites({ email }: { email: string }) {
         reg: r.aircraft_reg,
         type: r.aircraft_type,
         fleetName: r.fleet_name,
+        already: r.aircraft_id ? r.aircraft_id in already : false,
+        alreadyVia: r.aircraft_id ? already[r.aircraft_id] ?? null : null,
         fromName: r.granted_by_name,
         fromEmail: r.granted_by_email,
       })),
@@ -206,6 +240,17 @@ export function PendingInvites({ email }: { email: string }) {
       {inv.fleetName && (
         <div className="invite-meta">
           Every aircraft in this fleet, including ones added later
+        </div>
+      )}
+      {/* Deliberately not auto-merged and not hidden. This grant may carry a
+          different role from the one you already hold, and it comes from
+          whoever sent it — dropping it silently would decide something on
+          their behalf and on yours. Say what's true and let them choose. */}
+      {!inv.fleetName && inv.already && (
+        <div className="invite-meta warn-note">
+          You already have access to this aircraft
+          {inv.alreadyVia ? ` through the ${inv.alreadyVia} fleet` : ""}.
+          Accepting sets your role on this aircraft specifically.
         </div>
       )}
       {(inv.fromName || inv.fromEmail) && (

@@ -342,6 +342,7 @@ canvas.chart{display:block;width:100%;height:150px}
 .invite-craft{font-size:14px;color:var(--accent);font-family:var(--mono);font-weight:700;margin-bottom:4px}
 .invite-meta{font-size:11px;color:var(--muted2);margin-bottom:2px}
 .invite-meta b{color:var(--muted3)}
+.invite-meta.warn-note{color:var(--warn);margin:5px 0 4px;line-height:1.5}
 .invite-email{font-size:10px;color:var(--muted);font-family:var(--mono);letter-spacing:.02em;margin:0 0 2px}
 .invite-meta.mono{font-family:var(--mono);margin-bottom:10px}
 .invite-actions{display:flex;gap:8px}
