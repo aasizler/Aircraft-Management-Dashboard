@@ -227,7 +227,7 @@ export function AircraftSettings({
             <>
               <div className="form-divider">Fleet</div>
               <div className="form-row">
-                <label>Fleet</label>
+                <label>Section of the hangar</label>
                 <select
                   value={f.fleet_id}
                   onChange={(e) => set("fleet_id", e.target.value)}
