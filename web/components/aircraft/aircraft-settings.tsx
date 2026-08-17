@@ -223,6 +223,24 @@ export function AircraftSettings({
             <AirportAutocomplete value={f.airport} onChange={(v) => set("airport", v)} />
           </div>
 
+          {fleets.length > 0 && (
+            <>
+              <div className="form-divider">Fleet</div>
+              <div className="form-row">
+                <label>Fleet</label>
+                <select
+                  value={f.fleet_id}
+                  onChange={(e) => set("fleet_id", e.target.value)}
+                >
+                  <option value="">No fleet</option>
+                  {fleets.map((fl) => (
+                    <option key={fl.id} value={fl.id}>{fl.name}</option>
+                  ))}
+                </select>
+              </div>
+            </>
+          )}
+
           <div className="form-divider">Meters</div>
           <div className="form-grid">
             <div className="form-row">
