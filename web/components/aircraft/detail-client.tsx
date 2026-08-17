@@ -85,6 +85,7 @@ export function AircraftDetailClient({
   role = "owner",
   shared,
   sharedBy,
+  viaFleet,
   previewSave,
 }: {
   aircraft: AircraftRow;
@@ -93,6 +94,8 @@ export function AircraftDetailClient({
   /** Belongs to another org — someone else's record, shared with you. */
   shared?: boolean;
   sharedBy?: string | null;
+  /** Fleet this aircraft belongs to, if any. */
+  viaFleet?: { id: string; name: string } | null;
   previewSave?: (next: V1Aircraft) => Promise<void>;
 }) {
   const [data, setData] = useState<V1Aircraft>(aircraft.data ?? {});
@@ -287,7 +290,7 @@ export function AircraftDetailClient({
               <AircraftSettings aircraft={aircraft} meters={meters} data={data} save={save} hidden />
             )}
             {!previewSave && can(role, "manage_access") && (
-              <ManageAccess aircraftId={aircraft.id} orgId={aircraft.org_id} reg={aircraft.reg} hidden />
+              <ManageAccess aircraftId={aircraft.id} orgId={aircraft.org_id} reg={aircraft.reg} viaFleet={viaFleet} hidden />
             )}
             {!previewSave && <MeterCapture aircraft={aircraft} />}
             <span className={`sync-badge ${sync}`}>

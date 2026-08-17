@@ -24,6 +24,8 @@ const ROLE_LABEL: Record<CraftRole, string> = {
 // grant expires with its date window.
 export function ManageAccess({
   aircraftId,
+  fleetId,
+  viaFleet,
   orgId,
   reg,
   hidden,
@@ -31,8 +33,14 @@ export function ManageAccess({
   open: controlledOpen,
   onClose,
 }: {
-  aircraftId: string;
+  /** Target an aircraft… */
+  aircraftId?: string;
+  /** …or a whole fleet. Exactly one, matching the table's check constraint. */
+  fleetId?: string;
+  /** The fleet this aircraft belongs to, so its grants can be shown as well. */
+  viaFleet?: { id: string; name: string } | null;
   orgId: string;
+  /** Registration, or the fleet's name. */
   reg: string;
   /** Render only the modal — the trigger lives in the hangar tile menu. */
   hidden?: boolean;
@@ -50,6 +58,7 @@ export function ManageAccess({
   };
   const [grants, setGrants] = useState<Grant[]>([]);
   const [assigns, setAssigns] = useState<Assign[]>([]);
+  const [inherited, setInherited] = useState<Grant[]>([]);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<CraftRole>("owner");
   const [contract, setContract] = useState(false);
@@ -62,18 +71,32 @@ export function ManageAccess({
 
   const load = useCallback(async () => {
     const s = createClient();
-    const [{ data: g }, { data: a }] = await Promise.all([
-      s.from("aircraft_access").select("id, invited_email, user_id, role, accepted, user_name").eq("aircraft_id", aircraftId),
-      s
-        .from("assignments")
-        .select("id, invited_email, ends_at, starts_at")
-        .eq("aircraft_id", aircraftId)
-        .is("revoked_at", null)
-        .gte("ends_at", new Date().toISOString()),
+    const cols = "id, invited_email, user_id, role, accepted, user_name";
+    const direct = fleetId
+      ? s.from("aircraft_access").select(cols).eq("fleet_id", fleetId)
+      : s.from("aircraft_access").select(cols).eq("aircraft_id", aircraftId ?? "");
+
+    const [{ data: g }, { data: a }, { data: viaGrants }] = await Promise.all([
+      direct,
+      // Contract pilots are booked against an airframe, not a fleet.
+      aircraftId
+        ? s
+            .from("assignments")
+            .select("id, invited_email, ends_at, starts_at")
+            .eq("aircraft_id", aircraftId)
+            .is("revoked_at", null)
+            .gte("ends_at", new Date().toISOString())
+        : Promise.resolve({ data: [] as Assign[] }),
+      // Access this aircraft inherits from its fleet. Shown so "who can see
+      // this aeroplane" is answerable here, even though it's changed elsewhere.
+      viaFleet
+        ? s.from("aircraft_access").select(cols).eq("fleet_id", viaFleet.id)
+        : Promise.resolve({ data: [] as Grant[] }),
     ]);
     setGrants((g as Grant[]) ?? []);
     setAssigns((a as Assign[]) ?? []);
-  }, [aircraftId]);
+    setInherited((viaGrants as Grant[]) ?? []);
+  }, [aircraftId, fleetId, viaFleet]);
 
   // Loads grants when the modal opens; the setState is the payload.
   useEffect(() => {
@@ -136,7 +159,7 @@ export function ManageAccess({
         })
       : await s.from("aircraft_access").insert({
           org_id: orgId,
-          aircraft_id: aircraftId,
+          ...(fleetId ? { fleet_id: fleetId } : { aircraft_id: aircraftId }),
           invited_email: e,
           role,
         });
@@ -192,7 +215,7 @@ export function ManageAccess({
     load();
   }
 
-  const empty = grants.length === 0 && assigns.length === 0;
+  const empty = grants.length === 0 && assigns.length === 0 && inherited.length === 0;
 
   return (
     <>
@@ -212,7 +235,9 @@ export function ManageAccess({
             <div style={{ color: "var(--muted2)", fontSize: 13, padding: "4px 0 10px" }}>
               {readOnly
               ? "Nobody else has been given access to this aircraft."
-              : "Only org managers can see this aircraft. Grant access below."}
+              : fleetId
+                ? "Nobody has been given access to this fleet yet. Grant it below and it covers every aircraft in it."
+                : "Only org managers can see this aircraft. Grant access below."}
             </div>
           ) : (
             <ul className="doc-list" style={{ marginBottom: 8 }}>
@@ -259,6 +284,22 @@ export function ManageAccess({
                       Revoke
                     </button>
                   )}
+                </li>
+              ))}
+              {inherited.map((g) => (
+                <li className="doc-item" key={`via-${g.id}`}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="doc-name">
+                      {g.user_name?.trim() || g.invited_email || "(linked user)"}
+                    </div>
+                    {/* Not revocable from here on purpose: it isn't a grant on
+                        this aircraft, it's a grant on the fleet. Removing it
+                        here would silently change every other aircraft in it. */}
+                    <div className="doc-meta">
+                      {ROLE_LABEL[g.role]} · via {viaFleet?.name} fleet
+                    </div>
+                  </div>
+                  <span className="grant-role-static">Fleet</span>
                 </li>
               ))}
               {assigns.map((a) => (

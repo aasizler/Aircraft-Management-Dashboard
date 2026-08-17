@@ -141,7 +141,13 @@ export default async function Home() {
             Could not load aircraft: {error.message}
           </div>
         ) : tiles.length > 0 ? (
-          <HangarGrid aircraft={tiles} fleets={(fleets ?? []) as Fleet[]} />
+          <HangarGrid
+            aircraft={tiles}
+            fleets={(fleets ?? []) as Fleet[]}
+            canManageFleets={
+              membership?.role === "admin" || membership?.role === "manager"
+            }
+          />
         ) : (
           <div className="how-box">
             {membership?.org_id ? (

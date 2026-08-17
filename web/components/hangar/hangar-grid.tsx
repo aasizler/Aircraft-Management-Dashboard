@@ -43,9 +43,12 @@ export type Fleet = { id: string; name: string; org_id: string };
 export function HangarGrid({
   aircraft,
   fleets = [],
+  canManageFleets,
 }: {
   aircraft: Tile[];
   fleets?: Fleet[];
+  /** Org staff; fleets write is is_org_staff(). */
+  canManageFleets?: boolean;
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -74,6 +77,7 @@ export function HangarGrid({
   // into the aircraft's records — a detour you never asked for.
   const [accessTile, setAccessTile] = useState<Tile | null>(null);
   const [settingsTile, setSettingsTile] = useState<Tile | null>(null);
+  const [shareFleet, setShareFleet] = useState<Fleet | null>(null);
   // v1 gated reordering behind an explicit mode; tiles only drag once it's on,
   // and a plain click opens the aircraft rather than starting a drag.
   const [rearrange, setRearrange] = useState(false);
@@ -208,11 +212,18 @@ export function HangarGrid({
 
   // A fleet is a section. Ungrouped aircraft keep the original heading and sit
   // at the bottom, so a hangar with no fleets looks exactly as it always did.
-  const sections: { key: string; label: string; sub?: string; tiles: Tile[] }[] = [
+  const sections: {
+    key: string;
+    label: string;
+    sub?: string;
+    fleet?: Fleet;
+    tiles: Tile[];
+  }[] = [
     ...fleets
       .map((f) => ({
         key: f.id,
         label: f.name,
+        fleet: f,
         tiles: order.filter((t) => t.fleetId === f.id),
       }))
       .filter((s) => s.tiles.length > 0),
@@ -230,7 +241,20 @@ export function HangarGrid({
     <>
       {sections.map((section) => (
         <div key={section.key}>
-          <div className="section-lbl">{section.label}</div>
+          <div className="section-lbl">
+            {section.label}
+            {/* Sharing a fleet lives on the fleet, not on any one aircraft in
+                it — a grant here covers every aircraft in the section, and
+                anything filed into it later. */}
+            {section.fleet && canManageFleets && (
+              <button
+                className="section-action"
+                onClick={() => setShareFleet(section.fleet!)}
+              >
+                Share
+              </button>
+            )}
+          </div>
           {section.sub && <div className="section-sub">{section.sub}</div>}
           <div className={`ac-cards${rearrange ? " rearrange-mode" : ""}`}>
         {section.tiles.map((a) => (
@@ -372,11 +396,27 @@ export function HangarGrid({
         </>
       )}
 
+      {shareFleet && (
+        <ManageAccess
+          fleetId={shareFleet.id}
+          orgId={shareFleet.org_id}
+          reg={`${shareFleet.name} fleet`}
+          hidden
+          open
+          onClose={() => setShareFleet(null)}
+        />
+      )}
+
       {accessTile && (
         <ManageAccess
           aircraftId={accessTile.id}
           orgId={accessTile.org_id}
           reg={accessTile.reg}
+          viaFleet={
+            accessTile.fleetId
+              ? fleets.find((f) => f.id === accessTile.fleetId) ?? null
+              : null
+          }
           hidden
           open
           readOnly={!can(accessTile.appRole, "manage_access")}

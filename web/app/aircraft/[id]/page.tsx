@@ -51,6 +51,11 @@ export default async function AircraftDetail({
   // within an org, so two aircraft can legitimately read the same tail number.
   const shared = !membership;
 
+  // Named so Manage Access can show what this aircraft inherits from its fleet.
+  const { data: fleet } = a.fleet_id
+    ? await supabase.from("fleets").select("id, name").eq("id", a.fleet_id).maybeSingle()
+    : { data: null };
+
   return (
     <>
       <PageHeader title="Aircraft Details" />
@@ -59,6 +64,7 @@ export default async function AircraftDetail({
         meters={(meters ?? []) as Meter[]}
         role={role}
         shared={shared}
+        viaFleet={fleet}
         sharedBy={mine?.granted_by_name?.trim() || mine?.granted_by_email || null}
       />
     </>
