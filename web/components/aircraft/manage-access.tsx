@@ -349,6 +349,11 @@ export function ManageAccess({
               <input type="date" value={ends} onChange={(e) => setEnds(e.target.value)} />
             </div>
           )}
+          {/* Assignments are booked against an airframe, not a fleet — a
+              contract pilot flies a particular aeroplane on a particular trip.
+              Offering it here would have inserted an assignment with no
+              aircraft at all. */}
+          {!fleetId && (
           <label
             style={{
               display: "flex",
@@ -368,6 +373,7 @@ export function ManageAccess({
             />
             One-off contract pilot (access expires automatically)
           </label>
+          )}
           </>)}
           <div className="form-actions">
             <button className="btn-cancel" onClick={() => setOpen(false)}>Close</button>
