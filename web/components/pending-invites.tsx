@@ -30,6 +30,11 @@ function readDismissed(): Set<string> {
   }
 }
 
+/** What the invitation is to, however it's addressed. */
+function label(inv: { fleetName?: string | null; reg?: string | null }): string {
+  return inv.fleetName ?? inv.reg ?? "an aircraft";
+}
+
 type Invite = {
   id: string;
   aircraft_id: string;
@@ -37,6 +42,8 @@ type Invite = {
   invited_email: string | null;
   reg?: string | null;
   type?: string | null;
+  /** Set when the invitation is to a whole fleet rather than one aircraft. */
+  fleetName?: string | null;
   /** Who sent it. Name leads; the address is the confirmation. */
   fromName?: string | null;
   fromEmail?: string | null;
@@ -73,7 +80,7 @@ export function PendingInvites({ email }: { email: string }) {
     const { data } = await supabase
       .from("aircraft_access")
       .select(
-        "id, aircraft_id, role, invited_email, aircraft_reg, aircraft_type, granted_by_name, granted_by_email",
+        "id, aircraft_id, role, invited_email, aircraft_reg, aircraft_type, fleet_id, fleet_name, granted_by_name, granted_by_email",
       )
       .eq("accepted", false)
       .ilike("invited_email", email);
@@ -85,6 +92,8 @@ export function PendingInvites({ email }: { email: string }) {
       invited_email: string | null;
       aircraft_reg: string | null;
       aircraft_type: string | null;
+      fleet_id: string | null;
+      fleet_name: string | null;
       granted_by_name: string | null;
       granted_by_email: string | null;
     };
@@ -107,6 +116,7 @@ export function PendingInvites({ email }: { email: string }) {
         invited_email: r.invited_email,
         reg: r.aircraft_reg,
         type: r.aircraft_type,
+        fleetName: r.fleet_name,
         fromName: r.granted_by_name,
         fromEmail: r.granted_by_email,
       })),
@@ -148,7 +158,7 @@ export function PendingInvites({ email }: { email: string }) {
     if (error) { toast(`Could not accept: ${error.message}`, "danger"); return; }
     if (!data) { toast("That invitation is no longer available.", "danger"); load(); return; }
     setInvites((v) => v.filter((x) => x.id !== inv.id));
-    toast(`You now have access to ${inv.reg ?? "this aircraft"}`, "ok");
+    toast(`You now have access to ${label(inv)}`, "ok");
     router.refresh();
   }
 
@@ -171,6 +181,59 @@ export function PendingInvites({ email }: { email: string }) {
   if (!invites.length) return null;
 
   const count = invites.length;
+  // Two kinds of invitation, and they aren't interchangeable: one hands over a
+  // single aeroplane, the other every aeroplane in a fleet plus anything added
+  // to it later. Shown apart so nobody accepts the second thinking it's the
+  // first.
+  const fleetInvites = invites.filter((i) => i.fleetName);
+  const craftInvites = invites.filter((i) => !i.fleetName);
+
+  const renderInvite = (inv: Invite) => (
+    <div className="invite-card" key={inv.id}>
+      <div className="invite-head">
+        {inv.fleetName ? "Fleet Invitation" : "Aircraft Invitation"}
+      </div>
+      <div className="invite-craft">
+        {inv.fleetName
+          ? inv.fleetName
+          : inv.reg && inv.type
+            ? `${inv.reg} — ${inv.type}`
+            : inv.reg ?? "Aircraft invitation"}
+      </div>
+      {/* Says what accepting actually hands over. A fleet is open-ended —
+          anything filed into it later comes too — and that's worth knowing
+          before you accept rather than after. */}
+      {inv.fleetName && (
+        <div className="invite-meta">
+          Every aircraft in this fleet, including ones added later
+        </div>
+      )}
+      {(inv.fromName || inv.fromEmail) && (
+        <>
+          <div className="invite-meta">
+            From: <b>{inv.fromName?.trim() || inv.fromEmail}</b>
+          </div>
+          {inv.fromName?.trim() && inv.fromEmail && (
+            <div className="invite-email">{inv.fromEmail}</div>
+          )}
+        </>
+      )}
+      <div className="invite-meta mono">
+        Role:{" "}
+        <b style={{ color: CRAFT_ROLE_COLORS[inv.role] }}>
+          {CRAFT_ROLE_LABELS[inv.role]}
+        </b>
+      </div>
+      <div className="invite-actions">
+        <button className="btn sm primary" disabled={busy} onClick={() => accept(inv)}>
+          Accept
+        </button>
+        <button className="btn sm" disabled={busy} onClick={() => decline(inv)}>
+          Decline
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <>
@@ -192,8 +255,8 @@ export function PendingInvites({ email }: { email: string }) {
         <div className="pending-main">
           <div className="pending-title">
             {invites.length === 1
-              ? `You've been invited to ${invites[0].reg ?? "an aircraft"}`
-              : `${invites.length} pending aircraft invites`}
+              ? `You've been invited to ${label(invites[0])}`
+              : `${invites.length} pending invitations`}
           </div>
           <div className="pending-sub">
             {invites.length === 1
@@ -220,43 +283,24 @@ export function PendingInvites({ email }: { email: string }) {
           {/* Card per invite, laid out as v1's openPendingInvitesModal did:
               heading, REG — TYPE in accent mono, who sent it, then the role in
               its own colour. */}
-          {invites.map((inv) => (
-              <div className="invite-card" key={inv.id}>
-                <div className="invite-head">Aircraft Invitation</div>
-                <div className="invite-craft">
-                  {inv.reg && inv.type
-                    ? `${inv.reg} — ${inv.type}`
-                    : inv.reg ?? "Aircraft invitation"}
-                </div>
-                {(inv.fromName || inv.fromEmail) && (
-                  <>
-                    <div className="invite-meta">
-                      From: <b>{inv.fromName?.trim() || inv.fromEmail}</b>
-                    </div>
-                    {/* The address only when it isn't already the headline —
-                        quieter, but there so you can be sure who this is
-                        before accepting. */}
-                    {inv.fromName?.trim() && inv.fromEmail && (
-                      <div className="invite-email">{inv.fromEmail}</div>
-                    )}
-                  </>
-                )}
-                <div className="invite-meta mono">
-                  Role:{" "}
-                  <b style={{ color: CRAFT_ROLE_COLORS[inv.role] }}>
-                    {CRAFT_ROLE_LABELS[inv.role]}
-                  </b>
-                </div>
-                <div className="invite-actions">
-                  <button className="btn sm primary" disabled={busy} onClick={() => accept(inv)}>
-                    Accept
-                  </button>
-                  <button className="btn sm" disabled={busy} onClick={() => decline(inv)}>
-                    Decline
-                  </button>
-                </div>
+          {fleetInvites.length > 0 && (
+            <>
+              <div className="form-divider" style={{ borderTop: "none", marginTop: 0 }}>
+                Fleets
               </div>
-          ))}
+              {fleetInvites.map(renderInvite)}
+            </>
+          )}
+
+          {craftInvites.length > 0 && (
+            <>
+              <div className="form-divider" style={fleetInvites.length ? undefined : { borderTop: "none", marginTop: 0 }}>
+                Aircraft
+              </div>
+              {craftInvites.map(renderInvite)}
+            </>
+          )}
+
           <div className="form-actions">
             <button className="btn-cancel" onClick={() => setOpen(false)}>Close</button>
           </div>
