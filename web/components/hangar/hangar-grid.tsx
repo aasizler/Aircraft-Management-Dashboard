@@ -83,6 +83,7 @@ export function HangarGrid({
   const [renameTo, setRenameTo] = useState("");
   const [deleteFleet, setDeleteFleet] = useState<Fleet | null>(null);
   const [deleteImpact, setDeleteImpact] = useState<{ craft: number; people: number } | null>(null);
+  const [fleetMenu, setFleetMenu] = useState<string | null>(null);
   // v1 gated reordering behind an explicit mode; tiles only drag once it's on,
   // and a plain click opens the aircraft rather than starting a drag.
   const [rearrange, setRearrange] = useState(false);
@@ -96,6 +97,13 @@ export function HangarGrid({
     window.addEventListener("aerotrack:rearrange", on);
     return () => window.removeEventListener("aerotrack:rearrange", on);
   }, []);
+
+  useEffect(() => {
+    if (!fleetMenu) return;
+    const close = () => setFleetMenu(null);
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [fleetMenu]);
 
   useEffect(() => {
     if (!rearrange) return;
@@ -308,27 +316,52 @@ export function HangarGrid({
             {/* Sharing a fleet lives on the fleet, not on any one aircraft in
                 it — a grant here covers every aircraft in the section, and
                 anything filed into it later. */}
+            {/* Same ⋮ the tiles use. Three chips beside the name read as a
+                toolbar and competed with the heading; a fleet's actions are
+                the same kind of thing as an aircraft's, so they look it. */}
             {section.fleet && canManageFleets && (
-              <>
+              <span
+                className="section-menu-wrap"
+                onMouseDown={(e) => e.stopPropagation()}
+              >
                 <button
-                  className="section-action"
-                  onClick={() => setShareFleet(section.fleet!)}
+                  className="tile-dot-btn"
+                  title="Fleet options"
+                  aria-label={`Options for ${section.label}`}
+                  onClick={() =>
+                    setFleetMenu(fleetMenu === section.fleet!.id ? null : section.fleet!.id)
+                  }
                 >
-                  Share
+                  <span /><span /><span />
                 </button>
-                <button
-                  className="section-action"
-                  onClick={() => { setRenameFleet(section.fleet!); setRenameTo(section.fleet!.name); }}
-                >
-                  Rename
-                </button>
-                <button
-                  className="section-action danger"
-                  onClick={() => loadDeleteImpact(section.fleet!)}
-                >
-                  Delete
-                </button>
-              </>
+
+                {fleetMenu === section.fleet.id && (
+                  <div className="tile-dot-menu open section-dot-menu">
+                    <button
+                      className="row-dot-item"
+                      onClick={() => { setFleetMenu(null); setShareFleet(section.fleet!); }}
+                    >
+                      Share Fleet
+                    </button>
+                    <button
+                      className="row-dot-item"
+                      onClick={() => {
+                        setFleetMenu(null);
+                        setRenameFleet(section.fleet!);
+                        setRenameTo(section.fleet!.name);
+                      }}
+                    >
+                      Rename Fleet
+                    </button>
+                    <button
+                      className="row-dot-item danger-item"
+                      onClick={() => { setFleetMenu(null); loadDeleteImpact(section.fleet!); }}
+                    >
+                      Delete Fleet
+                    </button>
+                  </div>
+                )}
+              </span>
             )}
           </div>
           {section.sub && <div className="section-sub">{section.sub}</div>}

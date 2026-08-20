@@ -187,10 +187,9 @@ canvas.chart{display:block;width:100%;height:150px}
 /* HANGAR */
 .hangar-wrap{padding:0 28px 32px}
 .section-lbl{display:flex;align-items:center;gap:0;font-family:var(--display);font-size:18px;font-weight:800;margin-bottom:4px}
-.section-action{margin-left:10px;font-family:var(--mono);font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted2);border:1px solid var(--border2);border-radius:5px;padding:3px 8px;cursor:pointer;background:none;vertical-align:middle}
-.section-action.danger{color:var(--danger);border-color:rgba(240,75,75,.25)}
-.section-action.danger:hover{border-color:var(--danger);background:var(--danger-dim);color:var(--danger)}
-.section-action:hover{border-color:var(--accent);color:var(--accent)}
+/* Fleet actions live behind the same ⋮ the aircraft tiles use. */
+.section-menu-wrap{position:relative;display:inline-flex;margin-left:10px}
+.section-dot-menu{position:absolute;left:0;top:28px}
 .section-sub{font-size:12px;color:var(--muted);margin-bottom:16px}
 .ac-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;position:relative;z-index:60}
 .ac-tile{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;cursor:pointer;transition:all .2s;display:flex;flex-direction:column;position:relative;text-decoration:none;color:var(--text)}
