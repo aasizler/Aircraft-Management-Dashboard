@@ -8,6 +8,7 @@ import { ic, meterValue, type AircraftRow, type Insp, type Meter, type V1Aircraf
 import { ManageAccess } from "@/components/aircraft/manage-access";
 import { AircraftSettings } from "@/components/aircraft/aircraft-settings";
 import { Confirm } from "@/components/ui/confirm";
+import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 import { markSelfInitiated } from "@/lib/access-events";
 import { CRAFT_ROLE_LABELS, ROLE_LABELS, can, type AppRole } from "@/lib/permissions";
@@ -78,6 +79,10 @@ export function HangarGrid({
   const [accessTile, setAccessTile] = useState<Tile | null>(null);
   const [settingsTile, setSettingsTile] = useState<Tile | null>(null);
   const [shareFleet, setShareFleet] = useState<Fleet | null>(null);
+  const [renameFleet, setRenameFleet] = useState<Fleet | null>(null);
+  const [renameTo, setRenameTo] = useState("");
+  const [deleteFleet, setDeleteFleet] = useState<Fleet | null>(null);
+  const [deleteImpact, setDeleteImpact] = useState<{ craft: number; people: number } | null>(null);
   // v1 gated reordering behind an explicit mode; tiles only drag once it's on,
   // and a plain click opens the aircraft rather than starting a drag.
   const [rearrange, setRearrange] = useState(false);
@@ -187,6 +192,55 @@ export function HangarGrid({
     router.refresh();
   }
 
+  async function renameFleetTo(f: Fleet, name: string) {
+    const n = name.trim();
+    if (!n) return;
+    setBusy(true);
+    const { data, error } = await createClient()
+      .from("fleets").update({ name: n }).eq("id", f.id).select("id");
+    setBusy(false);
+    setRenameFleet(null);
+    if (error) {
+      // Unique index is on (org_id, lower(name)).
+      toast(error.code === "23505" ? "You already have a fleet with that name." : error.message, "danger");
+      return;
+    }
+    // fleets write is is_org_staff(); RLS filters rather than raising.
+    if (!data?.length) { toast("You don't have permission to rename this fleet.", "danger"); return; }
+    toast(`Renamed to ${n}`, "ok");
+    router.refresh();
+  }
+
+  /**
+   * Count what deleting a fleet actually costs before asking. Deleting one
+   * detaches its aircraft (the FK is on delete set null) and drops every grant
+   * that targeted it — so people lose access to several aircraft at once, and
+   * that shouldn't be a surprise discovered afterwards.
+   */
+  async function loadDeleteImpact(f: Fleet) {
+    setDeleteFleet(f);
+    setDeleteImpact(null);
+    const s = createClient();
+    const [{ count: craft }, { count: people }] = await Promise.all([
+      s.from("aircraft").select("id", { count: "exact", head: true }).eq("fleet_id", f.id),
+      s.from("aircraft_access").select("id", { count: "exact", head: true }).eq("fleet_id", f.id),
+    ]);
+    setDeleteImpact({ craft: craft ?? 0, people: people ?? 0 });
+  }
+
+  async function doDeleteFleet(f: Fleet) {
+    setBusy(true);
+    const { data, error } = await createClient()
+      .from("fleets").delete().eq("id", f.id).select("id");
+    setBusy(false);
+    setDeleteFleet(null);
+    setDeleteImpact(null);
+    if (error) { toast(`Delete failed: ${error.message}`, "danger"); return; }
+    if (!data?.length) { toast("You don't have permission to delete this fleet.", "danger"); return; }
+    toast(`${f.name} deleted — its aircraft are still here`, "ok");
+    router.refresh();
+  }
+
   async function onDrop(targetId: string) {
     if (!dragId || dragId === targetId) return;
     // Dragging is reordering, not re-filing. Moving between fleets is a
@@ -226,16 +280,24 @@ export function HangarGrid({
         fleet: f,
         tiles: order.filter((t) => t.fleetId === f.id),
       }))
-      .filter((s) => s.tiles.length > 0),
+      // Deliberately NOT filtered by tile count. A fleet with nothing in it
+      // used to render nowhere, which meant that once created it could never
+      // be renamed, shared or deleted — create with no delete.
+      ,
     {
       key: "__none__",
       label: "Active Aircraft",
       sub: "All aircraft you currently own or are managing.",
+      // Explicitly undefined so this shares a shape with the fleet sections;
+      // without it the array is a union and `s.fleet` isn't reachable below.
+      fleet: undefined as Fleet | undefined,
       tiles: order.filter(
         (t) => !t.fleetId || !fleets.some((f) => f.id === t.fleetId),
       ),
     },
-  ].filter((s) => s.tiles.length > 0);
+    // Only the ungrouped section is dropped when empty; a hangar whose aircraft
+    // are all filed shouldn't show a stray "Active Aircraft" heading.
+  ].filter((s) => s.fleet || s.tiles.length > 0);
 
   return (
     <>
@@ -247,15 +309,34 @@ export function HangarGrid({
                 it — a grant here covers every aircraft in the section, and
                 anything filed into it later. */}
             {section.fleet && canManageFleets && (
-              <button
-                className="section-action"
-                onClick={() => setShareFleet(section.fleet!)}
-              >
-                Share
-              </button>
+              <>
+                <button
+                  className="section-action"
+                  onClick={() => setShareFleet(section.fleet!)}
+                >
+                  Share
+                </button>
+                <button
+                  className="section-action"
+                  onClick={() => { setRenameFleet(section.fleet!); setRenameTo(section.fleet!.name); }}
+                >
+                  Rename
+                </button>
+                <button
+                  className="section-action danger"
+                  onClick={() => loadDeleteImpact(section.fleet!)}
+                >
+                  Delete
+                </button>
+              </>
             )}
           </div>
           {section.sub && <div className="section-sub">{section.sub}</div>}
+          {section.fleet && section.tiles.length === 0 && (
+            <div className="section-sub">
+              No aircraft in this fleet yet — set one&apos;s fleet in its settings.
+            </div>
+          )}
           <div className={`ac-cards${rearrange ? " rearrange-mode" : ""}`}>
         {section.tiles.map((a) => (
           <div
@@ -394,6 +475,74 @@ export function HangarGrid({
             <button className="btn primary sm" onClick={() => setRearrange(false)}>Done</button>
           </div>
         </>
+      )}
+
+      {renameFleet && (
+        <Modal title={`Rename ${renameFleet.name}`} onClose={() => setRenameFleet(null)}>
+          <div className="form-row">
+            <label>Name</label>
+            <input
+              type="text"
+              value={renameTo}
+              maxLength={40}
+              autoFocus
+              onChange={(e) => setRenameTo(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && !busy) renameFleetTo(renameFleet, renameTo); }}
+            />
+          </div>
+          <div className="form-actions">
+            <button className="btn-cancel" onClick={() => setRenameFleet(null)}>Cancel</button>
+            <button
+              className="btn-save"
+              disabled={busy || !renameTo.trim() || renameTo.trim() === renameFleet.name}
+              onClick={() => renameFleetTo(renameFleet, renameTo)}
+            >
+              {busy ? "Saving…" : "Rename"}
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {deleteFleet && (
+        <Confirm
+          title="Delete fleet"
+          message={
+            <>
+              Delete <b>{deleteFleet.name}</b>?
+              {deleteImpact === null ? (
+                <> Checking what this affects…</>
+              ) : (
+                <>
+                  {" "}
+                  {deleteImpact.craft > 0 ? (
+                    <>
+                      Its {deleteImpact.craft} aircraft stay in your hangar and
+                      become ungrouped — nothing is deleted with it.
+                    </>
+                  ) : (
+                    <>It has no aircraft in it.</>
+                  )}
+                  {deleteImpact.people > 0 && (
+                    <>
+                      {" "}
+                      <b>
+                        {deleteImpact.people}{" "}
+                        {deleteImpact.people === 1 ? "person loses" : "people lose"} access
+                      </b>{" "}
+                      to {deleteImpact.craft === 1 ? "that aircraft" : "those aircraft"},
+                      because their access came through this fleet.
+                    </>
+                  )}
+                </>
+              )}
+            </>
+          }
+          confirmLabel="Delete Fleet"
+          requireText={deleteImpact && deleteImpact.people > 0 ? deleteFleet.name : undefined}
+          busy={busy || deleteImpact === null}
+          onConfirm={() => doDeleteFleet(deleteFleet)}
+          onCancel={() => { setDeleteFleet(null); setDeleteImpact(null); }}
+        />
       )}
 
       {shareFleet && (
