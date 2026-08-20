@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useFleetAirborne } from "@/lib/adsb";
@@ -98,11 +98,18 @@ export function HangarGrid({
     return () => window.removeEventListener("aerotrack:rearrange", on);
   }, []);
 
+  // Close only when the mousedown lands OUTSIDE the menu, the way the nav ⋮
+  // does it. Closing on any mousedown tore the menu down before the click
+  // completed, so the item under the cursor never received it — the buttons
+  // looked inert because they were being unmounted mid-press.
+  const fleetMenuRef = useRef<HTMLSpanElement | null>(null);
   useEffect(() => {
     if (!fleetMenu) return;
-    const close = () => setFleetMenu(null);
-    document.addEventListener("mousedown", close);
-    return () => document.removeEventListener("mousedown", close);
+    const onDoc = (e: MouseEvent) => {
+      if (!fleetMenuRef.current?.contains(e.target as Node)) setFleetMenu(null);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
   }, [fleetMenu]);
 
   useEffect(() => {
@@ -322,7 +329,7 @@ export function HangarGrid({
             {section.fleet && canManageFleets && (
               <span
                 className="section-menu-wrap"
-                onMouseDown={(e) => e.stopPropagation()}
+                ref={fleetMenu === section.fleet.id ? fleetMenuRef : undefined}
               >
                 <button
                   className="tile-dot-btn"
@@ -571,7 +578,10 @@ export function HangarGrid({
             </>
           }
           confirmLabel="Delete Fleet"
-          requireText={deleteImpact && deleteImpact.people > 0 ? deleteFleet.name : undefined}
+          // Always, not only when someone loses access. A fleet is a container
+          // for other people's aeroplanes; typing its name is the difference
+          // between deciding to delete it and having deleted it.
+          requireText={deleteFleet.name}
           busy={busy || deleteImpact === null}
           onConfirm={() => doDeleteFleet(deleteFleet)}
           onCancel={() => { setDeleteFleet(null); setDeleteImpact(null); }}
