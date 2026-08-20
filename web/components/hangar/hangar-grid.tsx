@@ -328,7 +328,9 @@ export function HangarGrid({
                 the same kind of thing as an aircraft's, so they look it. */}
             {section.fleet && canManageFleets && (
               <span
-                className="section-menu-wrap"
+                className={`section-menu-wrap${
+                  fleetMenu === section.fleet.id ? " open" : ""
+                }`}
                 ref={fleetMenu === section.fleet.id ? fleetMenuRef : undefined}
               >
                 <button
