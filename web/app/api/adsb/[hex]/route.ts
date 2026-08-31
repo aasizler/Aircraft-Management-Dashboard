@@ -20,7 +20,14 @@ export async function GET(_req: Request, ctx: { params: Promise<{ hex: string }>
 
   try {
     const res = await fetch(`https://api.adsb.lol/v2/hex/${hex.toLowerCase()}`, {
-      headers: { accept: "application/json" },
+      headers: {
+        accept: "application/json",
+        // adsb.lol 403s the default Node fetch User-Agent ("node") and an empty
+        // one; it wants callers to identify themselves. Verified: "node" -> 403,
+        // a descriptive string -> 200, which is why this worked locally (curl's
+        // own UA) and failed on Vercel.
+        "user-agent": "AeroTrack/1.0 (+https://aerotrack-next.vercel.app)",
+      },
       // The feed updates every second; 5s of edge caching collapses the polling
       // of several tabs onto one upstream call without going stale.
       next: { revalidate: 5 },
