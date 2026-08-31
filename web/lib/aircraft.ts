@@ -13,6 +13,12 @@ export type V1Aircraft = Record<string, unknown> & {
   maintCosts?: MaintCost[];
   schedule?: SchedEvent[];
   documents?: DocEntry[];
+  /**
+   * @deprecated Lives in aircraft_financials now, not here. Kept on the type
+   * only so a blob written by v1 still parses; nothing in the app reads it.
+   * RLS gates rows and not jsonb keys, so anything left here is readable by
+   * every role that can read the aircraft.
+   */
   insurance?: Insurance;
   monthlyHours?: number[];
   oilByMonth?: number[];

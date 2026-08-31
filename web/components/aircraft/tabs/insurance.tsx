@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { daysUntil, newId, readInsurance, today, type DocEntry, type Pilot } from "@/lib/aircraft";
 import type { TabProps } from "../detail-client";
@@ -41,8 +41,29 @@ const EDIT_META: Record<string, { label: string; ph?: string }> = {
   pilotReq: { label: "Open Pilot Warranty / Pilot Requirements", ph: "Minimum 250TT, 50 in type, instrument rated..." },
 };
 
-export function InsuranceTab({ aircraft, data, save }: TabProps) {
-  const ins = readInsurance(data.insurance);
+export function InsuranceTab({ aircraft }: TabProps) {
+  // Insurance lives in aircraft_financials, NOT in aircraft.data. RLS gates
+  // rows and not keys inside a jsonb, so anything kept in the aircraft blob is
+  // readable by everyone who can read the aircraft — a Pilot grant included.
+  // `fin read` is can_see_money(): manager and owner only, never pilot.
+  const [finIns, setFinIns] = useState<Record<string, unknown> | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    createClient()
+      .from("aircraft_financials")
+      .select("insurance")
+      .eq("aircraft_id", aircraft.id)
+      .maybeSingle()
+      .then(({ data: row }) => {
+        if (cancelled) return;
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setFinIns((row?.insurance as Record<string, unknown>) ?? {});
+      });
+    return () => { cancelled = true; };
+  }, [aircraft.id]);
+
+  const ins = readInsurance(finIns ?? {});
   const pilots = ins.pilots ?? [];
   const docs = ins.documents ?? [];
   const toast = useToast();
@@ -57,6 +78,21 @@ export function InsuranceTab({ aircraft, data, save }: TabProps) {
     Object.fromEntries([...FIELDS, ...EDIT_ONLY].map(([k]) => [k as string, String(ins[k] ?? "")])),
   );
   const [notes, setNotes] = useState(ins.coverageNotes ?? "");
+
+  // The fetch resolves after first render, so the form seeds from an empty
+  // policy and has to be re-seeded once the real one arrives. Skipped while
+  // the editor is open — reloading underneath someone mid-edit would discard
+  // what they had typed.
+  useEffect(() => {
+    if (finIns === null || editPolicy) return;
+    const fresh = readInsurance(finIns);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPf(Object.fromEntries(
+      [...FIELDS, ...EDIT_ONLY].map(([k]) => [k as string, String(fresh[k] ?? "")]),
+    ));
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setNotes(fresh.coverageNotes ?? "");
+  }, [finIns, editPolicy]);
   const [pilot, setPilot] = useState<Pilot>({});
 
   // Expiry badge, wording and thresholds ported from renderInsurance().
@@ -70,22 +106,43 @@ export function InsuranceTab({ aircraft, data, save }: TabProps) {
           ? { cls: "warn", text: `Expires in ${daysLeft} days` }
           : { cls: "ok", text: `Policy Active — ${daysLeft} days remaining` };
 
+  /**
+   * Upsert rather than going through the page's save(), which writes
+   * aircraft.data. Checks the returned rowcount for the usual reason: `fin
+   * write` is can_manage_aircraft() and RLS filters rather than raising, so a
+   * refusal would otherwise look like a successful save.
+   */
+  async function saveInsurance(next: Record<string, unknown>): Promise<boolean> {
+    const { data: rows, error } = await createClient()
+      .from("aircraft_financials")
+      .upsert(
+        { aircraft_id: aircraft.id, org_id: aircraft.org_id, insurance: next },
+        { onConflict: "aircraft_id" },
+      )
+      .select("aircraft_id");
+    if (error) { toast(`Save failed: ${error.message}`, "danger"); return false; }
+    if (!rows?.length) {
+      toast("You don't have permission to change this aircraft's insurance.", "danger");
+      return false;
+    }
+    setFinIns(next);
+    return true;
+  }
+
   async function savePolicy() {
     setBusy(true);
-    await save({
-      ...data,
-      insurance: {
-        ...(data.insurance ?? {}),
-        ...pf,
-        hull: pf.hull === "" ? 0 : Number(pf.hull) || pf.hull,
-        // v1 stored coverage notes under `notes`; write the same key so the
-        // two apps round-trip the same blob.
-        notes,
-        pilots,
-        documents: docs,
-      },
+    const ok = await saveInsurance({
+      ...(finIns ?? {}),
+      ...pf,
+      hull: pf.hull === "" ? 0 : Number(pf.hull) || pf.hull,
+      // v1 stored coverage notes under `notes`; keep the same key so an
+      // imported policy round-trips.
+      notes,
+      pilots,
+      documents: docs,
     });
     setBusy(false);
+    if (!ok) return;
     setEditPolicy(false);
     toast("Policy saved", "ok");
   }
@@ -97,19 +154,21 @@ export function InsuranceTab({ aircraft, data, save }: TabProps) {
       pilotModal?.idx != null
         ? pilots.map((p, k) => (k === pilotModal.idx ? pilot : p))
         : [...pilots, pilot];
-    await save({ ...data, insurance: { ...(data.insurance ?? {}), pilots: next } });
+    const ok = await saveInsurance({ ...(finIns ?? {}), pilots: next });
     setBusy(false);
+    if (!ok) return;
     setPilotModal(null);
     setPilot({});
     toast("Named pilot saved", "ok");
   }
 
   async function removePilot(idx: number) {
-    await save({
-      ...data,
-      insurance: { ...(data.insurance ?? {}), pilots: pilots.filter((_, k) => k !== idx) },
+    const ok = await saveInsurance({
+      ...(finIns ?? {}),
+      pilots: pilots.filter((_, k) => k !== idx),
     });
     setConfirmPilot(null);
+    if (!ok) return;
     toast("Pilot removed", "ok");
   }
 
@@ -128,11 +187,9 @@ export function InsuranceTab({ aircraft, data, save }: TabProps) {
       uploadedOn: today(),
       storagePath: path,
     };
-    await save({
-      ...data,
-      insurance: { ...(data.insurance ?? {}), documents: [entry, ...docs] },
-    });
+    const ok = await saveInsurance({ ...(finIns ?? {}), documents: [entry, ...docs] });
     setBusy(false);
+    if (!ok) return;
     toast("Policy document uploaded", "ok");
   }
 
