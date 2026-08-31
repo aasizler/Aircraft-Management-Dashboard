@@ -276,6 +276,11 @@ export function ic(i: Insp, maintHrs: number) {
     remUnit = "",
     remFoot = "";
   let hoursBlocked = false;
+  // "Overdue" is a claim about the DUE DATE, not about a progress bar reaching
+  // 100%. The calendar bar fills the moment the due day starts, so deriving the
+  // badge from the percentage marked an inspection OVERDUE on the day it was
+  // still legal — the row read "due today" and "OVERDUE" at the same time.
+  let pastDue = false;
   const t = Date.now();
 
   if (i.intervalHrs && i.lastHobbs != null) {
@@ -287,6 +292,7 @@ export function ic(i: Insp, maintHrs: number) {
       const u = maintHrs - (i.lastHobbs || 0);
       p = Math.min(100, (u / i.intervalHrs) * 100);
       const rem = Math.max(0, i.intervalHrs - u);
+      pastDue = u >= i.intervalHrs;
       nl = `${(i.lastHobbs + i.intervalHrs).toFixed(0)} hrs (${rem.toFixed(0)} hrs rem)`;
       if (rem <= 0) {
         remNum = "Due Now";
@@ -317,6 +323,7 @@ export function ic(i: Insp, maintHrs: number) {
       // Local date parts, not toISOString(): nx is local midnight, so UTC
       // formatting printed the previous day for anyone east of Greenwich.
       const dateStr = `${nx.getFullYear()}-${String(nx.getMonth() + 1).padStart(2, "0")}-${String(nx.getDate()).padStart(2, "0")}`;
+      pastDue = dl < 0;
       if (dl < 0) {
         nl = `${dateStr} (${Math.abs(dl)}d overdue)`;
         remNum = Math.abs(dl);
@@ -339,7 +346,7 @@ export function ic(i: Insp, maintHrs: number) {
     return { ...blank, s: "unknown" as InspStatus, nl: "hours not set" };
 
   let s: InspStatus = "ok";
-  if (p >= 100) s = "overdue";
+  if (pastDue) s = "overdue";
   else if (p >= 80) s = "warn";
   return { p, s, nl, remNum, remUnit, remFoot, hoursBlocked };
 }
