@@ -103,6 +103,21 @@ export function LiveBanner({
       );
     }
 
+    if (status === "error") {
+      return (
+        <div className="adsb-banner ground">
+          <span className="adsb-banner-icon">📡</span>
+          <div className="adsb-banner-main">
+            <div className="adsb-banner-title">Live tracking unavailable</div>
+            <div className="adsb-banner-detail">
+              Couldn&rsquo;t reach the ADS-B feed — this says nothing about whether{" "}
+              {reg} is flying
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     if (status === "none") {
       return (
         <div className="adsb-banner ground">

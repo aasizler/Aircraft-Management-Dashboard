@@ -59,22 +59,37 @@ function normalize(ac: RawAc): LiveState {
   };
 }
 
-// Keyless live position by hex from adsb.lol (same feed as the flight monitor).
-export async function fetchLive(reg: string): Promise<LiveState | null> {
+/**
+ * Live position by hex, via our own /api/adsb proxy.
+ *
+ * This used to call https://api.adsb.lol directly from the browser. It never
+ * worked: adsb.lol answers 200 with valid JSON but sends no CORS headers on any
+ * response, so every lookup threw and the UI reported "not broadcasting" for
+ * what was really a blocked request.
+ *
+ * The result distinguishes the two so callers can stop asserting a negative
+ * they never actually observed.
+ */
+export type LiveResult =
+  | { ok: true; state: LiveState | null }
+  | { ok: false; state: null };
+
+export async function fetchLive(reg: string): Promise<LiveResult> {
   const hex = nToHex(reg);
-  if (!hex) return null;
+  if (!hex) return { ok: true, state: null }; // not an N-number we can map
   try {
-    const res = await fetch(`https://api.adsb.lol/v2/hex/${hex}`);
-    if (!res.ok) return null;
-    const json = (await res.json()) as { ac?: RawAc[] };
-    if (!json.ac || !json.ac.length) return null;
-    return normalize(json.ac[0]);
+    const res = await fetch(`/api/adsb/${hex}`);
+    if (!res.ok) return { ok: false, state: null };
+    const json = (await res.json()) as { ac?: RawAc[]; error?: string };
+    if (json.error) return { ok: false, state: null };
+    if (!json.ac || !json.ac.length) return { ok: true, state: null };
+    return { ok: true, state: normalize(json.ac[0]) };
   } catch {
-    return null;
+    return { ok: false, state: null };
   }
 }
 
-export type LiveStatus = "searching" | "airborne" | "ground" | "none";
+export type LiveStatus = "searching" | "airborne" | "ground" | "none" | "error";
 
 /** One recorded position along the current flight (v1 _adsbRecordTrack). */
 export type TrackPoint = { lat: number; lon: number; alt: number | null; t: number };
@@ -117,8 +132,16 @@ export function useLivePosition(reg: string, onLanding?: (l: Landing) => void) {
     let wasAirborne = false;
 
     async function poll() {
-      const s = await fetchLive(key);
+      const res = await fetchLive(key);
       if (!alive) return;
+      const s = res.state;
+
+      if (!res.ok) {
+        // Lookup failed — say so rather than claiming the aircraft is silent.
+        setState(null);
+        setStatus("error");
+        return;
+      }
 
       if (!s || s.lat == null) {
         setState(null);
@@ -191,7 +214,10 @@ export function useFleetAirborne(regs: string[]) {
       if (!alive) return;
       setAirborne(
         Object.fromEntries(
-          results.map(([r, s]) => [r, !!s && s.lat != null && !s.onGround]),
+          results.map(([r, res]) => [
+            r,
+            res.ok && !!res.state && res.state.lat != null && !res.state.onGround,
+          ]),
         ),
       );
     }

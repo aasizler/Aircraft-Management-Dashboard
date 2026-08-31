@@ -60,7 +60,8 @@ export function ManageAccess({
   const [assigns, setAssigns] = useState<Assign[]>([]);
   const [inherited, setInherited] = useState<Grant[]>([]);
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<CraftRole>("owner");
+  // Least privilege by default — the form used to open on "owner".
+  const [role, setRole] = useState<CraftRole>("pilot");
   const [contract, setContract] = useState(false);
   const [ends, setEnds] = useState("");
   const [busy, setBusy] = useState(false);
@@ -199,6 +200,13 @@ export function ManageAccess({
       setNotice({ text: "You don't have permission to change that role.", kind: "warn" });
       return;
     }
+    // Say so. A permission change that persists silently is indistinguishable
+    // from one RLS quietly refused.
+    const who = grants.find((r) => r.id === id);
+    setNotice({
+      text: `${who?.user_name?.trim() || who?.invited_email || "Access"} is now ${ROLE_LABEL[next]}`,
+      kind: "ok",
+    });
     load();
   }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CORE_INSP, ic, INSP_BADGE, intervalText, today, type Insp } from "@/lib/aircraft";
+import { CORE_INSP, ic, INSP_BADGE, intervalText, METER_LABEL, today, type Insp } from "@/lib/aircraft";
 import type { TabProps } from "../detail-client";
 import { Modal } from "@/components/ui/modal";
 import { Confirm } from "@/components/ui/confirm";
@@ -45,6 +45,7 @@ export function InspectionsTab({
   const [busy, setBusy] = useState(false);
   const [showInactive, setShowInactive] = useState(false);
   const [confirmClear, setConfirmClear] = useState<number | null>(null);
+  const [confirmComply, setConfirmComply] = useState<number | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
 
   // Deep-link from the dashboard alert feed / next-due card (v1's preInsp).
@@ -236,7 +237,7 @@ export function InspectionsTab({
         </td>
         <td>
           <div className="action-cell">
-            <button className="action-btn" onClick={() => (unpop ? openEdit(idx) : markComplied(idx))}>
+            <button className="action-btn" onClick={() => (unpop ? openEdit(idx) : setConfirmComply(idx))}>
               {unpop ? "Log First" : "Update"}
             </button>
             <RowMenu items={menu} />
@@ -258,9 +259,20 @@ export function InspectionsTab({
 
   return (
     <>
+      {/* An hour-based inspection pinned to a meter reading zero can never be
+          computed — it just shows NO HOURS forever with nothing saying why. */}
+      {!(maintHrs > 0) && all.some((i) => i.intervalHrs && !i.inactive) && (
+        <div className="grant-msg warn" style={{ marginBottom: 10 }}>
+          Hour-based inspections can&rsquo;t be tracked: this aircraft&rsquo;s
+          maintenance clock is <b>{METER_LABEL[aircraft.maint_basis]}</b>, which
+          reads 0.0. Set the current hours — or point the maintenance clock at
+          the meter you actually track — in Aircraft Settings.
+        </div>
+      )}
+
       <div className="tbl-toolbar">
         <span className="mono" style={{ marginRight: "auto" }}>
-          measured against {aircraft.maint_basis} · {maintHrs.toFixed(1)} hrs
+          measured against {METER_LABEL[aircraft.maint_basis].toLowerCase()} · {maintHrs.toFixed(1)} hrs
         </span>
         {allow("inspection") && (
           <button className="btn sm primary" onClick={openAdd}>Log Inspection</button>
@@ -377,6 +389,25 @@ export function InspectionsTab({
             </button>
           </div>
         </Modal>
+      )}
+
+      {confirmComply != null && (
+        <Confirm
+          title="Mark inspection complied"
+          message={
+            <>
+              Record <b>{all[confirmComply]?.name}</b> as complied on{" "}
+              <b>{today()}</b>
+              {all[confirmComply]?.intervalHrs ? <> at <b>{maintHrs.toFixed(1)} hrs</b></> : null}?
+              {all[confirmComply]?.lastDate ? (
+                <> This replaces the current record of <b>{all[confirmComply]?.lastDate}</b>.</>
+              ) : null}
+            </>
+          }
+          confirmLabel="Mark complied"
+          onConfirm={() => { const i = confirmComply; setConfirmComply(null); markComplied(i); }}
+          onCancel={() => setConfirmComply(null)}
+        />
       )}
 
       {confirmClear != null && (

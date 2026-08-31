@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { today, type FlightEntry, type RouteEntry } from "@/lib/aircraft";
+import { METER_LABEL, today, type FlightEntry, type RouteEntry } from "@/lib/aircraft";
 import type { TabProps } from "../detail-client";
 import { Modal } from "@/components/ui/modal";
 import { Confirm } from "@/components/ui/confirm";
@@ -141,7 +141,7 @@ export function FlightsTab({ data, save, consumeAction, aircraft }: TabProps) {
             </div>
           </div>
           <div className="form-row">
-            <label>Hobbs Out / In</label>
+            <label>{METER_LABEL[aircraft.maint_basis]} Out / In</label>
             <div className="form-grid">
               <input type="number" step="0.1" value={form.hobbsOut ?? ""} onChange={(e) => set("hobbsOut", e.target.value)} placeholder="1243.0" />
               <input type="number" step="0.1" value={form.hobbsIn ?? ""} onChange={(e) => set("hobbsIn", e.target.value)} placeholder="1244.5" />

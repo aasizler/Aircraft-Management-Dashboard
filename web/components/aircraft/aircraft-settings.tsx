@@ -269,6 +269,13 @@ export function AircraftSettings({
                 disabled={f.cost_basis === f.maint_basis}
                 onChange={(e) => set("costHrs", e.target.value)}
               />
+              {/* Both clocks on one meter is the single-timer case. Without a
+                  word here it reads as a second, contradictory hours field. */}
+              {f.cost_basis === f.maint_basis && (
+                <div style={{ fontSize: 10, color: "var(--muted2)", marginTop: 4 }}>
+                  Same meter as the maintenance clock — one reading drives both
+                </div>
+              )}
             </div>
           </div>
 

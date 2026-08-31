@@ -40,6 +40,14 @@ export function MaintCosts({
 
   const total = entries.reduce((s, e) => s + (Number(e.cost) || 0), 0);
 
+  // Newest first. The table rendered entries in raw array order, which is
+  // insertion order for anything imported — so a 2025 receipt could sit above a
+  // 2026 one. Delete indexes into the ORIGINAL array, so carry that index along
+  // rather than sorting the array itself.
+  const ordered = entries
+    .map((e, i) => [e, i] as const)
+    .sort((a, b) => (b[0].date ?? "").localeCompare(a[0].date ?? ""));
+
   async function submit() {
     const cost = Number(f.cost);
     if (!cost) { toast("Enter an amount.", "warn"); return; }
@@ -157,7 +165,7 @@ export function MaintCosts({
                 </tr>
               </thead>
               <tbody>
-                {entries.map((e, i) => {
+                {ordered.map(([e, i]) => {
                   const hex = MAINT_CAT_HEX[e.cat] ?? "#888";
                   return (
                     <tr key={i}>

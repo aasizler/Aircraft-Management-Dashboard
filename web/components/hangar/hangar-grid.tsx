@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useFleetAirborne } from "@/lib/adsb";
 import { ic, meterValue, type AircraftRow, type Insp, type Meter, type V1Aircraft } from "@/lib/aircraft";
@@ -318,7 +319,7 @@ export function HangarGrid({
     <>
       {sections.map((section) => (
         <div key={section.key}>
-          <div className="section-lbl">
+          <h2 className="section-lbl">
             {section.label}
             {/* Sharing a fleet lives on the fleet, not on any one aircraft in
                 it — a grant here covers every aircraft in the section, and
@@ -372,7 +373,7 @@ export function HangarGrid({
                 )}
               </span>
             )}
-          </div>
+          </h2>
           {section.sub && <div className="section-sub">{section.sub}</div>}
           {section.fleet && section.tiles.length === 0 && (
             <div className="section-sub">
@@ -390,6 +391,19 @@ export function HangarGrid({
             onDragOver={(e) => rearrange && e.preventDefault()}
             onDrop={() => rearrange && onDrop(a.id)}
             onClick={() => { if (!rearrange) router.push(`/aircraft/${a.id}`); }}
+            // The tile was a bare clickable div: no keyboard focus, no way in
+            // without a mouse. Drag-and-drop rules out making the whole card an
+            // anchor, so it announces itself as a link and answers the keys one
+            // would. The registration below is a real href for new-tab opens.
+            role={rearrange ? undefined : "link"}
+            tabIndex={rearrange ? undefined : 0}
+            onKeyDown={(e) => {
+              if (rearrange) return;
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                router.push(`/aircraft/${a.id}`);
+              }
+            }}
           >
             <div className="ac-tile-top">
               <div className="ac-tile-pro">PRO</div>
@@ -401,7 +415,16 @@ export function HangarGrid({
             </div>
 
             <div className="ac-tile-body">
-              <div className="ac-tile-reg">{a.reg}</div>
+              <div className="ac-tile-reg">
+                <Link
+                  href={`/aircraft/${a.id}`}
+                  onClick={(e) => e.stopPropagation()}
+                  tabIndex={-1}
+                  style={{ color: "inherit", textDecoration: "none" }}
+                >
+                  {a.reg}
+                </Link>
+              </div>
               <div className="ac-tile-type">{a.type ?? "—"}</div>
               <div className="ac-tile-serial">{a.serial ?? ""}</div>
             </div>

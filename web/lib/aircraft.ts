@@ -306,8 +306,17 @@ export function ic(i: Insp, maintHrs: number) {
     const dp = totalMs > 0 ? Math.min(100, ((t - start) / totalMs) * 100) : 0;
     if (dp > p) {
       p = dp;
-      const dl = Math.round((nx.getTime() - t) / 86_400_000);
-      const dateStr = nx.toISOString().slice(0, 10);
+      // Whole CALENDAR days between today and the due day. Differencing raw
+      // timestamps compared local-midnight-of-the-due-day against the current
+      // clock time, so an inspection due today read "1d overdue" from about
+      // 11:36am onward — Math.round tipped the -0.x to -1 partway through the
+      // day. Flooring both ends to local midnight keeps the label stable.
+      const midnight = new Date(t);
+      midnight.setHours(0, 0, 0, 0);
+      const dl = Math.round((nx.getTime() - midnight.getTime()) / 86_400_000);
+      // Local date parts, not toISOString(): nx is local midnight, so UTC
+      // formatting printed the previous day for anyone east of Greenwich.
+      const dateStr = `${nx.getFullYear()}-${String(nx.getMonth() + 1).padStart(2, "0")}-${String(nx.getDate()).padStart(2, "0")}`;
       if (dl < 0) {
         nl = `${dateStr} (${Math.abs(dl)}d overdue)`;
         remNum = Math.abs(dl);
@@ -362,11 +371,19 @@ export function intervalText(i: Insp): string {
 export function oilLife(a: V1Aircraft, maintHrs: number) {
   const interval = Number(a.oilInterval) || 50;
   const base = Number(a.oilHobbs ?? 0);
-  const tracked = maintHrs > 0 && (a.oilHobbs != null || (a.oil ?? []).length > 0);
+  // Two different reasons this can't be computed, and they need different
+  // words: nothing was ever logged, versus something was logged but the
+  // maintenance clock reads zero so there is nothing to measure from.
+  const hasRecord = a.oilHobbs != null || (a.oil ?? []).length > 0;
+  const meterReadable = maintHrs > 0;
+  const tracked = meterReadable && hasRecord;
   const used = Math.max(0, maintHrs - base);
   const hrsLeft = interval - used;
   const pct = Math.max(0, Math.min(100, (hrsLeft / interval) * 100));
-  return { pct, hrsLeft, used, interval, tracked, overdueHrs: hrsLeft < 0 ? -hrsLeft : 0 };
+  return {
+    pct, hrsLeft, used, interval, tracked, hasRecord, meterReadable,
+    overdueHrs: hrsLeft < 0 ? -hrsLeft : 0,
+  };
 }
 
 // ── Shape-tolerant readers for the imported v1 blob ─────────────────────────
@@ -485,3 +502,36 @@ export const daysUntil = (iso: string) =>
   Math.round(
     (new Date(iso + "T12:00:00").getTime() - Date.now()) / 86_400_000,
   );
+
+/**
+ * Stable JSON for equality checks against a value that has round-tripped
+ * through Postgres. jsonb does not preserve key order, so two equal blobs
+ * routinely serialise differently under JSON.stringify; sorting every object's
+ * keys makes the comparison mean what it looks like it means.
+ */
+export function canonical(v: unknown): string {
+  const walk = (x: unknown): unknown => {
+    if (Array.isArray(x)) return x.map(walk);
+    if (x && typeof x === "object") {
+      return Object.fromEntries(
+        Object.keys(x as Record<string, unknown>)
+          .sort()
+          .map((k) => [k, walk((x as Record<string, unknown>)[k])]),
+      );
+    }
+    return x;
+  };
+  return JSON.stringify(walk(v));
+}
+
+/**
+ * How each meter is spoken about in the UI. Which meter an aircraft actually
+ * runs on is per-aircraft (see MeterKind), so screens that show a reading must
+ * name the aircraft's own meter rather than saying "Hobbs" and hoping.
+ */
+export const METER_LABEL: Record<MeterKind, string> = {
+  hobbs: "Hobbs",
+  tach: "Tach",
+  flight: "Flight Time",
+  total: "Total Time",
+};

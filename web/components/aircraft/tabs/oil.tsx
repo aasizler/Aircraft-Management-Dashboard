@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { monthLabel, oilLife, readMonthly, today, type OilEntry } from "@/lib/aircraft";
+import { METER_LABEL, monthLabel, oilLife, readMonthly, today, type OilEntry } from "@/lib/aircraft";
 import type { TabProps } from "../detail-client";
 import { Modal } from "@/components/ui/modal";
 import { Confirm } from "@/components/ui/confirm";
@@ -12,7 +12,7 @@ import { useToast } from "@/components/ui/toast";
 // select, not a free-text oil name.
 const FLUIDS = ["Engine Oil", "Hydraulic Fluid", "Brake Fluid", "Coolant", "Other"];
 
-export function OilTab({ data, maintHrs, save, consumeAction }: TabProps) {
+export function OilTab({ data, maintHrs, save, consumeAction, aircraft }: TabProps) {
   const entries = (data.oil ?? []) as OilEntry[];
   const life = oilLife(data, maintHrs);
   const toast = useToast();
@@ -115,18 +115,22 @@ export function OilTab({ data, maintHrs, save, consumeAction }: TabProps) {
               ? life.hrsLeft >= 0
                 ? `${life.hrsLeft.toFixed(1)} hrs left · ${life.interval}hr interval`
                 : `${life.overdueHrs.toFixed(1)} hrs overdue`
-              : "no oil change recorded"}
+              : life.hasRecord
+                ? `${METER_LABEL[aircraft.maint_basis].toLowerCase()} reads 0 — can't measure`
+                : "no oil change recorded"}
           </div>
         </div>
         <div className="stat-box">
           <div className="stat-lbl">Total Added</div>
           <div className="stat-val">{totalAdded.toFixed(1)} qt</div>
-          <div className="stat-sub">{adds.length} entr{adds.length === 1 ? "y" : "ies"}</div>
+          <div className="stat-sub">
+            {adds.length} top-up{adds.length === 1 ? "" : "s"} · excludes changes
+          </div>
         </div>
         <div className="stat-box">
           <div className="stat-lbl">Avg / Month</div>
           <div className="stat-val">{avgMonth.toFixed(2)} qt</div>
-          <div className="stat-sub">6-month avg</div>
+          <div className="stat-sub">6-month avg · includes changes</div>
         </div>
         <div className="stat-box">
           <div className="stat-lbl">Consumption</div>

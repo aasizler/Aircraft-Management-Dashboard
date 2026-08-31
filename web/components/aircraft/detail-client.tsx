@@ -10,6 +10,7 @@ import {
   type Meter,
   type Squawk,
   type V1Aircraft,
+  canonical,
 } from "@/lib/aircraft";
 import { can, type AppRole, type Permission } from "@/lib/permissions";
 import { useAircraftRealtime } from "@/lib/realtime";
@@ -176,11 +177,17 @@ export function AircraftDetailClient({
   // another user" to the person who had just pressed save. v1 compared the
   // incoming blob with the local one and returned early when they matched;
   // same test here, against a ref so the callback always sees current data.
+  //
+  // The stringify comparison was still wrong: Postgres stores jsonb with its
+  // own key order (by length, then bytewise), so the blob that comes back down
+  // the channel almost never serialises identically to the local object even
+  // when the two are equal. Every save announced itself as someone else's edit.
+  // Compare canonically — keys sorted at every level — instead.
   const dataRef = useRef(data);
   dataRef.current = data;
   const remoteRef = useRef<(next: Record<string, unknown>) => void>(() => {});
   remoteRef.current = (next: Record<string, unknown>) => {
-    if (JSON.stringify(next) === JSON.stringify(dataRef.current)) return;
+    if (canonical(next) === canonical(dataRef.current)) return;
     setData(next as V1Aircraft);
     toast("Updated by another user", "info");
   };

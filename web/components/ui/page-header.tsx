@@ -23,7 +23,7 @@ export function PageHeader({
       style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 12 }}
     >
       <div>
-        <div className="page-title">{title}</div>
+        <h1 className="page-title">{title}</h1>
         <div className="page-sub">{sub ?? `Today is ${today}`}</div>
       </div>
       {right}

@@ -173,11 +173,13 @@ export function DashboardTab({
       <div className="dash-sec-h">
         <span>Needs Attention</span>
         <span className="sec-note">
-          {alerts.length === 0
+          {alerts.length + grounding.length === 0
             ? untracked.length
               ? `${untracked.length} inspection${untracked.length > 1 ? "s" : ""} not yet recorded`
               : "All inspections current"
-            : `${alerts.length} item${alerts.length > 1 ? "s" : ""} need attention`}
+            : `${alerts.length + grounding.length} item${
+                alerts.length + grounding.length === 1 ? " needs" : "s need"
+              } attention`}
         </span>
       </div>
       <div className="alert-feed">

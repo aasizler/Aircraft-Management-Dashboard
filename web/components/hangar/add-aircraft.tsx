@@ -24,11 +24,14 @@ const METERS: MeterKind[] = ["hobbs", "tach", "flight", "total"];
 export function AddAircraftButton({
   orgId,
   hangarName,
+  fleets = [],
 }: {
   /** Absent for an account that hasn't got a hangar yet. */
   orgId?: string | null;
   /** Used to name the hangar created on first use. */
   hangarName?: string | null;
+  /** Sections of the hangar this aircraft can be filed under on creation. */
+  fleets?: { id: string; name: string }[];
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -47,6 +50,7 @@ export function AddAircraftButton({
     engineSMOH: "",
     tbo: "1700",
     oilInterval: "50",
+    fleet_id: "",
   });
 
   const set = (k: keyof typeof f, v: string) => setF((p) => ({ ...p, [k]: v }));
@@ -149,6 +153,7 @@ export function AddAircraftButton({
         airport: f.airport.trim() || null,
         maint_basis: f.maint_basis,
         cost_basis: f.cost_basis,
+        fleet_id: f.fleet_id || null,
         data,
       });
 
@@ -182,7 +187,7 @@ export function AddAircraftButton({
     setOpen(false);
     setF({
       reg: "", type: "", serial: "", airport: "", engineType: "",
-      maint_basis: "hobbs", cost_basis: "hobbs", hours: "",
+      maint_basis: "hobbs", cost_basis: "hobbs", hours: "", fleet_id: "",
       engineSMOH: "", tbo: "1700", oilInterval: "50",
     });
     toast(`${reg} added to the hangar`, "ok");
@@ -251,6 +256,20 @@ export function AddAircraftButton({
             <label>Home Airport</label>
             <AirportAutocomplete value={f.airport} onChange={(v) => set("airport", v)} />
           </div>
+
+          {/* Filing it on creation. Without this a new aircraft always landed
+              ungrouped and had to be moved from its settings afterwards. */}
+          {fleets.length > 0 && (
+            <div className="form-row">
+              <label>Fleet</label>
+              <select value={f.fleet_id} onChange={(e) => set("fleet_id", e.target.value)}>
+                <option value="">No fleet</option>
+                {fleets.map((fl) => (
+                  <option key={fl.id} value={fl.id}>{fl.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Meters have no v1 equivalent — v2 tracks which clock drives what. */}
           <div className="form-divider">Meters</div>

@@ -121,6 +121,7 @@ export default async function Home() {
               membership?.org_id && <NewFleetButton orgId={membership.org_id} />}
           <AddAircraftButton
             orgId={membership?.org_id}
+            fleets={(fleets ?? []) as { id: string; name: string }[]}
             hangarName={
               (() => {
                 const m = user?.user_metadata as
