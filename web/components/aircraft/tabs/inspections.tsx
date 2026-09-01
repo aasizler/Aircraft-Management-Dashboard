@@ -200,6 +200,9 @@ export function InspectionsTab({
           <td>
             <div className="action-cell">
               <button className="action-btn" onClick={() => toggleActive(idx)}>Reactivate</button>
+              {/* No menu on an inactive row — reactivating is the only thing to
+                  do with it. The slot is held so the ⋮ column stays straight. */}
+              <span className="menu-slot" aria-hidden="true" />
             </div>
           </td>
         </tr>

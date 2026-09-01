@@ -92,7 +92,15 @@ html, body { height: 100%; }
 .badge.ok{background:var(--ok-dim);color:var(--ok);border-color:rgba(45,212,160,.2)}
 .badge.info{background:var(--accent-dim);color:var(--accent);border-color:rgba(74,158,255,.2)}
 .mono{font-family:var(--mono);font-size:12px;color:var(--muted2);white-space:nowrap}
-.action-cell{display:flex;gap:5px}
+/* Right-aligned, with the leading button on a fixed width. The ⋮ used to sit
+   wherever the button before it happened to end, so "Update" and "Log First"
+   pushed it to two different x positions and the column zig-zagged down the
+   table. Rows with no menu (Reactivate) reserve the slot instead of gaining
+   one, so the column stays straight without giving them an action they should
+   not have. */
+.action-cell{display:flex;gap:6px;align-items:center;justify-content:flex-end}
+.action-cell > .action-btn{min-width:80px}
+.action-cell > .menu-slot{width:var(--ctl-h-sm);flex-shrink:0}
 .action-btn{display:inline-flex;align-items:center;justify-content:center;height:var(--ctl-h-sm);padding:0 11px;white-space:nowrap;line-height:1;border-radius:var(--ctl-r);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--body);transition:all .15s;border:1px solid var(--border2);background:var(--bg4);color:var(--muted2)}
 .action-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
 .action-btn.del{background:none;border-color:transparent;color:var(--muted)}
