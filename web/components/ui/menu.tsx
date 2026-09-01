@@ -39,6 +39,13 @@ export function MenuContent({
         sideOffset={6}
         collisionPadding={10}
         aria-label={ariaLabel}
+        // The content is portaled out of the tile in the DOM, but React
+        // synthetic events bubble through the REACT tree, not the DOM one — so
+        // a click on "Manage access" still reached the tile's onClick and
+        // navigated to the aircraft underneath. Stop it at the menu boundary.
+        // These fire after the item's own handlers, so selection is unaffected.
+        onClick={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
       >
         {children}
       </DropdownMenu.Content>
