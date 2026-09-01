@@ -19,7 +19,17 @@ import type { ReactNode } from "react";
  * icons, then destructive actions separated below a divider.
  */
 
-export const Menu = DropdownMenu.Root;
+/**
+ * Non-modal on purpose. Radix's default (modal) traps focus and manages
+ * `pointer-events` on <body> for the duration — and because selecting an item
+ * opens one of our own modals on top, its teardown overlapped with that mount.
+ * The result: after closing the dialog, the FIRST click on any ⋮ was swallowed
+ * and you had to click twice. These are dropdowns, not blocking dialogs;
+ * nothing here wants a focus trap.
+ */
+export function Menu({ children }: { children: ReactNode }) {
+  return <DropdownMenu.Root modal={false}>{children}</DropdownMenu.Root>;
+}
 export const MenuTrigger = DropdownMenu.Trigger;
 
 export function MenuContent({
