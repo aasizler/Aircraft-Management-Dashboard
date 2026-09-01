@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useFleetAirborne } from "@/lib/adsb";
-import { ic, meterValue, type AircraftRow, type Insp, type Meter, type V1Aircraft } from "@/lib/aircraft";
+import { ic, meterValue, type AircraftRow, type Insp, type Meter, type Squawk, type V1Aircraft } from "@/lib/aircraft";
 import { ManageAccess } from "@/components/aircraft/manage-access";
 import { AircraftSettings } from "@/components/aircraft/aircraft-settings";
 import { Confirm } from "@/components/ui/confirm";
@@ -146,14 +146,30 @@ export function HangarGrid({
     };
   }
 
-  /** Health dot, exactly as v1 computed it: red overdue, amber due-soon, else green. */
-  function statusDot(t: Tile) {
+  /**
+   * Airworthiness at a glance, as a chip you can read across the hangar rather
+   * than v1's 8px dot.
+   *
+   * Two corrections to what the dot computed:
+   *
+   *  - a GROUNDING SQUAWK now counts. The dot scored inspections only, so an
+   *    aeroplane grounded by an open squawk showed green as long as its
+   *    paperwork was in date — the one state you most need to see.
+   *  - an aircraft with nothing recorded is no longer green. lib/aircraft.ts
+   *    already refuses to call an unrecorded inspection "ok" for the same
+   *    reason; the tile was still painting a brand-new airframe as airworthy.
+   */
+  function tileStatus(t: Tile): { label: string; cls: string } {
     const hrs = meterValue(t.meters, t.maint_basis);
     const active = ((t.data?.inspections ?? []) as Insp[]).filter((i) => !i.inactive);
     const scored = active.map((i) => ic(i, hrs).s);
-    if (scored.includes("overdue")) return "#f04b4b";
-    if (scored.includes("warn")) return "#f59e0b";
-    return "#2dd4a0";
+    const grounding = ((t.data?.squawks ?? []) as Squawk[]).some((q) => q.status === "open");
+
+    if (grounding || scored.includes("overdue")) return { label: "Grounded", cls: "grounded" };
+    if (scored.includes("warn")) return { label: "Due Soon", cls: "due" };
+    // Nothing has actually been signed off — say so instead of implying current.
+    if (!scored.includes("ok")) return { label: "Not Tracked", cls: "untracked" };
+    return { label: "Current", cls: "current" };
   }
 
   async function remove(t: Tile) {
@@ -419,13 +435,17 @@ export function HangarGrid({
               }
             }}
           >
+            {/* Was an image-shaped band holding a PRO chip and a ghosted copy of
+                the registration printed again directly below it. Now it carries
+                the one thing worth reading across a hangar: airworthiness. */}
             <div className="ac-tile-top">
-              <div className="ac-tile-pro">PRO</div>
               {airborne[a.reg] && (
                 <div className="tile-airborne"><span className="tp" />LIVE</div>
               )}
-              <div className="tile-reg-ghost">{a.reg}</div>
-              <div className="tile-status-dot" style={{ background: statusDot(a) }} />
+              {(() => {
+                const st = tileStatus(a);
+                return <span className={`tile-status ${st.cls}`}>{st.label}</span>;
+              })()}
             </div>
 
             <div className="ac-tile-body">

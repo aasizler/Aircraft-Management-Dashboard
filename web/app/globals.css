@@ -198,8 +198,7 @@ canvas.chart{display:block;width:100%;height:150px}
 .ac-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;position:relative;z-index:60}
 .ac-tile{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;cursor:pointer;transition:all .2s;display:flex;flex-direction:column;position:relative;text-decoration:none;color:var(--text)}
 .ac-tile:hover{border-color:var(--accent);transform:translateY(-1px)}
-.ac-tile-top{height:84px;background:linear-gradient(135deg,#080e14,#0a1320);display:flex;align-items:center;justify-content:center;position:relative;border-bottom:1px solid var(--border);border-radius:12px 12px 0 0;flex-shrink:0}
-.ac-tile-pro{position:absolute;top:8px;left:8px;background:rgba(74,158,255,.15);border:1px solid rgba(74,158,255,.28);color:var(--accent);font-size:9px;font-weight:700;letter-spacing:.08em;padding:2px 7px;border-radius:3px;font-family:var(--mono)}
+.ac-tile-top{height:46px;background:linear-gradient(135deg,#080e14,#0a1320);display:flex;align-items:center;justify-content:center;position:relative;border-bottom:1px solid var(--border);border-radius:12px 12px 0 0;flex-shrink:0}
 .ac-tile-body{padding:14px 15px 4px;flex:1}
 .ac-tile-reg{font-size:20px;font-weight:800;font-family:var(--body);letter-spacing:.04em}
 .ac-tile-type{font-size:13px;color:var(--accent);font-family:var(--body);font-weight:700;margin-top:4px;letter-spacing:.08em}
@@ -387,8 +386,6 @@ canvas.chart{display:block;width:100%;height:150px}
 .rearrange-bar{position:fixed;bottom:36px;left:50%;transform:translateX(-50%);background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:14px 24px;display:flex;align-items:center;gap:16px;box-shadow:0 8px 32px rgba(0,0,0,.5);z-index:500;pointer-events:all}
 /* HANGAR TILE — role chip, LIVE badge and reg watermark (v1 renderHangar) */
 .role-badge{display:inline-flex;align-items:center;font-size:10px;font-weight:700;color:var(--muted2);font-family:var(--mono);letter-spacing:.05em;background:var(--bg4);border:1px solid var(--border2);border-radius:4px;padding:2px 7px}
-.tile-reg-ghost{font-size:26px;font-weight:800;font-family:var(--body);letter-spacing:.06em;color:rgba(74,158,255,.22)}
-.tile-status-dot{position:absolute;bottom:8px;right:10px;width:8px;height:8px;border-radius:50%}
 .tile-airborne{position:absolute;top:8px;right:8px;display:inline-flex;align-items:center;gap:4px;background:rgba(0,225,100,.14);border:1px solid rgba(0,225,100,.3);color:#00e164;font-size:9px;font-weight:700;letter-spacing:.06em;padding:2px 7px;border-radius:3px;font-family:var(--mono)}
 .tile-airborne .tp{width:5px;height:5px;border-radius:50%;background:#00e164;animation:adsb-blink 1.4s ease-in-out infinite}
 /* NAV DOT MENU */
@@ -571,3 +568,17 @@ canvas.chart{display:block;width:100%;height:150px}
 .meter-jump-list b{text-transform:uppercase;font-size:10px;letter-spacing:.06em;color:var(--muted3);min-width:52px}
 .meter-jump-delta{margin-left:auto;color:var(--warn);font-weight:700}
 .meter-jump-note{font-size:12px;line-height:1.55;color:var(--muted3)}
+
+/* Airworthiness, legible across a hangar. Replaces an 8px unlabelled dot whose
+   colour was the only thing distinguishing "grounded" from "current". Colour
+   here carries meaning, and never carries it alone — the word does the work for
+   anyone who can't separate the hues. */
+.tile-status{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:4px 11px;border-radius:999px;border:1px solid}
+.tile-status::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0}
+.tile-status.grounded{color:#ff6b6b;background:rgba(240,75,75,.13);border-color:rgba(240,75,75,.34)}
+.tile-status.due{color:#f7b23b;background:rgba(245,158,11,.13);border-color:rgba(245,158,11,.34)}
+.tile-status.current{color:#2dd4a0;background:rgba(45,212,160,.12);border-color:rgba(45,212,160,.3)}
+.tile-status.untracked{color:var(--muted2);background:var(--bg4);border-color:var(--border2)}
+/* A grounded aeroplane should catch the eye from the whole hangar, not just its
+   own tile. */
+.ac-tile:has(.tile-status.grounded){border-color:rgba(240,75,75,.34)}
