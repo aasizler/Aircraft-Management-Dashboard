@@ -616,3 +616,11 @@ canvas.chart{display:block;width:100%;height:150px}
 .menu-identity-text{display:flex;flex-direction:column;min-width:0}
 .menu-identity-name{font-size:13px;font-weight:600;color:var(--text);line-height:1.3}
 .menu-identity-sub{font-size:11px;color:var(--muted2);line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Empty sections. Centred, quiet, and always saying what belongs here rather
+   than just reporting that nothing does. */
+.empty{display:flex;flex-direction:column;align-items:center;text-align:center;gap:2px;padding:34px 20px}
+.empty-ic{display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;background:var(--bg4);color:var(--muted2);margin-bottom:10px}
+.empty-title{font-size:14px;font-weight:600;color:var(--text)}
+.empty-body{font-size:12.5px;color:var(--muted2);line-height:1.6;max-width:44ch;margin:0}
+.empty .btn{margin-top:14px}

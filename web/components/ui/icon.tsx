@@ -16,7 +16,8 @@ export type IconName =
   | "eraser" | "power"
   // actions and status
   | "hangar" | "plane" | "landing" | "signal" | "alert" | "grounded"
-  | "droplet" | "wrench" | "camera" | "paperclip" | "check" | "cash";
+  | "droplet" | "wrench" | "camera" | "paperclip" | "check" | "cash"
+  | "calendar" | "file" | "shield";
 
 const PATHS: Record<IconName, string> = {
   sort:      "M4 6h10M4 12h7M4 18h4M17 8v10m0 0l-3-3m3 3l3-3",
@@ -44,6 +45,9 @@ const PATHS: Record<IconName, string> = {
   paperclip: "M21.4 11.1l-9.2 9.2a6 6 0 01-8.5-8.5l9.2-9.2a4 4 0 015.7 5.7l-9.2 9.2a2 2 0 01-2.8-2.8l8.5-8.5",
   check:     "M20 6L9 17l-5-5",
   cash:      "M2 7h20v10H2zM12 14.5a2.5 2.5 0 100-5 2.5 2.5 0 000 5M6 7v10M18 7v10",
+  calendar:  "M3 6a2 2 0 012-2h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2zM3 10h18M8 2v4M16 2v4",
+  file:      "M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6M9 13h6M9 17h6",
+  shield:    "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z",
 };
 
 export function Icon({ name, size = 15 }: { name: IconName; size?: number }) {

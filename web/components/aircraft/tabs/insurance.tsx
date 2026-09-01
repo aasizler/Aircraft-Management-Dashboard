@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { daysUntil, newId, readInsurance, today, type DocEntry, type Pilot } from "@/lib/aircraft";
 import type { TabProps } from "../detail-client";
 import { Modal } from "@/components/ui/modal";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Confirm } from "@/components/ui/confirm";
 import { useToast } from "@/components/ui/toast";
 
@@ -244,9 +245,12 @@ export function InsuranceTab({ aircraft }: TabProps) {
         <div className="panel">
           <div className="panel-title">Policy Details</div>
           {!ins.provider && !ins.policy ? (
-            <div style={{ color: "var(--muted2)", padding: "16px 0", textAlign: "center", fontSize: 13 }}>
-              No policy on file. Click Edit Policy to add details.
-            </div>
+            <EmptyState
+              icon="shield"
+              title="No policy on file"
+              body="Record the provider, hull value, liability limits and renewal date to track coverage against this aircraft."
+              action={{ label: "Add policy", onClick: () => setEditPolicy(true) }}
+            />
           ) : (
             FIELDS.map(([k, label]) => (
               <div className="ins-field" key={k as string}>
@@ -265,7 +269,12 @@ export function InsuranceTab({ aircraft }: TabProps) {
             </button>
           </div>
           {pilots.length === 0 ? (
-            <div style={{ color: "var(--muted2)", fontSize: 13 }}>No named pilots on file.</div>
+            <EmptyState
+              icon="users"
+              title="No named pilots"
+              body="Pilots approved to fly under this policy appear here, with their certificate, hours and medical expiry."
+              action={{ label: "Add pilot", onClick: () => { setPilot({}); setPilotModal({}); } }}
+            />
           ) : (
             pilots.map((p, idx) => (
               <div className="pilot-card" key={idx}>
@@ -314,9 +323,11 @@ export function InsuranceTab({ aircraft }: TabProps) {
           onChange={(e) => e.target.files?.[0] && uploadDoc(e.target.files[0])}
         />
         {docs.length === 0 ? (
-          <div style={{ fontSize: 12, color: "var(--muted2)", padding: "8px 0" }}>
-            No documents uploaded.
-          </div>
+          <EmptyState
+            icon="file"
+            title="No policy documents"
+            body="Keep the certificate of insurance and endorsements here, alongside the policy they belong to."
+          />
         ) : (
           <ul className="doc-list">
             {docs.map((d, i) => (

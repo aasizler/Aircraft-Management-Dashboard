@@ -6,6 +6,7 @@ import { newId, today, type DocEntry } from "@/lib/aircraft";
 import type { TabProps } from "../detail-client";
 import { Confirm } from "@/components/ui/confirm";
 import { useToast } from "@/components/ui/toast";
+import { EmptyState } from "@/components/ui/empty-state";
 
 const MAX_MB = 25;
 
@@ -115,8 +116,12 @@ export function DocumentsTab({ aircraft, data, save, allow }: TabProps) {
 
       <ul className="doc-list">
         {docs.length === 0 ? (
-          <li style={{ color: "var(--muted2)", fontSize: 12, padding: "6px 0" }}>
-            No documents uploaded yet.
+          <li>
+            <EmptyState
+              icon="file"
+              title="No documents yet"
+              body="Logbooks, annual paperwork, 337s and STCs live here — drop a file above to add the first."
+            />
           </li>
         ) : (
           docs.map((d, idx) => (

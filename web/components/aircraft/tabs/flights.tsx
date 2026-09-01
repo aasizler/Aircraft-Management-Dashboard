@@ -6,6 +6,7 @@ import type { TabProps } from "../detail-client";
 import { Modal } from "@/components/ui/modal";
 import { Confirm } from "@/components/ui/confirm";
 import { RowMenu } from "@/components/ui/row-menu";
+import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/components/ui/toast";
 
 export function FlightsTab({ data, save, consumeAction, aircraft }: TabProps) {
@@ -89,9 +90,12 @@ export function FlightsTab({ data, save, consumeAction, aircraft }: TabProps) {
         </div>
 
         {flights.length === 0 ? (
-          <div style={{ color: "var(--muted2)", fontSize: 13, padding: "10px 0" }}>
-            No flights logged yet. Use <b>Log Flight</b> to add entries.
-          </div>
+          <EmptyState
+            icon="plane"
+            title="No flights logged"
+            body="Logged flights build this aircraft's hours, its monthly utilisation and its cost per hour."
+            action={{ label: "Log flight", onClick: openAdd }}
+          />
         ) : (
           flights.map((f, idx) => {
             const dur = durOf(f);

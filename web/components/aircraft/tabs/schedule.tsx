@@ -6,6 +6,7 @@ import type { TabProps } from "../detail-client";
 import { Modal } from "@/components/ui/modal";
 import { Confirm } from "@/components/ui/confirm";
 import { RowMenu } from "@/components/ui/row-menu";
+import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/components/ui/toast";
 
 const TYPE_COLOR: Record<string, string> = {
@@ -137,7 +138,12 @@ export function ScheduleTab({ aircraft, data, save }: TabProps) {
           )}
         </div>
         {shown.length === 0 ? (
-          <div className="sched-empty">Nothing scheduled.</div>
+          <EmptyState
+            icon="calendar"
+            title="Nothing on the schedule"
+            body="Reservations, maintenance downtime and trips appear here, on the two-week strip above."
+            action={{ label: "Add event", onClick: openAdd }}
+          />
         ) : (
           shown.map((e) => {
             const idx = all.indexOf(e);

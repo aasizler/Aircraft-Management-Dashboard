@@ -9,6 +9,7 @@ import { Modal } from "@/components/ui/modal";
 import { Confirm } from "@/components/ui/confirm";
 import { Donut, LabeledBarChart } from "@/components/ui/charts";
 import { useToast } from "@/components/ui/toast";
+import { EmptyState } from "@/components/ui/empty-state";
 import { ReceiptScan } from "./receipt-scan";
 import type { PendingAction } from "./detail-client";
 
@@ -154,7 +155,12 @@ export function MaintCosts({
         </div>
 
         {entries.length === 0 ? (
-          <div className="how-box">No cost entries yet.</div>
+          <EmptyState
+            icon="cash"
+            title="No costs recorded"
+            body="Fuel, parts and shop invoices land here, and drive the cost-per-hour figures below."
+            action={{ label: "Log cost", onClick: () => setOpen(true) }}
+          />
         ) : (
           <div className="table-scroll">
             <table className="data-table">
