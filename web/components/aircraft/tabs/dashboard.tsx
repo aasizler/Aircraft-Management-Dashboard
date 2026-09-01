@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  ic, oilLife, readMonthly, SQ_LABELS,
+  airworthiness, oilLife, readMonthly, SQ_LABELS,
   type DocEntry, type Insp, type MaintCost, type OilEntry, type Squawk,
 } from "@/lib/aircraft";
 import { Icon, type IconName } from "@/components/ui/icon";
@@ -20,20 +20,14 @@ export function DashboardTab({
   data, maintHrs, costHrs, aircraft, go, focusInspection,
 }: TabProps) {
   const all = (data.inspections ?? []) as Insp[];
-  const active = all.map((i, idx) => ({ i, idx })).filter((x) => !x.i.inactive);
-  const scored = active
-    .map((x) => ({ ...x, st: ic(x.i, maintHrs) }))
-    .sort((a, b) => b.st.p - a.st.p);
-
-  const tracked = scored.filter((x) => x.st.s !== "none" && x.st.s !== "unknown");
-  const untracked = scored.filter((x) => x.st.s === "none");
+  // Same judgement the hangar tile shows, from the same function — these two
+  // used to work it out separately and drifted apart.
+  const air = airworthiness(data, maintHrs);
+  const { scored, tracked, untracked, overdue, dueSoon, grounding } = air;
   const next = tracked[0];
-  const overdue = tracked.filter((x) => x.st.s === "overdue");
-  const dueSoon = tracked.filter((x) => x.st.s === "warn");
 
   const life = oilLife(data, maintHrs);
   const squawks = (data.squawks ?? []) as Squawk[];
-  const grounding = squawks.filter((s) => s.status === "open");
   const docs = (data.documents ?? []) as DocEntry[];
   const months = readMonthly(data.monthlyHours, 6);
   const sixMoHours = months.reduce((s, m) => s + m.hours, 0);

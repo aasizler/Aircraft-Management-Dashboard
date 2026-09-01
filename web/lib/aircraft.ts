@@ -542,3 +542,71 @@ export const METER_LABEL: Record<MeterKind, string> = {
   flight: "Flight Time",
   total: "Total Time",
 };
+
+// ── Airworthiness ───────────────────────────────────────────────────────────
+
+/**
+ * One answer to "can this aeroplane fly", for every screen that asks.
+ *
+ * The hangar tile, the dashboard ribbon and the inspections table each worked
+ * this out for themselves, and they drifted: the tile scored inspections only,
+ * so an aircraft grounded by an open squawk showed green while its paperwork
+ * was in date, and one with nothing recorded showed green too. Both were fixed
+ * on the tile alone, which is exactly how the next copy diverges.
+ *
+ * `level` is the ordering the whole app agrees on:
+ *
+ *   grounded  — an open (grounding) squawk, or an inspection past due
+ *   due       — something inside its warning window
+ *   untracked — nothing has been signed off, so there is nothing to vouch for
+ *   current   — everything recorded is in date
+ */
+export type AirworthinessLevel = "grounded" | "due" | "untracked" | "current";
+
+export type Airworthiness = {
+  level: AirworthinessLevel;
+  /** Title case, for chips and ribbons: "Grounded", "Due Soon". */
+  label: string;
+  /** Active inspections, worst first. */
+  scored: { i: Insp; idx: number; st: ReturnType<typeof ic> }[];
+  overdue: { i: Insp; idx: number; st: ReturnType<typeof ic> }[];
+  dueSoon: { i: Insp; idx: number; st: ReturnType<typeof ic> }[];
+  untracked: { i: Insp; idx: number; st: ReturnType<typeof ic> }[];
+  /** Inspections with a usable status — neither unrecorded nor unmeasurable. */
+  tracked: { i: Insp; idx: number; st: ReturnType<typeof ic> }[];
+  /** Open squawks. An open squawk grounds the aircraft, as it did in v1. */
+  grounding: Squawk[];
+};
+
+const LEVEL_LABEL: Record<AirworthinessLevel, string> = {
+  grounded: "Grounded",
+  due: "Due Soon",
+  untracked: "Not Tracked",
+  current: "Current",
+};
+
+export function airworthiness(a: V1Aircraft, maintHrs: number): Airworthiness {
+  const all = (a.inspections ?? []) as Insp[];
+  const scored = all
+    .map((i, idx) => ({ i, idx }))
+    .filter((x) => !x.i.inactive)
+    .map((x) => ({ ...x, st: ic(x.i, maintHrs) }))
+    .sort((x, y) => y.st.p - x.st.p);
+
+  const tracked = scored.filter((x) => x.st.s !== "none" && x.st.s !== "unknown");
+  const overdue = tracked.filter((x) => x.st.s === "overdue");
+  const dueSoon = tracked.filter((x) => x.st.s === "warn");
+  const untracked = scored.filter((x) => x.st.s === "none");
+  const grounding = ((a.squawks ?? []) as Squawk[]).filter((s) => s.status === "open");
+
+  const level: AirworthinessLevel =
+    grounding.length > 0 || overdue.length > 0
+      ? "grounded"
+      : dueSoon.length > 0
+        ? "due"
+        : tracked.length === 0
+          ? "untracked"
+          : "current";
+
+  return { level, label: LEVEL_LABEL[level], scored, overdue, dueSoon, untracked, tracked, grounding };
+}

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useFleetAirborne } from "@/lib/adsb";
-import { ic, meterValue, type AircraftRow, type Insp, type Meter, type Squawk, type V1Aircraft } from "@/lib/aircraft";
+import { airworthiness, meterValue, type AircraftRow, type Meter, type V1Aircraft } from "@/lib/aircraft";
 import { ManageAccess } from "@/components/aircraft/manage-access";
 import { AircraftSettings } from "@/components/aircraft/aircraft-settings";
 import { Confirm } from "@/components/ui/confirm";
@@ -135,28 +135,12 @@ export function HangarGrid({
 
   /**
    * Airworthiness at a glance, as a chip you can read across the hangar rather
-   * than v1's 8px dot.
-   *
-   * Two corrections to what the dot computed:
-   *
-   *  - a GROUNDING SQUAWK now counts. The dot scored inspections only, so an
-   *    aeroplane grounded by an open squawk showed green as long as its
-   *    paperwork was in date — the one state you most need to see.
-   *  - an aircraft with nothing recorded is no longer green. lib/aircraft.ts
-   *    already refuses to call an unrecorded inspection "ok" for the same
-   *    reason; the tile was still painting a brand-new airframe as airworthy.
+   * than v1's 8px dot. The judgement itself lives in lib/aircraft.ts, shared
+   * with the dashboard — this only picks the words and the class.
    */
   function tileStatus(t: Tile): { label: string; cls: string } {
-    const hrs = meterValue(t.meters, t.maint_basis);
-    const active = ((t.data?.inspections ?? []) as Insp[]).filter((i) => !i.inactive);
-    const scored = active.map((i) => ic(i, hrs).s);
-    const grounding = ((t.data?.squawks ?? []) as Squawk[]).some((q) => q.status === "open");
-
-    if (grounding || scored.includes("overdue")) return { label: "Grounded", cls: "grounded" };
-    if (scored.includes("warn")) return { label: "Due Soon", cls: "due" };
-    // Nothing has actually been signed off — say so instead of implying current.
-    if (!scored.includes("ok")) return { label: "Not Tracked", cls: "untracked" };
-    return { label: "Current", cls: "current" };
+    const a = airworthiness(t.data ?? {}, meterValue(t.meters, t.maint_basis));
+    return { label: a.label, cls: a.level };
   }
 
   async function remove(t: Tile) {
