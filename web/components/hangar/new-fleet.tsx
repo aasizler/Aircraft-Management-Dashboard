@@ -44,7 +44,7 @@ export function NewFleetButton({ orgId }: { orgId: string }) {
 
   return (
     <>
-      <button className="btn sm" onClick={() => setOpen(true)}>
+      <button className="btn" onClick={() => setOpen(true)}>
         + New Fleet
       </button>
 
