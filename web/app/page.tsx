@@ -38,7 +38,7 @@ export default async function Home() {
       // returned the share's role rather than a single global one.
       supabase
         .from("aircraft_access")
-        .select("id, aircraft_id, role, user_id, invited_email, granted_by_name, granted_by_email")
+        .select("id, aircraft_id, fleet_id, role, user_id, invited_email, granted_by_name, granted_by_email")
         .eq("accepted", true),
       // Fleets are sections in the hangar, so they're needed to render it —
       // not just to edit one.
@@ -48,6 +48,7 @@ export default async function Home() {
   type GrantRow = {
     id: string;
     aircraft_id: string;
+    fleet_id: string | null;
     role: CraftRole;
     user_id: string | null;
     invited_email: string | null;
@@ -67,6 +68,17 @@ export default async function Home() {
   );
   const grantFor = (id: string): GrantRow | undefined =>
     mine.find((g) => g.aircraft_id === id);
+
+  // Which fleets this viewer may pass on. Org staff administer every fleet in
+  // their own hangar; anyone else may share only a fleet they hold a `manager`
+  // grant on. This mirrors can_share_fleet() in the database exactly — the UI
+  // must not offer an action RLS is going to refuse.
+  const isStaff = membership?.role === "admin" || membership?.role === "manager";
+  const shareableFleetIds = isStaff
+    ? ((fleets ?? []) as { id: string }[]).map((f) => f.id)
+    : mine
+        .filter((g) => g.fleet_id && g.role === "manager")
+        .map((g) => g.fleet_id as string);
 
   const metersFor = (id: string): Meter[] =>
     ((meters ?? []) as (Meter & { aircraft_id: string })[])
@@ -145,9 +157,8 @@ export default async function Home() {
           <HangarGrid
             aircraft={tiles}
             fleets={(fleets ?? []) as Fleet[]}
-            canManageFleets={
-              membership?.role === "admin" || membership?.role === "manager"
-            }
+            canManageFleets={isStaff}
+            shareableFleetIds={shareableFleetIds}
           />
         ) : (
           <div className="how-box">

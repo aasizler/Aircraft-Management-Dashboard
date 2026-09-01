@@ -10,9 +10,12 @@ import type { CraftRole } from "@/lib/types";
 type Grant = { id: string; invited_email: string | null; user_id: string | null; role: CraftRole; accepted: boolean; user_name: string | null };
 type Assign = { id: string; invited_email: string | null; ends_at: string; starts_at: string };
 
+// Ordered most-privileged first, so the per-grant dropdown reads as a ladder.
+// Manager outranks Owner here by design: the management company administers the
+// roster, the owner sees the money and the records.
 const ROLE_LABEL: Record<CraftRole, string> = {
-  owner: "Owner",
   manager: "Manager",
+  owner: "Owner",
   pilot: "Pilot",
 };
 
@@ -346,9 +349,9 @@ export function ManageAccess({
             <div className="form-row">
               <label>Role</label>
               <select value={role} onChange={(e) => setRole(e.target.value as CraftRole)}>
-                <option value="owner">Owner — sees their aircraft, logs flights, no financials edit</option>
-                <option value="manager">Manager — full management</option>
-                <option value="pilot">Pilot — airworthiness + logs flights, no money</option>
+                <option value="manager">Manager — full control, including access and deletion</option>
+                <option value="owner">Owner — records and financials; can&rsquo;t manage access or delete</option>
+                <option value="pilot">Pilot — flying, squawks and inspections; no financials</option>
               </select>
             </div>
           ) : (

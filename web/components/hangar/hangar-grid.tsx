@@ -46,11 +46,19 @@ export function HangarGrid({
   aircraft,
   fleets = [],
   canManageFleets,
+  shareableFleetIds = [],
 }: {
   aircraft: Tile[];
   fleets?: Fleet[];
   /** Org staff; fleets write is is_org_staff(). */
   canManageFleets?: boolean;
+  /**
+   * Fleets this viewer may pass on. Org staff get all of them; a grantee gets
+   * only the ones they hold a `manager` grant on. Sharing and administering are
+   * separate rights: being handed a fleet lets you pass it on, not rename or
+   * destroy somebody else's.
+   */
+  shareableFleetIds?: string[];
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -327,7 +335,7 @@ export function HangarGrid({
             {/* Same ⋮ the tiles use. Three chips beside the name read as a
                 toolbar and competed with the heading; a fleet's actions are
                 the same kind of thing as an aircraft's, so they look it. */}
-            {section.fleet && canManageFleets && (
+            {section.fleet && (canManageFleets || shareableFleetIds.includes(section.fleet.id)) && (
               <span
                 className={`section-menu-wrap${
                   fleetMenu === section.fleet.id ? " open" : ""
@@ -347,12 +355,16 @@ export function HangarGrid({
 
                 {fleetMenu === section.fleet.id && (
                   <div className="tile-dot-menu open section-dot-menu">
-                    <button
-                      className="row-dot-item"
-                      onClick={() => { setFleetMenu(null); setShareFleet(section.fleet!); }}
-                    >
-                      Share Fleet
-                    </button>
+                    {shareableFleetIds.includes(section.fleet.id) && (
+                      <button
+                        className="row-dot-item"
+                        onClick={() => { setFleetMenu(null); setShareFleet(section.fleet!); }}
+                      >
+                        Share Fleet
+                      </button>
+                    )}
+                    {canManageFleets && (
+                    <>
                     <button
                       className="row-dot-item"
                       onClick={() => {
@@ -369,6 +381,8 @@ export function HangarGrid({
                     >
                       Delete Fleet
                     </button>
+                    </>
+                    )}
                   </div>
                 )}
               </span>
