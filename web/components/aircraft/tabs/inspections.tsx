@@ -46,6 +46,7 @@ export function InspectionsTab({
   const [showInactive, setShowInactive] = useState(false);
   const [confirmClear, setConfirmClear] = useState<number | null>(null);
   const [confirmComply, setConfirmComply] = useState<number | null>(null);
+  const [confirmDeactivate, setConfirmDeactivate] = useState<number | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
 
   // Deep-link from the dashboard alert feed / next-due card (v1's preInsp).
@@ -208,7 +209,7 @@ export function InspectionsTab({
     const menu = [
       ...(unpop ? [] : [{ label: "Edit entry", onClick: () => openEdit(idx) }]),
       ...(unpop ? [] : [{ label: "Clear entry", onClick: () => setConfirmClear(idx), danger: true }]),
-      { label: "Deactivate", onClick: () => toggleActive(idx), danger: true },
+      { label: "Deactivate", onClick: () => setConfirmDeactivate(idx), danger: true },
       ...(i.core ? [] : [{ label: "Delete row", onClick: () => setConfirmDelete(idx), danger: true }]),
     ];
 
@@ -389,6 +390,23 @@ export function InspectionsTab({
             </button>
           </div>
         </Modal>
+      )}
+
+      {confirmDeactivate != null && (
+        <Confirm
+          title="Deactivate inspection"
+          message={
+            <>
+              Stop tracking <b>{all[confirmDeactivate]?.name}</b>? It moves to the
+              Inactive list and no longer counts towards this aircraft&rsquo;s
+              status. Nothing recorded is deleted, and you can reactivate it at
+              any time.
+            </>
+          }
+          confirmLabel="Deactivate"
+          onConfirm={() => { const i = confirmDeactivate; setConfirmDeactivate(null); toggleActive(i); }}
+          onCancel={() => setConfirmDeactivate(null)}
+        />
       )}
 
       {confirmComply != null && (
