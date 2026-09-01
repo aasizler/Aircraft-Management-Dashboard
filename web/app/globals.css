@@ -99,7 +99,7 @@ html, body { height: 100%; }
    one, so the column stays straight without giving them an action they should
    not have. */
 .action-cell{display:flex;gap:6px;align-items:center;justify-content:flex-end}
-.action-cell > .action-btn{min-width:80px}
+.action-cell.even > .action-btn{min-width:86px}
 .action-cell > .menu-slot{width:var(--ctl-h-sm);flex-shrink:0}
 .action-btn{display:inline-flex;align-items:center;justify-content:center;height:var(--ctl-h-sm);padding:0 11px;white-space:nowrap;line-height:1;border-radius:var(--ctl-r);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--body);transition:all .15s;border:1px solid var(--border2);background:var(--bg4);color:var(--muted2)}
 .action-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}

@@ -198,7 +198,7 @@ export function InspectionsTab({
           <td style={{ fontSize: 12, color: "var(--muted)" }}>{i.by || "—"}</td>
           <td className="mono" style={{ color: "var(--muted)" }}>{i.updatedOn || "—"}</td>
           <td>
-            <div className="action-cell">
+            <div className="action-cell even">
               <button className="action-btn" onClick={() => toggleActive(idx)}>Reactivate</button>
               {/* No menu on an inactive row — reactivating is the only thing to
                   do with it. The slot is held so the ⋮ column stays straight. */}
@@ -240,7 +240,7 @@ export function InspectionsTab({
           {unpop ? "—" : i.updatedOn || "—"}
         </td>
         <td>
-          <div className="action-cell">
+          <div className="action-cell even">
             <button className="action-btn" onClick={() => (unpop ? openEdit(idx) : setConfirmComply(idx))}>
               {unpop ? "Log First" : "Update"}
             </button>
