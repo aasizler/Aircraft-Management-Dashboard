@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { Icon } from "@/components/ui/icon";
 import { createClient } from "@/lib/supabase/client";
 import {
   newId, SQ_BADGE, SQ_COLORS, SQ_LABELS, today,
@@ -222,7 +223,7 @@ export function SquawksTab({ aircraft, data, save, consumeAction, allow }: TabPr
                         {sq.attachment?.name && (
                           <>
                             <span style={{ color: "var(--accent)", fontFamily: "var(--mono)", fontSize: 10 }}>
-                              📎 {sq.attachment.name}
+                              <Icon name="paperclip" size={13} /> {sq.attachment.name}
                             </span>{" "}
                             <button
                               className="action-btn"

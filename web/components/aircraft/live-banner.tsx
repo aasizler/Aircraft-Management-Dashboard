@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { Icon } from "@/components/ui/icon";
 import { useLivePosition, nearestAirport, type Landing } from "@/lib/adsb";
 import { pushLiveFlight } from "@/lib/flight-history";
 import { loadAirportDb } from "@/lib/airports";
@@ -94,7 +95,7 @@ export function LiveBanner({
     if (status === "searching") {
       return (
         <div className="adsb-banner searching">
-          <span className="adsb-banner-icon">📡</span>
+          <span className="adsb-banner-icon"><Icon name="signal" size={17} /></span>
           <div className="adsb-banner-main">
             <div className="adsb-banner-title">Searching for {reg}…</div>
             <div className="adsb-banner-detail">Checking live ADS-B feed</div>
@@ -106,7 +107,7 @@ export function LiveBanner({
     if (status === "error") {
       return (
         <div className="adsb-banner ground">
-          <span className="adsb-banner-icon">📡</span>
+          <span className="adsb-banner-icon"><Icon name="signal" size={17} /></span>
           <div className="adsb-banner-main">
             <div className="adsb-banner-title">Live tracking unavailable</div>
             <div className="adsb-banner-detail">
@@ -121,7 +122,7 @@ export function LiveBanner({
     if (status === "none") {
       return (
         <div className="adsb-banner ground">
-          <span className="adsb-banner-icon">🛬</span>
+          <span className="adsb-banner-icon"><Icon name="landing" size={17} /></span>
           <div className="adsb-banner-main">
             <div className="adsb-banner-title">{reg} — no live signal</div>
             <div className="adsb-banner-detail">Not currently broadcasting ADS-B</div>

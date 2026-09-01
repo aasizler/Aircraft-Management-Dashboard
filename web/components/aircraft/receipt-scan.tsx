@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { Icon } from "@/components/ui/icon";
 import { Modal } from "@/components/ui/modal";
 import { PhotoView } from "@/components/ui/photo-view";
 import { useToast } from "@/components/ui/toast";
@@ -186,7 +187,7 @@ export function ReceiptScan({
   return (
     <>
       <button className="btn sm" onClick={() => { reset(); setOpen(true); }}>
-        📷 Scan Receipt
+        <Icon name="camera" />Scan Receipt
       </button>
 
       {open && (
@@ -200,7 +201,7 @@ export function ReceiptScan({
               if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
             }}
           >
-            <div className="pdf-drop-icon">📷</div>
+            <div className="pdf-drop-icon"><Icon name="camera" size={26} /></div>
             <div className="pdf-drop-title">
               {preview ? "Drop another receipt or click to browse" : "Drop a receipt or click to browse"}
             </div>

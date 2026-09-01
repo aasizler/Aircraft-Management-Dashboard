@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Icon } from "@/components/ui/icon";
 import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { AP_FULL } from "@/lib/reference-data";
@@ -700,7 +701,7 @@ export function FlightMap({
             onClick={toggleReplay}
             disabled={replayBusy}
           >
-            <span style={{ fontSize: 12 }}>✈️</span>
+            <Icon name="plane" size={13} />
             {replayBusy ? "Loading…" : replay ? "Hide Last Flight" : "Last Flight"}
           </button>
         )}

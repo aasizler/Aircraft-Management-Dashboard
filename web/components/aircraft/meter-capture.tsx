@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { Icon } from "@/components/ui/icon";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Modal } from "@/components/ui/modal";
@@ -290,7 +291,7 @@ export function MeterCapture({ aircraft }: { aircraft: AircraftRow }) {
   return (
     <>
       <button className="btn sm" onClick={() => setOpen(true)}>
-        📷 Meter Photo
+        <Icon name="camera" />Meter Photo
       </button>
 
       {open && (
@@ -307,7 +308,7 @@ export function MeterCapture({ aircraft }: { aircraft: AircraftRow }) {
                 className="pdf-drop"
                 onClick={() => inputRef.current?.click()}
               >
-                <div className="pdf-drop-icon">📷</div>
+                <div className="pdf-drop-icon"><Icon name="camera" size={26} /></div>
                 <div className="pdf-drop-title">Photograph the meter</div>
                 <div className="pdf-drop-sub">
                   Hobbs, tach, or flight timer — click to choose a photo

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Icon } from "@/components/ui/icon";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Modal } from "@/components/ui/modal";
@@ -296,7 +297,7 @@ export function PendingInvites({ email }: { email: string }) {
 
       {!dismissed && (
       <div className="pending-banner">
-        <span className="pending-icon">✉️</span>
+        <span className="pending-icon"><Icon name="inbox" size={16} /></span>
         <div className="pending-main">
           <div className="pending-title">
             {invites.length === 1

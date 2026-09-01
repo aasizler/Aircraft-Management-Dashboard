@@ -4,6 +4,7 @@ import {
   ic, oilLife, readMonthly, SQ_LABELS,
   type DocEntry, type Insp, type MaintCost, type OilEntry, type Squawk,
 } from "@/lib/aircraft";
+import { Icon, type IconName } from "@/components/ui/icon";
 import type { TabProps } from "../detail-client";
 import { Sparkline } from "@/components/ui/charts";
 import { useLivePosition } from "@/lib/adsb";
@@ -45,30 +46,30 @@ export function DashboardTab({
   // Status ribbon — a grounding squawk outranks everything, as in v1.
   const ribbon =
     grounding.length > 0
-      ? { icon: "⛔", title: "Grounding Squawk Open", glow: "rgba(240,75,75,.18)",
+      ? { icon: "grounded" as const, title: "Grounding Squawk Open", glow: "rgba(240,75,75,.18)",
           sub: `${grounding.length} grounding item — ${grounding[0].desc.slice(0, 70)}` }
       : overdue.length > 0
-        ? { icon: "⚠", title: "Attention Required", glow: "rgba(240,75,75,.18)",
+        ? { icon: "alert" as const, title: "Attention Required", glow: "rgba(240,75,75,.18)",
             sub: `${overdue.length} inspection${overdue.length > 1 ? "s" : ""} overdue` }
         : dueSoon.length > 0 || (life.tracked && life.pct < 15)
-          ? { icon: "◷", title: "Coming Due", glow: "rgba(245,158,11,.18)",
+          ? { icon: "alert" as const, title: "Coming Due", glow: "rgba(245,158,11,.18)",
               sub: `${dueSoon.length} inspection${dueSoon.length !== 1 ? "s" : ""} due soon${life.tracked && life.pct < 15 ? " · oil life low" : ""}` }
           : tracked.length === 0
-            ? { icon: "◌", title: "Not Yet Tracked", glow: "rgba(59,158,255,.16)",
+            ? { icon: "eye" as const, title: "Not Yet Tracked", glow: "rgba(59,158,255,.16)",
                 sub: "No inspection has been recorded — nothing to report on yet" }
-            : { icon: "✓", title: "All Clear", glow: "rgba(45,212,160,.18)",
+            : { icon: "check" as const, title: "All Clear", glow: "rgba(45,212,160,.18)",
                 sub: "No overdue items — aircraft is current" };
 
   const pctColor = (p: number) =>
     p >= 100 ? "var(--danger)" : p >= 80 ? "var(--warn)" : "var(--accent)";
 
   // Recent activity, merged across the logs (v1 renderActivity).
-  type Act = { when: string; icon: string; title: string; detail: string };
+  type Act = { when: string; icon: IconName; title: string; detail: string };
   const acts: Act[] = [];
   ((data.oil ?? []) as OilEntry[]).forEach((o) =>
     acts.push({
       when: o.date,
-      icon: o.kind === "change" ? "🔧" : "🛢",
+      icon: o.kind === "change" ? "wrench" : "droplet",
       title: o.kind === "change" ? "Oil change" : "Oil added",
       detail: [o.qty ? `${o.qty} qt` : "", o.type ?? "", o.notes ?? ""].filter(Boolean).join(" · "),
     }),
@@ -76,18 +77,18 @@ export function DashboardTab({
   ((data.maintCosts ?? []) as MaintCost[]).forEach((m) =>
     acts.push({
       when: m.date,
-      icon: "💵",
+      icon: "cash" as const,
       title: m.desc || "Maintenance cost",
       detail: [m.shop ?? "", `$${Number(m.cost).toFixed(2)}`].filter(Boolean).join(" · "),
     }),
   );
   squawks.forEach((s) =>
-    acts.push({ when: s.date, icon: "⚠️", title: SQ_LABELS[s.status], detail: s.desc }),
+    acts.push({ when: s.date, icon: "alert" as const, title: SQ_LABELS[s.status], detail: s.desc }),
   );
   all.filter((i) => i.lastDate).forEach((i) =>
     acts.push({
       when: i.lastDate!,
-      icon: "🧰",
+      icon: "wrench" as const,
       title: `${i.name} complied`,
       detail: i.by ? `by ${i.by}` : "",
     }),
@@ -104,7 +105,7 @@ export function DashboardTab({
     <div style={{ paddingTop: 16 }}>
       {/* Status ribbon */}
       <div className="status-card" style={{ "--sc-glow": ribbon.glow } as React.CSSProperties}>
-        <span className="sc-icon">{ribbon.icon}</span>
+        <span className="sc-icon"><Icon name={ribbon.icon} size={20} /></span>
         <div>
           <div className="sc-title">{ribbon.title}</div>
           <div className="sc-sub">{ribbon.sub}</div>
@@ -156,16 +157,16 @@ export function DashboardTab({
       {/* Quick actions */}
       <div className="dash-quick">
         <button className="dash-qbtn" onClick={() => go("Utilization", "log-flight")}>
-          <span className="qi">✈️</span>Log Flight
+          <span className="qi"><Icon name="plane" size={16} /></span>Log Flight
         </button>
         <button className="dash-qbtn" onClick={() => go("Squawks", "add-squawk")}>
-          <span className="qi">⚠️</span>Add Squawk
+          <span className="qi"><Icon name="alert" size={16} /></span>Add Squawk
         </button>
         <button className="dash-qbtn" onClick={() => go("Oil and Fluids", "log-oil")}>
-          <span className="qi">🛢</span>Log Oil
+          <span className="qi"><Icon name="droplet" size={16} /></span>Log Oil
         </button>
         <button className="dash-qbtn" onClick={() => go("Oil and Fluids", "oil-change")}>
-          <span className="qi">🔧</span>Oil Change
+          <span className="qi"><Icon name="wrench" size={16} /></span>Oil Change
         </button>
       </div>
 
@@ -185,7 +186,7 @@ export function DashboardTab({
       <div className="alert-feed">
         {grounding.map((s) => (
           <div className="alert-item adanger" key={s.id} onClick={() => go("Squawks")}>
-            <div className="al-icon">⛔</div>
+            <div className="al-icon"><Icon name="grounded" size={17} /></div>
             <div className="al-text">
               <div className="al-name">{s.desc}</div>
               <div className="al-detail">Grounding squawk · noted {s.date}</div>
@@ -200,7 +201,7 @@ export function DashboardTab({
             key={al.name + al.idx}
             onClick={() => focusInspection(al.idx)}
           >
-            <div className="al-icon">{al.type === "danger" ? "⚠️" : "⏱"}</div>
+            <div className="al-icon"><Icon name="alert" size={17} /></div>
             <div className="al-text">
               <div className="al-name">{al.name}</div>
               <div className="al-detail">{al.detail}</div>
@@ -313,7 +314,7 @@ export function DashboardTab({
         ) : (
           recent.map((a, i) => (
             <div className="act-item" key={i}>
-              <div className="act-ic">{a.icon}</div>
+              <div className="act-ic"><Icon name={a.icon} size={14} /></div>
               <div className="act-main">
                 <div className="act-t">{a.title}</div>
                 <div className="act-d">{a.detail}</div>

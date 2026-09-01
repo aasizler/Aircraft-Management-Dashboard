@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { Icon } from "@/components/ui/icon";
 import {
   Menu, MenuTrigger, MenuContent, MenuItem, MenuSeparator, MenuIdentity,
 } from "@/components/ui/menu";
@@ -50,6 +51,7 @@ export function NavMenu({ email, name }: { email?: string | null; name?: string 
     <div className="nav-right">
       {onDetail && (
         <button className="btn primary sm" onClick={() => router.push("/")}>
+          <Icon name="hangar" size={14} />
           Hangar
         </button>
       )}
