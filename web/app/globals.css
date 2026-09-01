@@ -191,9 +191,6 @@ canvas.chart{display:block;width:100%;height:150px}
 /* No z-index while closed — a stacking context on every heading meant equal
    values resolved by DOM order, so a later fleet's button painted over an
    earlier fleet's open dropdown. Only the open one is lifted. */
-.section-menu-wrap{position:relative;display:inline-flex;margin-left:10px}
-.section-menu-wrap.open{z-index:150}
-.section-dot-menu{position:absolute;left:0;top:28px}
 .section-sub{font-size:12px;color:var(--muted);margin-bottom:16px}
 .ac-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;position:relative;z-index:60}
 .ac-tile{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;cursor:pointer;transition:all .2s;display:flex;flex-direction:column;position:relative;text-decoration:none;color:var(--text)}
@@ -308,7 +305,6 @@ canvas.chart{display:block;width:100%;height:150px}
 .tile-dot-btn:hover{border-color:var(--accent);background:var(--accent-dim)}
 .tile-dot-btn span{width:3px;height:3px;border-radius:50%;background:var(--muted2);display:block}
 .tile-dot-btn:hover span{background:var(--accent)}
-.tile-dot-menu{background:var(--bg2);border:1px solid var(--border2);border-radius:8px;min-width:160px;z-index:200;overflow:hidden;box-shadow:0 6px 24px rgba(0,0,0,.6)}
 .portal-item{width:100%;text-align:left;background:none;border:none;color:var(--muted3);font-size:12px;font-weight:500;padding:9px 12px;cursor:pointer;font-family:var(--body);transition:all .12s}
 .portal-item:hover{background:var(--bg4);color:var(--text)}
 /* ADS-B LIVE */
@@ -393,9 +389,6 @@ canvas.chart{display:block;width:100%;height:150px}
 .dot-menu-btn:hover{border-color:var(--accent)}
 .dot-menu-btn span{width:3px;height:3px;border-radius:50%;background:var(--muted2);display:block}
 .dot-menu-btn:hover span{background:var(--accent)}
-.dot-menu{position:absolute;right:0;top:34px;background:var(--bg2);border:1px solid var(--border3);border-radius:8px;min-width:180px;z-index:900;overflow:hidden;box-shadow:0 8px 26px rgba(0,0,0,.6)}
-.dot-menu-item{width:100%;text-align:left;background:none;border:none;color:var(--muted3);font-size:12.5px;font-weight:500;padding:10px 14px;cursor:pointer;font-family:var(--body);transition:all .12s}
-.dot-menu-item:hover{background:var(--bg4);color:var(--text)}
 /* TOASTS — v1 showToast() */
 .toast-wrap{position:fixed;right:20px;bottom:20px;display:flex;flex-direction:column;gap:8px;z-index:4000;pointer-events:none}
 .toast{pointer-events:all;display:flex;align-items:center;gap:9px;background:var(--bg3);border:1px solid var(--border3);border-radius:9px;padding:11px 16px;font-size:13px;color:var(--text);box-shadow:0 10px 32px rgba(0,0,0,.55);cursor:pointer;max-width:380px;animation:toast-in .18s ease-out}
@@ -582,3 +575,33 @@ canvas.chart{display:block;width:100%;height:150px}
 /* A grounded aeroplane should catch the eye from the whole hangar, not just its
    own tile. */
 .ac-tile:has(.tile-status.grounded){border-color:rgba(240,75,75,.34)}
+
+/* ── ⋮ menus (Radix dropdown-menu) ──────────────────────────────────────────
+   Replaces three hand-rolled variants that differed in padding, casing and
+   which item carried the divider. One shape now: context header, grouped
+   items with icons, destructive separated below a rule. */
+.menu{min-width:208px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:5px;box-shadow:0 10px 30px rgba(0,0,0,.5),0 2px 6px rgba(0,0,0,.35);z-index:200;animation:menu-in .12s ease-out}
+@keyframes menu-in{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
+
+.menu-item{display:flex;align-items:center;gap:9px;width:100%;padding:7px 9px;border:0;background:none;border-radius:6px;font-size:13px;font-family:var(--body);color:var(--text);text-align:left;cursor:pointer;outline:none;user-select:none}
+.menu-item[data-highlighted]{background:var(--bg4)}
+.menu-item.danger{color:var(--danger)}
+.menu-item.danger[data-highlighted]{background:rgba(240,75,75,.12)}
+.menu-icon{color:var(--muted2);flex-shrink:0}
+.menu-item.danger .menu-icon{color:currentColor}
+.menu-item[data-highlighted] .menu-icon{color:var(--text)}
+.menu-item.danger[data-highlighted] .menu-icon{color:currentColor}
+
+.menu-sep{height:1px;background:var(--border2);margin:5px -5px}
+
+/* Names the subject — "N137BF", "Main fleet" — so an action is never
+   ambiguous about what it acts on. */
+.menu-label{padding:6px 9px 4px;font-family:var(--mono);font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted2)}
+
+/* Identity block. Deliberately not an item: no hover, no pointer, sized and
+   spaced unlike the actions beneath it. */
+.menu-identity{display:flex;align-items:center;gap:9px;padding:8px 9px 9px;cursor:default}
+.menu-avatar{width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--accent-dim,rgba(59,158,255,.16));color:var(--accent);font-size:11px;font-weight:700;font-family:var(--body);letter-spacing:.02em}
+.menu-identity-text{display:flex;flex-direction:column;min-width:0}
+.menu-identity-name{font-size:13px;font-weight:600;color:var(--text);line-height:1.3}
+.menu-identity-sub{font-size:11px;color:var(--muted2);line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

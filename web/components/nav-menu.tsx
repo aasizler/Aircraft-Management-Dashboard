@@ -1,8 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useSyncExternalStore } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import {
+  Menu, MenuTrigger, MenuContent, MenuItem, MenuSeparator, MenuIdentity,
+} from "@/components/ui/menu";
 import {
   getAircraftPerms,
   getPendingInvites,
@@ -18,9 +21,7 @@ import {
  * "Rearrange Hangar / Settings / Sign Out" on the hangar; the first port had no
  * nav menu at all, exposing Sign Out as a bare button instead.
  */
-export function NavMenu({ email }: { email?: string | null }) {
-  const [open, setOpen] = useState(false);
-  const wrap = useRef<HTMLDivElement>(null);
+export function NavMenu({ email, name }: { email?: string | null; name?: string | null }) {
   const router = useRouter();
   const pathname = usePathname();
   const onDetail = pathname?.startsWith("/aircraft/");
@@ -39,20 +40,6 @@ export function NavMenu({ email }: { email?: string | null }) {
     getServerPendingInvites,
   );
 
-  useEffect(() => {
-    if (!open) return;
-    const onDoc = (e: MouseEvent) => {
-      if (!wrap.current?.contains(e.target as Node)) setOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
-    document.addEventListener("mousedown", onDoc);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDoc);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
-
   async function signOut() {
     await createClient().auth.signOut();
     router.push("/login");
@@ -60,92 +47,69 @@ export function NavMenu({ email }: { email?: string | null }) {
   }
 
   return (
-    <div className="nav-right" ref={wrap} style={{ position: "relative" }}>
+    <div className="nav-right">
       {onDetail && (
         <button className="btn primary sm" onClick={() => router.push("/")}>
           Hangar
         </button>
       )}
-      <button
-        className="dot-menu-btn"
-        aria-label="Menu"
-        onClick={() => setOpen((o) => !o)}
-      >
-        <span /><span /><span />
-      </button>
 
-      {open && (
-        <div className="dot-menu">
+      <Menu>
+        <MenuTrigger asChild>
+          <button className="dot-menu-btn" aria-label="Menu">
+            <span /><span /><span />
+          </button>
+        </MenuTrigger>
+
+        <MenuContent ariaLabel="Account and page actions">
+          {/* Who you are, as a header. This was previously a row styled like
+              Sign out but not clickable. */}
+          <MenuIdentity name={name?.trim() || email || "Signed in"} sub={name?.trim() ? email : null} />
+          <MenuSeparator />
+
           {/* Only when something is waiting. The ribbon can be dismissed and
               the toast expires, so without this an invitation could not be
               reached again until a reload. */}
           {pending > 0 && (
-            <button
-              className="dot-menu-item"
-              onClick={() => {
-                setOpen(false);
-                window.dispatchEvent(new Event("aerotrack:pending-invites"));
-              }}
+            <MenuItem
+              icon="inbox"
+              onSelect={() => window.dispatchEvent(new Event("aerotrack:pending-invites"))}
             >
               Pending invitations ({pending})
-            </button>
+            </MenuItem>
           )}
+
           {onDetail && perms?.editSettings && (
-            <button
-              className="dot-menu-item"
-              onClick={() => {
-                setOpen(false);
-                // The settings modal lives inside AircraftDetailClient; v1 called
-                // openSettingsModal() directly, so bridge with an event. The
-                // modal only mounts for roles with edit_settings, hence the
-                // perms check — otherwise this fired at nothing.
-                window.dispatchEvent(new Event("aerotrack:aircraft-settings"));
-              }}
+            <MenuItem
+              icon="settings"
+              onSelect={() => window.dispatchEvent(new Event("aerotrack:aircraft-settings"))}
             >
-              Aircraft Settings
-            </button>
+              Aircraft settings
+            </MenuItem>
           )}
-          {/* No Manage Access here. v1's detail menu was Aircraft Settings /
+
+          {/* No Manage access here. v1's detail menu was Aircraft Settings /
               App Settings / Sign Out; this item was added in the port, and the
               nav has no idea what role the viewer holds — so for anyone who
               can't manage access it dispatched an event that nothing was
-              listening for and the menu just closed. The detail page renders
-              its own Manage Access button behind can(role,'manage_access'),
-              and the hangar tile menu gates the same way. */}
+              listening for and the menu just closed. */}
           {!onDetail && (
-            <button
-              className="dot-menu-item"
-              onClick={() => {
-                setOpen(false);
-                window.dispatchEvent(new Event("aerotrack:rearrange"));
-              }}
+            <MenuItem
+              icon="sort"
+              onSelect={() => window.dispatchEvent(new Event("aerotrack:rearrange"))}
             >
-              Rearrange Hangar
-            </button>
+              Rearrange hangar
+            </MenuItem>
           )}
-          <button
-            className="dot-menu-item"
-            onClick={() => { setOpen(false); router.push("/settings"); }}
-          >
-            {onDetail ? "App Settings" : "Settings"}
-          </button>
-          {email && (
-            <div
-              className="dot-menu-item"
-              style={{ color: "var(--muted)", fontSize: 11, cursor: "default", borderTop: "1px solid var(--border2)" }}
-            >
-              {email}
-            </div>
-          )}
-          <button
-            className="dot-menu-item"
-            style={{ color: "var(--danger)" }}
-            onClick={() => { setOpen(false); signOut(); }}
-          >
-            Sign Out
-          </button>
-        </div>
-      )}
+
+          <MenuItem icon="settings" onSelect={() => router.push("/settings")}>
+            {onDetail ? "App settings" : "Settings"}
+          </MenuItem>
+
+          <MenuSeparator />
+          <MenuItem icon="logout" onSelect={signOut}>Sign out</MenuItem>
+        </MenuContent>
+      </Menu>
     </div>
   );
 }

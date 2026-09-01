@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -10,6 +10,9 @@ import { ManageAccess } from "@/components/aircraft/manage-access";
 import { AircraftSettings } from "@/components/aircraft/aircraft-settings";
 import { Confirm } from "@/components/ui/confirm";
 import { Modal } from "@/components/ui/modal";
+import {
+  Menu, MenuTrigger, MenuContent, MenuItem, MenuSeparator, MenuLabel,
+} from "@/components/ui/menu";
 import { useToast } from "@/components/ui/toast";
 import { markSelfInitiated } from "@/lib/access-events";
 import { CRAFT_ROLE_LABELS, ROLE_LABELS, can, type AppRole } from "@/lib/permissions";
@@ -62,7 +65,6 @@ export function HangarGrid({
 }) {
   const router = useRouter();
   const toast = useToast();
-  const [menu, setMenu] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [order, setOrder] = useState<Tile[]>(aircraft);
 
@@ -92,7 +94,6 @@ export function HangarGrid({
   const [renameTo, setRenameTo] = useState("");
   const [deleteFleet, setDeleteFleet] = useState<Fleet | null>(null);
   const [deleteImpact, setDeleteImpact] = useState<{ craft: number; people: number } | null>(null);
-  const [fleetMenu, setFleetMenu] = useState<string | null>(null);
   // v1 gated reordering behind an explicit mode; tiles only drag once it's on,
   // and a plain click opens the aircraft rather than starting a drag.
   const [rearrange, setRearrange] = useState(false);
@@ -102,24 +103,10 @@ export function HangarGrid({
 
   // Entered from the nav ⋮ "Rearrange Hangar" item.
   useEffect(() => {
-    const on = () => { setMenu(null); setRearrange(true); };
+    const on = () => setRearrange(true);
     window.addEventListener("aerotrack:rearrange", on);
     return () => window.removeEventListener("aerotrack:rearrange", on);
   }, []);
-
-  // Close only when the mousedown lands OUTSIDE the menu, the way the nav ⋮
-  // does it. Closing on any mousedown tore the menu down before the click
-  // completed, so the item under the cursor never received it — the buttons
-  // looked inert because they were being unmounted mid-press.
-  const fleetMenuRef = useRef<HTMLSpanElement | null>(null);
-  useEffect(() => {
-    if (!fleetMenu) return;
-    const onDoc = (e: MouseEvent) => {
-      if (!fleetMenuRef.current?.contains(e.target as Node)) setFleetMenu(null);
-    };
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, [fleetMenu]);
 
   useEffect(() => {
     if (!rearrange) return;
@@ -182,7 +169,6 @@ export function HangarGrid({
       .from("aircraft").delete().eq("id", t.id).select("id");
     setBusy(false);
     setConfirmTile(null);
-    setMenu(null);
     if (error) { toast(`Delete failed: ${error.message}`, "danger"); return; }
     if (!data?.length) {
       toast("You don't have permission to delete this aircraft.", "danger");
@@ -208,7 +194,6 @@ export function HangarGrid({
       .rpc("decline_aircraft_access", { p_access: t.grantId });
     setBusy(false);
     setLeaveTile(null);
-    setMenu(null);
     if (error) { toast(`Could not leave: ${error.message}`, "danger"); return; }
     if (!data) { toast("You no longer have a grant on this aircraft.", "danger"); router.refresh(); return; }
     setOrder((o) => o.filter((x) => x.id !== t.id));
@@ -352,56 +337,50 @@ export function HangarGrid({
                 toolbar and competed with the heading; a fleet's actions are
                 the same kind of thing as an aircraft's, so they look it. */}
             {section.fleet && (canManageFleets || shareableFleetIds.includes(section.fleet.id)) && (
-              <span
-                className={`section-menu-wrap${
-                  fleetMenu === section.fleet.id ? " open" : ""
-                }`}
-                ref={fleetMenu === section.fleet.id ? fleetMenuRef : undefined}
-              >
-                <button
-                  className="tile-dot-btn"
-                  title="Fleet options"
-                  aria-label={`Options for ${section.label}`}
-                  onClick={() =>
-                    setFleetMenu(fleetMenu === section.fleet!.id ? null : section.fleet!.id)
-                  }
-                >
-                  <span /><span /><span />
-                </button>
+              <Menu>
+                <MenuTrigger asChild>
+                  <button
+                    className="tile-dot-btn"
+                    title="Fleet options"
+                    aria-label={`Options for ${section.label}`}
+                  >
+                    <span /><span /><span />
+                  </button>
+                </MenuTrigger>
+                <MenuContent align="start" ariaLabel={`Actions for ${section.label} fleet`}>
+                  <MenuLabel>{section.label} fleet</MenuLabel>
 
-                {fleetMenu === section.fleet.id && (
-                  <div className="tile-dot-menu open section-dot-menu">
-                    {shareableFleetIds.includes(section.fleet.id) && (
-                      <button
-                        className="row-dot-item"
-                        onClick={() => { setFleetMenu(null); setShareFleet(section.fleet!); }}
-                      >
-                        Share Fleet
-                      </button>
-                    )}
-                    {canManageFleets && (
+                  {/* Sharing a fleet lives on the fleet, not on any one
+                      aircraft in it — a grant here covers every aircraft in the
+                      section, and anything filed into it later. */}
+                  {shareableFleetIds.includes(section.fleet.id) && (
+                    <MenuItem icon="share" onSelect={() => setShareFleet(section.fleet!)}>
+                      Share fleet
+                    </MenuItem>
+                  )}
+                  {canManageFleets && (
                     <>
-                    <button
-                      className="row-dot-item"
-                      onClick={() => {
-                        setFleetMenu(null);
-                        setRenameFleet(section.fleet!);
-                        setRenameTo(section.fleet!.name);
-                      }}
-                    >
-                      Rename Fleet
-                    </button>
-                    <button
-                      className="row-dot-item danger-item"
-                      onClick={() => { setFleetMenu(null); loadDeleteImpact(section.fleet!); }}
-                    >
-                      Delete Fleet
-                    </button>
+                      <MenuItem
+                        icon="pencil"
+                        onSelect={() => {
+                          setRenameFleet(section.fleet!);
+                          setRenameTo(section.fleet!.name);
+                        }}
+                      >
+                        Rename
+                      </MenuItem>
+                      <MenuSeparator />
+                      <MenuItem
+                        icon="trash"
+                        danger
+                        onSelect={() => loadDeleteImpact(section.fleet!)}
+                      >
+                        Delete fleet
+                      </MenuItem>
                     </>
-                    )}
-                  </div>
-                )}
-              </span>
+                  )}
+                </MenuContent>
+              </Menu>
             )}
           </h2>
           {section.sub && <div className="section-sub">{section.sub}</div>}
@@ -476,88 +455,69 @@ export function HangarGrid({
                 </span>
               )}
               {Object.values(menuFor(a)).some(Boolean) && (
-                <button
-                  className="tile-dot-btn"
-                  title="Options"
-                  aria-label={`Options for ${a.reg}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setMenu(menu === a.id ? null : a.id);
-                  }}
-                >
-                  <span /><span /><span />
-                </button>
-              )}
+                <Menu>
+                  <MenuTrigger asChild>
+                    <button
+                      className="tile-dot-btn"
+                      title="Options"
+                      aria-label={`Options for ${a.reg}`}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <span /><span /><span />
+                    </button>
+                  </MenuTrigger>
+                  <MenuContent ariaLabel={`Actions for ${a.reg}`}>
+                    {/* Names the subject, so "Delete" never has to. */}
+                    <MenuLabel>{a.reg}</MenuLabel>
 
-              {menu === a.id && (
-                <div
-                  className="tile-dot-menu open"
-                  style={{ position: "absolute", right: 0, bottom: 32 }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {/* v1 listed this unconditionally, but v1's settings modal
-                      also opened for anyone — openSettingsModal() had no
-                      guard. v2 mounts it only for edit_settings, which is the
-                      stricter and better call, so the menu item has to follow
-                      or a pilot gets sent to the aircraft with nothing to
-                      show for it. */}
-                  {menuFor(a).settings && (
-                    <button
-                      className="row-dot-item"
-                      onClick={() => { setMenu(null); setSettingsTile(a); }}
-                    >
-                      Aircraft Settings
-                    </button>
-                  )}
-                  {/* ?access=1 only opens anything for a role that passes
-                      can(role,'manage_access') in the detail page — showing it
-                      to everyone meant a shared user clicked it and just
-                      landed on the aircraft with no modal. */}
-                  {menuFor(a).access && (
-                    <button
-                      className="row-dot-item"
-                      onClick={() => { setMenu(null); setAccessTile(a); }}
-                    >
-                      Manage Access
-                    </button>
-                  )}
+                    {/* v1 listed this unconditionally, but v1's settings modal
+                        also opened for anyone — openSettingsModal() had no
+                        guard. v2 mounts it only for edit_settings, which is the
+                        stricter and better call, so the menu item has to follow
+                        or a pilot gets sent to the aircraft with nothing to
+                        show for it. */}
+                    {menuFor(a).settings && (
+                      <MenuItem icon="settings" onSelect={() => setSettingsTile(a)}>
+                        Settings
+                      </MenuItem>
+                    )}
+                    {/* ?access=1 only opens anything for a role that passes
+                        can(role,'manage_access') in the detail page — showing it
+                        to everyone meant a shared user clicked it and just
+                        landed on the aircraft with no modal. */}
+                    {menuFor(a).access && (
+                      <MenuItem icon="users" onSelect={() => setAccessTile(a)}>
+                        Manage access
+                      </MenuItem>
+                    )}
+                    {menuFor(a).viewAccess && (
+                      <MenuItem icon="eye" onSelect={() => setAccessTile(a)}>
+                        View access
+                      </MenuItem>
+                    )}
 
-                  {menuFor(a).viewAccess && (
-                    <button
-                      className="row-dot-item"
-                      onClick={() => { setMenu(null); setAccessTile(a); }}
-                    >
-                      View Access
-                    </button>
-                  )}
+                    {(menuFor(a).leave || menuFor(a).remove) && <MenuSeparator />}
 
-                  {/* Someone here on a grant can hand it back. There is no v1
-                      equivalent — v1 only let the granter revoke — but without
-                      it a shared user has no way to clear an aircraft they no
-                      longer want in their hangar. */}
-                  {menuFor(a).leave && (
-                    <button
-                      className="row-dot-item danger-item"
-                      disabled={busy}
-                      onClick={() => { setMenu(null); setLeaveTile(a); }}
-                    >
-                      Leave Aircraft
-                    </button>
-                  )}
-                  {/* v1 omitted this entirely unless can('delete', id).
-                      Someone an aircraft was shared with must not be able to
-                      delete the owner's records — and RLS refuses them anyway,
-                      so showing the button only produced a silent no-op. */}
-                  {menuFor(a).remove && (
-                    <button
-                      className="row-dot-item danger-item"
-                      disabled={busy}
-                      onClick={() => { setMenu(null); setConfirmTile(a); }}
-                    >
-                      Delete Aircraft
-                    </button>
-                  )}
-                </div>
+                    {/* Someone here on a grant can hand it back. There is no v1
+                        equivalent — v1 only let the granter revoke — but without
+                        it a shared user has no way to clear an aircraft they no
+                        longer want in their hangar. */}
+                    {menuFor(a).leave && (
+                      <MenuItem icon="exit" danger onSelect={() => setLeaveTile(a)}>
+                        Leave aircraft
+                      </MenuItem>
+                    )}
+                    {/* v1 omitted this entirely unless can('delete', id).
+                        Someone an aircraft was shared with must not be able to
+                        delete the owner's records — and RLS refuses them anyway,
+                        so showing the button only produced a silent no-op. */}
+                    {menuFor(a).remove && (
+                      <MenuItem icon="trash" danger onSelect={() => setConfirmTile(a)}>
+                        Delete aircraft
+                      </MenuItem>
+                    )}
+                  </MenuContent>
+                </Menu>
               )}
             </div>
           </div>

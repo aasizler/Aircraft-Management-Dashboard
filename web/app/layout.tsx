@@ -64,7 +64,16 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
               <span className="nav-dot" />
               AeroTrack
             </Link>
-            <NavMenu email={user.email} />
+            <NavMenu
+              email={user.email}
+              name={(() => {
+                const m = user.user_metadata as
+                  | { first_name?: string; last_name?: string; full_name?: string }
+                  | undefined;
+                const joined = [m?.first_name, m?.last_name].filter(Boolean).join(" ");
+                return joined || m?.full_name || null;
+              })()}
+            />
           </nav>
           {/* Mounted here rather than on the hangar so the ribbon, and the
               modal the nav ⋮ opens, exist on every page. Hangar-only meant
