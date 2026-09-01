@@ -580,8 +580,16 @@ canvas.chart{display:block;width:100%;height:150px}
    Replaces three hand-rolled variants that differed in padding, casing and
    which item carried the divider. One shape now: context header, grouped
    items with icons, destructive separated below a rule. */
-.menu{min-width:208px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:5px;box-shadow:0 10px 30px rgba(0,0,0,.5),0 2px 6px rgba(0,0,0,.35);z-index:200;animation:menu-in .12s ease-out}
+.menu{min-width:208px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;padding:5px;box-shadow:0 10px 30px rgba(0,0,0,.5),0 2px 6px rgba(0,0,0,.35);z-index:200}
+/* Keyed to data-state, and an EXIT animation is mandatory, not decoration.
+   Radix's Presence waits for animationend before unmounting; with a single
+   unconditional animation the computed animation-name never returns to none,
+   that event never fires, and every closed menu stayed in the DOM forever —
+   two were live at once before this. */
+.menu[data-state="open"]{animation:menu-in .12s ease-out}
+.menu[data-state="closed"]{animation:menu-out .09s ease-in forwards}
 @keyframes menu-in{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
+@keyframes menu-out{from{opacity:1}to{opacity:0;transform:translateY(-2px)}}
 
 .menu-item{display:flex;align-items:center;gap:9px;width:100%;padding:7px 9px;border:0;background:none;border-radius:6px;font-size:13px;font-family:var(--body);color:var(--text);text-align:left;cursor:pointer;outline:none;user-select:none}
 .menu-item[data-highlighted]{background:var(--bg4)}
