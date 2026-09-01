@@ -42,12 +42,27 @@ function greatCircle(a: [number, number], b: [number, number]): [number, number]
 // at the copy in /public (kept in sync by scripts/copy-maplibre-worker.mjs).
 maplibregl.setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
 
+// CARTO began stamping "API KEY REQUIRED · carto.com/basemaps/apikey" diagonally
+// across every basemap tile. It serves those at HTTP 200 as a valid PNG, so
+// nothing failed, nothing logged, and the watermark simply appeared under the
+// routes. Esri's canvas basemaps need no key and the satellite layer already
+// came from there.
+//
+// Esri splits geography from labels, so each basemap is a pair: the base draws
+// the land, the reference draws place names over it. Note {z}/{y}/{x} — Esri
+// orders row before column, unlike XYZ.
+const ESRI = "https://server.arcgisonline.com/ArcGIS/rest/services";
+
 const BASEMAPS = {
-  map: ["https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png"],
-  mapLight: ["https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png"],
-  satellite: [
-    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-  ],
+  map: [`${ESRI}/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}`],
+  mapLight: [`${ESRI}/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}`],
+  satellite: [`${ESRI}/World_Imagery/MapServer/tile/{z}/{y}/{x}`],
+};
+
+const LABELS = {
+  map: [`${ESRI}/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}`],
+  mapLight: [`${ESRI}/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}`],
+  satellite: [`${ESRI}/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}`],
 };
 
 type Mode = "airports" | "routes";
@@ -201,6 +216,10 @@ export function FlightMap({
     () => (basemap === "satellite" ? BASEMAPS.satellite : isLight() ? BASEMAPS.mapLight : BASEMAPS.map),
     [basemap],
   );
+  const labelTiles = useCallback(
+    () => (basemap === "satellite" ? LABELS.satellite : isLight() ? LABELS.mapLight : LABELS.map),
+    [basemap],
+  );
 
   // Track the wrapper's width and derive the map height from it.
   useEffect(() => {
@@ -232,12 +251,16 @@ export function FlightMap({
             type: "raster",
             tiles: tiles(),
             tileSize: 256,
-            attribution: "© OpenStreetMap · CARTO · Esri",
+            attribution: "© Esri · OpenStreetMap",
           },
+          labels: { type: "raster", tiles: labelTiles(), tileSize: 256 },
         },
         layers: [
           { id: "bg", type: "background", paint: { "background-color": isLight() ? "#e8e8e6" : "#080e14" } },
           { id: "base", type: "raster", source: "base" },
+          // Above the land, below everything this app draws — the route and
+          // airport layers are added later, so they stack on top of it.
+          { id: "labels", type: "raster", source: "labels" },
         ],
       },
       center: [-95, 39],
@@ -484,8 +507,10 @@ export function FlightMap({
     const map = mapRef.current;
     if (!map || !ready) return;
     const src = map.getSource("base") as maplibregl.RasterTileSource | undefined;
+    const lbl = map.getSource("labels") as maplibregl.RasterTileSource | undefined;
     basemapRef.current = basemap;
     src?.setTiles?.(tiles());
+    lbl?.setTiles?.(labelTiles());
     if (map.getLayer("routes")) {
       map.setPaintProperty("routes", "line-color", [
         "case", ["boolean", ["feature-state", "hl"], false],
@@ -494,7 +519,7 @@ export function FlightMap({
     }
     if (map.getLayer("bg"))
       map.setPaintProperty("bg", "background-color", isLight() ? "#e8e8e6" : "#080e14");
-  }, [basemap, tiles, ready]);
+  }, [basemap, tiles, labelTiles, ready]);
 
   // Push the live ADS-B position to the map marker as it polls.
   useEffect(() => {
