@@ -123,7 +123,8 @@ export function MenuItem({
 // earn its bundle.
 export type IconName =
   | "sort" | "settings" | "logout" | "users" | "eye"
-  | "trash" | "share" | "pencil" | "inbox" | "exit";
+  | "trash" | "share" | "pencil" | "inbox" | "exit"
+  | "eraser" | "power";
 
 const PATHS: Record<IconName, string> = {
   sort:     "M4 6h10M4 12h7M4 18h4M17 8v10m0 0l-3-3m3 3l3-3",
@@ -136,6 +137,8 @@ const PATHS: Record<IconName, string> = {
   pencil:   "M17 3a2.8 2.8 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z",
   inbox:    "M22 12h-6l-2 3h-4l-2-3H2M5.5 5.1L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.5-6.9A2 2 0 0016.8 4H7.2a2 2 0 00-1.7 1.1z",
   exit:     "M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9",
+  eraser:   "M4 15l7-7a2 2 0 013 0l4 4a2 2 0 010 3l-5 5H8l-4-4a2 2 0 010-1zM9 21h11",
+  power:    "M12 3v9M18.4 6.6a9 9 0 11-12.8 0",
 };
 
 function Icon({ name }: { name: IconName }) {

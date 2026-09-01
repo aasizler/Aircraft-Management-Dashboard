@@ -1,54 +1,69 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import {
+  Menu, MenuTrigger, MenuContent, MenuItem, MenuSeparator, MenuLabel,
+  type IconName,
+} from "@/components/ui/menu";
 
-// The ⋮ row menu from v1 (toggleRowMenu / toggleSqMenu), including the
-// click-outside close the first port's dot menus were missing.
+export type RowMenuItem = {
+  label: string;
+  onClick: () => void;
+  danger?: boolean;
+  icon?: IconName;
+};
+
+/**
+ * The ⋮ that sits at the end of a table row — inspections, squawks, flights,
+ * schedule.
+ *
+ * Same `items` API it always had, now on the shared Radix menu so these behave
+ * identically to the hangar's: portalled out of the row (a menu inside an
+ * overflow-scrolled table used to be clipped by it), keyboard navigable, and
+ * dismissed by the same rules everywhere.
+ */
 export function RowMenu({
   items,
+  label,
 }: {
-  items: { label: string; onClick: () => void; danger?: boolean }[];
+  items: RowMenuItem[];
+  /** Names the row being acted on, when "Delete row" alone would be ambiguous. */
+  label?: string;
 }) {
-  const [open, setOpen] = useState(false);
-  const wrap = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onDoc = (e: MouseEvent) => {
-      if (!wrap.current?.contains(e.target as Node)) setOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
-    document.addEventListener("mousedown", onDoc);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDoc);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
+  const firstDanger = items.findIndex((i) => i.danger);
 
   return (
-    <div className="row-dot-wrap" ref={wrap}>
-      <button
-        className="row-dot-btn"
-        title="More"
-        aria-label="More actions"
-        onClick={() => setOpen((o) => !o)}
-      >
-        <span /><span /><span />
-      </button>
-      {open && (
-        <div className="row-dot-menu open">
-          {items.map((it) => (
-            <button
-              key={it.label}
-              className={`row-dot-item${it.danger ? " danger-item" : ""}`}
-              onClick={() => { setOpen(false); it.onClick(); }}
-            >
+    <Menu>
+      <MenuTrigger asChild>
+        <button className="row-dot-btn" title="More" aria-label={label ? `Actions for ${label}` : "More actions"}>
+          <span /><span /><span />
+        </button>
+      </MenuTrigger>
+      <MenuContent>
+        {label && <MenuLabel>{label}</MenuLabel>}
+        {items.map((it, i) => (
+          <span key={it.label} style={{ display: "contents" }}>
+            {/* Destructive actions get separated rather than relying on colour
+                alone — the same rule the hangar menus follow. */}
+            {i === firstDanger && i > 0 && <MenuSeparator />}
+            <MenuItem icon={it.icon ?? inferIcon(it.label)} danger={it.danger} onSelect={it.onClick}>
               {it.label}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
+            </MenuItem>
+          </span>
+        ))}
+      </MenuContent>
+    </Menu>
   );
+}
+
+// Every row menu in the app draws from the same short vocabulary, so the icon
+// follows from the verb and no call site has to restate it. An explicit `icon`
+// still wins for anything new.
+function inferIcon(label: string): IconName | undefined {
+  const l = label.toLowerCase();
+  if (l.startsWith("edit")) return "pencil";
+  if (l.startsWith("delete")) return "trash";
+  if (l.startsWith("clear")) return "eraser";
+  if (l.startsWith("deactivate") || l.startsWith("reactivate")) return "power";
+  if (l.startsWith("view")) return "eye";
+  return undefined;
 }

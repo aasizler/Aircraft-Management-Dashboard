@@ -429,24 +429,10 @@ canvas.chart{display:block;width:100%;height:150px}
 .toast-btn:hover{border-color:var(--accent);color:var(--accent)}
 .toast-btn.pri{border-color:rgba(59,158,255,.45);color:var(--accent);background:var(--accent-dim)}
 /* ROW DOT MENU */
-.row-dot-wrap{position:relative;display:inline-block}
 .row-dot-btn{width:22px;height:22px;border-radius:5px;border:1px solid var(--border2);background:var(--bg4);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:0;transition:all .15s}
 .row-dot-btn:hover{border-color:var(--accent)}
 .row-dot-btn span{width:3px;height:3px;border-radius:50%;background:var(--muted2);display:block}
 .row-dot-btn:hover span{background:var(--accent)}
-.row-dot-menu{position:absolute;right:0;top:26px;background:var(--bg2);border:1px solid var(--border3);border-radius:8px;min-width:150px;z-index:900;overflow:hidden;box-shadow:0 8px 26px rgba(0,0,0,.6)}
-.row-dot-item{width:100%;text-align:left;background:none;border:none;color:var(--muted3);font-size:12px;font-weight:500;padding:9px 13px;cursor:pointer;font-family:var(--body);transition:all .12s;display:flex;align-items:center;gap:9px}
-/* A marker per item, the same language the toasts use. Grey at rest so the
-   menu stays quiet, coloured on hover so the action you're about to take
-   identifies itself before you take it. */
-.row-dot-item::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--muted);flex-shrink:0;transition:background .12s}
-.row-dot-item:hover{background:var(--accent-dim);color:var(--accent)}
-.row-dot-item:hover::before{background:var(--accent)}
-/* Destructive items read as destructive before you hover, not after. */
-.row-dot-item.danger-item{color:var(--danger)}
-.row-dot-item.danger-item::before{background:var(--danger)}
-.row-dot-item.danger-item:hover::before{background:var(--danger)}
-.row-dot-item.danger-item:hover{background:var(--danger-dim);color:var(--danger)}
 /* CHARTS */
 .chart-empty{padding:34px 0;text-align:center;color:var(--muted2);font-size:12px}
 .bars{display:flex;align-items:flex-end;gap:6px}

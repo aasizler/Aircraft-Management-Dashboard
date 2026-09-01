@@ -206,10 +206,10 @@ export function InspectionsTab({
     }
 
     const menu = [
-      ...(unpop ? [] : [{ label: "Edit Entry", onClick: () => openEdit(idx) }]),
-      ...(unpop ? [] : [{ label: "Clear Entry", onClick: () => setConfirmClear(idx), danger: true }]),
+      ...(unpop ? [] : [{ label: "Edit entry", onClick: () => openEdit(idx) }]),
+      ...(unpop ? [] : [{ label: "Clear entry", onClick: () => setConfirmClear(idx), danger: true }]),
       { label: "Deactivate", onClick: () => toggleActive(idx), danger: true },
-      ...(i.core ? [] : [{ label: "Delete Row", onClick: () => setConfirmDelete(idx), danger: true }]),
+      ...(i.core ? [] : [{ label: "Delete row", onClick: () => setConfirmDelete(idx), danger: true }]),
     ];
 
     const dim = unpop ? { opacity: 0.5 } : undefined;
@@ -240,7 +240,7 @@ export function InspectionsTab({
             <button className="action-btn" onClick={() => (unpop ? openEdit(idx) : setConfirmComply(idx))}>
               {unpop ? "Log First" : "Update"}
             </button>
-            <RowMenu items={menu} />
+            <RowMenu items={menu} label={i.name} />
           </div>
         </td>
       </tr>
