@@ -10,8 +10,11 @@ import {
   EngineAutocomplete,
   TypeAutocomplete,
 } from "@/components/ui/autocomplete";
-import type { AircraftRow, Meter, V1Aircraft } from "@/lib/aircraft";
+import { METER_LABEL, type AircraftRow, type Meter, type V1Aircraft } from "@/lib/aircraft";
 import type { AcClass } from "@/lib/reference-data";
+import {
+  orderKinds, profileFor, profileForClass, profileForTypeString, type MeterProfile,
+} from "@/lib/meters";
 import type { MeterKind } from "@/lib/types";
 
 const METERS: MeterKind[] = ["hobbs", "tach", "flight", "total"];
@@ -91,6 +94,37 @@ export function AircraftSettings({
   // Blobs written before the class existed are piston, which is what they were.
   const [cls, setCls] = useState<AcClass>(data.acClass ?? "piston");
   const turbine = cls !== "piston";
+  const [profile, setProfile] = useState<MeterProfile>(
+    () => profileForTypeString(aircraft.type, data.acClass ?? "piston") ?? profileForClass(data.acClass ?? "piston"),
+  );
+  // Only worth showing when it disagrees with how the aircraft is set up now —
+  // an aircraft already on the right clocks doesn't need to be told so.
+  const suggestion =
+    profile.maint !== f.maint_basis || profile.cost !== f.cost_basis ? profile : null;
+
+  /**
+   * Repointing a basis has to re-read that meter. It used to keep whatever was
+   * in the box, so switching maintenance from Hobbs to Flight Time wrote the
+   * Hobbs number onto the flight meter — which is how an airframe ends up
+   * inspecting against a clock that never ran.
+   */
+  function setBasis(which: "maint" | "cost", kind: MeterKind) {
+    setF((p) =>
+      which === "maint"
+        ? { ...p, maint_basis: kind, maintHrs: String(meterOf(kind)) }
+        : { ...p, cost_basis: kind, costHrs: String(meterOf(kind)) },
+    );
+  }
+
+  function applySuggestion(prof: MeterProfile) {
+    setF((p) => ({
+      ...p,
+      maint_basis: prof.maint,
+      cost_basis: prof.cost,
+      maintHrs: String(meterOf(prof.maint)),
+      costHrs: String(meterOf(prof.cost)),
+    }));
+  }
 
   const set = (k: keyof typeof f, v: string) => setF((p) => ({ ...p, [k]: v }));
 
@@ -196,6 +230,7 @@ export function AircraftSettings({
               onResolve={(t) => {
                 const next = t.cls ?? "piston";
                 setCls(next);
+                setProfile(profileFor(t.icao, next));
                 if (next !== "piston") setF((p) => ({ ...p, oilInterval: "" }));
               }}
             />
@@ -258,27 +293,55 @@ export function AircraftSettings({
           )}
 
           <div className="form-divider">Meters</div>
+
+          {/* A suggestion, not an edit. Repointing the clocks on an aircraft
+              that already has readings is the owner's call, not a side effect
+              of correcting its type. */}
+          {suggestion && (
+            <div className="how-box" style={{ marginBottom: 12 }}>
+              {suggestion.note}{" "}
+              <button
+                type="button"
+                className="btn sm"
+                style={{ marginLeft: 6 }}
+                onClick={() => applySuggestion(suggestion)}
+              >
+                Use {METER_LABEL[suggestion.maint]} / {METER_LABEL[suggestion.cost]}
+              </button>
+            </div>
+          )}
+
           <div className="form-grid">
             <div className="form-row">
               <label>Maintenance clock</label>
-              <select value={f.maint_basis} onChange={(e) => set("maint_basis", e.target.value)}>
-                {METERS.map((m) => <option key={m} value={m}>{m}</option>)}
+              <select
+                value={f.maint_basis}
+                onChange={(e) => setBasis("maint", e.target.value as MeterKind)}
+              >
+                {orderKinds(profile, METERS).map((m) => (
+                  <option key={m} value={m}>{METER_LABEL[m]}</option>
+                ))}
               </select>
             </div>
             <div className="form-row">
-              <label>Current {f.maint_basis} hours</label>
+              <label>Current {METER_LABEL[f.maint_basis]} hours</label>
               <input type="number" step="0.1" value={f.maintHrs} onChange={(e) => set("maintHrs", e.target.value)} />
             </div>
           </div>
           <div className="form-grid">
             <div className="form-row">
               <label>Cost clock</label>
-              <select value={f.cost_basis} onChange={(e) => set("cost_basis", e.target.value)}>
-                {METERS.map((m) => <option key={m} value={m}>{m}</option>)}
+              <select
+                value={f.cost_basis}
+                onChange={(e) => setBasis("cost", e.target.value as MeterKind)}
+              >
+                {orderKinds(profile, METERS).map((m) => (
+                  <option key={m} value={m}>{METER_LABEL[m]}</option>
+                ))}
               </select>
             </div>
             <div className="form-row">
-              <label>Current {f.cost_basis} hours</label>
+              <label>Current {METER_LABEL[f.cost_basis]} hours</label>
               <input
                 type="number" step="0.1"
                 value={f.cost_basis === f.maint_basis ? f.maintHrs : f.costHrs}

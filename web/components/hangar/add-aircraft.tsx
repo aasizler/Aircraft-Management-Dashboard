@@ -11,7 +11,9 @@ import {
   TypeAutocomplete,
 } from "@/components/ui/autocomplete";
 import { makeCoreInspections, type V1Aircraft } from "@/lib/aircraft";
-import type { AcClass } from "@/lib/reference-data";
+import { METER_LABEL } from "@/lib/aircraft";
+import type { AcClass, AcType } from "@/lib/reference-data";
+import { orderKinds, profileFor, profileForClass, type MeterProfile } from "@/lib/meters";
 import type { MeterKind } from "@/lib/types";
 
 const METERS: MeterKind[] = ["hobbs", "tach", "flight", "total"];
@@ -48,6 +50,8 @@ export function AddAircraftButton({
     maint_basis: "hobbs" as MeterKind,
     cost_basis: "hobbs" as MeterKind,
     hours: "",
+    maintHrs: "",
+    costHrs: "",
     engineSMOH: "",
     tbo: "1700",
     oilInterval: "50",
@@ -57,6 +61,9 @@ export function AddAircraftButton({
   // aircraft type has always been treated as.
   const [cls, setCls] = useState<AcClass>("piston");
   const turbine = cls !== "piston";
+  // What clocks the airframe carries. Drives the defaults and the ordering of
+  // the two selects; every kind stays selectable underneath.
+  const [profile, setProfile] = useState<MeterProfile>(profileForClass("piston"));
 
   const set = (k: keyof typeof f, v: string) => setF((p) => ({ ...p, [k]: v }));
 
@@ -65,13 +72,19 @@ export function AddAircraftButton({
    * interval, so picking one out of the catalogue clears both rather than
    * leaving 1700/50 sitting in the fields looking authoritative.
    */
-  function pickType(t: { cls?: AcClass }) {
+  function pickType(t: AcType) {
     const next = t.cls ?? "piston";
+    const prof = profileFor(t.icao, next);
     setCls(next);
+    setProfile(prof);
     setF((p) => ({
       ...p,
       tbo: next === "piston" ? (p.tbo || "1700") : p.tbo === "1700" ? "" : p.tbo,
       oilInterval: next === "piston" ? (p.oilInterval || "50") : "",
+      // Point the bases at the clocks this airframe actually has, rather than
+      // leaving both on hobbs and hoping someone notices.
+      maint_basis: prof.maint,
+      cost_basis: prof.cost,
     }));
   }
 
@@ -199,11 +212,16 @@ export function AddAircraftButton({
       return;
     }
 
-    // Seed the meters the airframe carries (maint + cost bases; deduped).
+    // Seed the meters the airframe carries (maint + cost bases; deduped). Each
+    // gets its own reading — seeding both from airframe total put total time on
+    // a Cirrus's flight meter, which then inspected against the wrong number.
+    // Blank still means "same as airframe hours", which is the single-clock case.
+    const reading = (kind: MeterKind) =>
+      Number(kind === f.maint_basis ? f.maintHrs : f.costHrs) || hrs;
     const kinds = Array.from(new Set([f.maint_basis, f.cost_basis]));
     await supabase
       .from("aircraft_meters")
-      .insert(kinds.map((kind) => ({ aircraft_id: id, kind, current: hrs })));
+      .insert(kinds.map((kind) => ({ aircraft_id: id, kind, current: reading(kind) })));
 
     const reg = f.reg.trim().toUpperCase();
     setBusy(false);
@@ -212,8 +230,10 @@ export function AddAircraftButton({
       reg: "", type: "", serial: "", airport: "", engineType: "",
       maint_basis: "hobbs", cost_basis: "hobbs", hours: "", fleet_id: "",
       engineSMOH: "", tbo: "1700", oilInterval: "50",
+      maintHrs: "", costHrs: "",
     });
     setCls("piston");
+    setProfile(profileForClass("piston"));
     toast(`${reg} added to the hangar`, "ok");
     router.refresh();
   }
@@ -305,20 +325,54 @@ export function AddAircraftButton({
 
           {/* Meters have no v1 equivalent — v2 tracks which clock drives what. */}
           <div className="form-divider">Meters</div>
+          <div className="how-box" style={{ marginBottom: 12 }}>{profile.note}</div>
           <div className="form-grid">
             <div className="form-row">
               <label>Maintenance clock</label>
               <select value={f.maint_basis} onChange={(e) => set("maint_basis", e.target.value)}>
-                {METERS.map((m) => <option key={m} value={m}>{m}</option>)}
+                {orderKinds(profile, METERS).map((m) => (
+                  <option key={m} value={m}>{METER_LABEL[m]}</option>
+                ))}
               </select>
+              <div style={{ fontSize: 10, color: "var(--muted2)", marginTop: 4 }}>
+                Inspections, SMOH and oil count against this
+              </div>
             </div>
             <div className="form-row">
               <label>Cost clock</label>
               <select value={f.cost_basis} onChange={(e) => set("cost_basis", e.target.value)}>
-                {METERS.map((m) => <option key={m} value={m}>{m}</option>)}
+                {orderKinds(profile, METERS).map((m) => (
+                  <option key={m} value={m}>{METER_LABEL[m]}</option>
+                ))}
               </select>
+              <div style={{ fontSize: 10, color: "var(--muted2)", marginTop: 4 }}>
+                Billing and $/hr count against this
+              </div>
             </div>
           </div>
+
+          {/* Two clocks read two different numbers. Left blank they both start
+              at the airframe total, which is only right when there is one. */}
+          {f.maint_basis !== f.cost_basis && (
+            <div className="form-grid">
+              <div className="form-row">
+                <label>Current {METER_LABEL[f.maint_basis]}</label>
+                <input
+                  type="number" step="0.1" value={f.maintHrs}
+                  placeholder={f.hours || "0"}
+                  onChange={(e) => set("maintHrs", e.target.value)}
+                />
+              </div>
+              <div className="form-row">
+                <label>Current {METER_LABEL[f.cost_basis]}</label>
+                <input
+                  type="number" step="0.1" value={f.costHrs}
+                  placeholder={f.hours || "0"}
+                  onChange={(e) => set("costHrs", e.target.value)}
+                />
+              </div>
+            </div>
+          )}
 
           {err && <div className="auth-err">{err}</div>}
           <div className="form-actions">
