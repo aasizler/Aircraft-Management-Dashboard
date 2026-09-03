@@ -9,6 +9,7 @@ import { airworthiness, meterValue, type AircraftRow, type Meter, type V1Aircraf
 import { ManageAccess } from "@/components/aircraft/manage-access";
 import { AircraftSettings } from "@/components/aircraft/aircraft-settings";
 import { Confirm } from "@/components/ui/confirm";
+import { Icon } from "@/components/ui/icon";
 import { Modal } from "@/components/ui/modal";
 import {
   Menu, MenuTrigger, MenuContent, MenuItem, MenuSeparator, MenuLabel,
@@ -138,10 +139,42 @@ export function HangarGrid({
    * than v1's 8px dot. The judgement itself lives in lib/aircraft.ts, shared
    * with the dashboard — this only picks the words and the class.
    */
-  function tileStatus(t: Tile): { label: string; cls: string } {
+  function tileStatus(t: Tile): { label: string; cls: string; why: string; full: string } {
     const a = airworthiness(t.data ?? {}, meterValue(t.meters, t.maint_basis));
-    return { label: a.label, cls: a.level };
+    // What the status is FOR: a grounding squawk outranks the calendar, then
+    // the most-elapsed tracked inspection, which is what `scored` is sorted by.
+    const sq = a.grounding[0];
+    const next = a.overdue[0] ?? a.dueSoon[0] ?? a.tracked[0];
+    // Compact on purpose: the footer gives this ~180px beside the field code,
+    // and inspection names are unbounded — "Pitot-Static / IFR Cert." blows
+    // straight past the tile edge. The timing is the actionable half, so it is
+    // never what gets cut; the name is trimmed to whatever budget is left. The
+    // title attribute carries the full text either way.
+    const BUDGET = 27;
+    const short = (u?: string) =>
+      /day/i.test(u ?? "") ? "d" : /hour/i.test(u ?? "") ? "h" : "";
+    const clip = (v: string, n: number) => (v.length > n ? `${v.slice(0, n - 1).trimEnd()}…` : v);
+
+    let why: string, full: string;
+    if (sq) {
+      full = sq.desc;
+      why = clip(full, BUDGET);
+    } else if (next) {
+      const when = `${next.st.remNum}${short(next.st.remUnit)}${next.st.remFoot === "overdue" ? " overdue" : ""}`;
+      full = `${next.i.name} · ${when}`;
+      why = `${clip(next.i.name, Math.max(6, BUDGET - when.length - 3))} · ${when}`;
+    } else {
+      full = why = "Nothing recorded";
+    }
+    return { label: a.label, cls: a.level, why, full };
   }
+
+  /**
+   * The field code for the footer. `airport` is stored as v1 wrote it —
+   * "KVDF — Tampa Executive Airport" — so the identifier is the leading token.
+   */
+  const fieldCode = (t: Tile) =>
+    (t.airport ?? "").trim().split(/[\s—-]+/)[0].toUpperCase() || null;
 
   async function remove(t: Tile) {
     setBusy(true);
@@ -398,112 +431,152 @@ export function HangarGrid({
               }
             }}
           >
-            {/* Was an image-shaped band holding a PRO chip and a ghosted copy of
-                the registration printed again directly below it. Now it carries
-                the one thing worth reading across a hangar: airworthiness. */}
-            <div className="ac-tile-top">
-              {airborne[a.reg] && (
-                <div className="tile-airborne"><span className="tp" />LIVE</div>
-              )}
-              {(() => {
-                const st = tileStatus(a);
-                return <span className={`tile-status ${st.cls}`}>{st.label}</span>;
-              })()}
-            </div>
-
-            <div className="ac-tile-body">
-              <div className="ac-tile-reg">
-                <Link
-                  href={`/aircraft/${a.id}`}
-                  onClick={(e) => e.stopPropagation()}
-                  tabIndex={-1}
-                  style={{ color: "inherit", textDecoration: "none" }}
-                >
-                  {a.reg}
-                </Link>
-              </div>
-              <div className="ac-tile-type">{a.type ?? "—"}</div>
-              <div className="ac-tile-serial">{a.serial ?? ""}</div>
-            </div>
-
-            <div className="ac-tile-foot" style={{ position: "relative" }}>
-              <span className="role-badge">
-                {a.craftRole ? CRAFT_ROLE_LABELS[a.craftRole] : ROLE_LABELS[a.appRole]}
-              </span>
-              {a.shared && (
-                <span
-                  className="tile-shared"
-                  title={a.sharedBy ? `Shared by ${a.sharedBy}` : "Shared with you"}
-                >
-                  SHARED
-                </span>
-              )}
-              {Object.values(menuFor(a)).some(Boolean) && (
-                <Menu>
-                  <MenuTrigger asChild>
-                    <button
-                      className="tile-dot-btn"
-                      title="Options"
-                      aria-label={`Options for ${a.reg}`}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <span /><span /><span />
-                    </button>
-                  </MenuTrigger>
-                  <MenuContent ariaLabel={`Actions for ${a.reg}`}>
-                    {/* Names the subject, so "Delete" never has to. */}
-                    <MenuLabel>{a.reg}</MenuLabel>
-
-                    {/* v1 listed this unconditionally, but v1's settings modal
-                        also opened for anyone — openSettingsModal() had no
-                        guard. v2 mounts it only for edit_settings, which is the
-                        stricter and better call, so the menu item has to follow
-                        or a pilot gets sent to the aircraft with nothing to
-                        show for it. */}
-                    {menuFor(a).settings && (
-                      <MenuItem icon="settings" onSelect={() => setSettingsTile(a)}>
-                        Settings
-                      </MenuItem>
+            {(() => {
+              const st = tileStatus(a);
+              const flying = airborne[a.reg];
+              const code = fieldCode(a);
+              return (
+                <>
+                  {/* The band is a photo slot with an honest empty state: the
+                      silhouette washed in the status colour. Role rides it; the
+                      ⋮ takes the corner the LIVE tag used to hold, because the
+                      footer's signal control already says the aircraft flies. */}
+                  <div className="ac-tile-band">
+                    <span className="tile-ghost"><Icon name="plane" size={78} /></span>
+                    <span className="band-chip">
+                      {a.craftRole ? CRAFT_ROLE_LABELS[a.craftRole] : ROLE_LABELS[a.appRole]}
+                    </span>
+                    {a.shared && (
+                      <span
+                        className="tile-shared"
+                        title={a.sharedBy ? `Shared by ${a.sharedBy}` : "Shared with you"}
+                      >
+                        SHARED
+                      </span>
                     )}
-                    {/* ?access=1 only opens anything for a role that passes
-                        can(role,'manage_access') in the detail page — showing it
-                        to everyone meant a shared user clicked it and just
-                        landed on the aircraft with no modal. */}
-                    {menuFor(a).access && (
-                      <MenuItem icon="users" onSelect={() => setAccessTile(a)}>
-                        Manage access
-                      </MenuItem>
-                    )}
-                    {menuFor(a).viewAccess && (
-                      <MenuItem icon="eye" onSelect={() => setAccessTile(a)}>
-                        View access
-                      </MenuItem>
-                    )}
+                    {Object.values(menuFor(a)).some(Boolean) && (
+                      <Menu>
+                        <MenuTrigger asChild>
+                          <button
+                            className="dot-ghost band-menu"
+                            title="Options"
+                            aria-label={`Options for ${a.reg}`}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <span /><span /><span />
+                          </button>
+                        </MenuTrigger>
+                        <MenuContent ariaLabel={`Actions for ${a.reg}`}>
+                          {/* Names the subject, so "Delete" never has to. */}
+                          <MenuLabel>{a.reg}</MenuLabel>
 
-                    {(menuFor(a).leave || menuFor(a).remove) && <MenuSeparator />}
+                          {/* v1 listed this unconditionally, but v1's settings modal
+                              also opened for anyone — openSettingsModal() had no
+                              guard. v2 mounts it only for edit_settings, which is the
+                              stricter and better call, so the menu item has to follow
+                              or a pilot gets sent to the aircraft with nothing to
+                              show for it. */}
+                          {menuFor(a).settings && (
+                            <MenuItem icon="settings" onSelect={() => setSettingsTile(a)}>
+                              Settings
+                            </MenuItem>
+                          )}
+                          {/* ?access=1 only opens anything for a role that passes
+                              can(role,'manage_access') in the detail page — showing it
+                              to everyone meant a shared user clicked it and just
+                              landed on the aircraft with no modal. */}
+                          {menuFor(a).access && (
+                            <MenuItem icon="users" onSelect={() => setAccessTile(a)}>
+                              Manage access
+                            </MenuItem>
+                          )}
+                          {menuFor(a).viewAccess && (
+                            <MenuItem icon="eye" onSelect={() => setAccessTile(a)}>
+                              View access
+                            </MenuItem>
+                          )}
 
-                    {/* Someone here on a grant can hand it back. There is no v1
-                        equivalent — v1 only let the granter revoke — but without
-                        it a shared user has no way to clear an aircraft they no
-                        longer want in their hangar. */}
-                    {menuFor(a).leave && (
-                      <MenuItem icon="exit" danger onSelect={() => setLeaveTile(a)}>
-                        Leave aircraft
-                      </MenuItem>
+                          {(menuFor(a).leave || menuFor(a).remove) && <MenuSeparator />}
+
+                          {/* Someone here on a grant can hand it back. There is no v1
+                              equivalent — v1 only let the granter revoke — but without
+                              it a shared user has no way to clear an aircraft they no
+                              longer want in their hangar. */}
+                          {menuFor(a).leave && (
+                            <MenuItem icon="exit" danger onSelect={() => setLeaveTile(a)}>
+                              Leave aircraft
+                            </MenuItem>
+                          )}
+                          {/* v1 omitted this entirely unless can('delete', id).
+                              Someone an aircraft was shared with must not be able to
+                              delete the owner's records — and RLS refuses them anyway,
+                              so showing the button only produced a silent no-op. */}
+                          {menuFor(a).remove && (
+                            <MenuItem icon="trash" danger onSelect={() => setConfirmTile(a)}>
+                              Delete aircraft
+                            </MenuItem>
+                          )}
+                        </MenuContent>
+                      </Menu>
                     )}
-                    {/* v1 omitted this entirely unless can('delete', id).
-                        Someone an aircraft was shared with must not be able to
-                        delete the owner's records — and RLS refuses them anyway,
-                        so showing the button only produced a silent no-op. */}
-                    {menuFor(a).remove && (
-                      <MenuItem icon="trash" danger onSelect={() => setConfirmTile(a)}>
-                        Delete aircraft
-                      </MenuItem>
-                    )}
-                  </MenuContent>
-                </Menu>
-              )}
-            </div>
+                  </div>
+
+                  <div className="ac-tile-body">
+                    <div className="ac-tile-reg">
+                      <Link
+                        href={`/aircraft/${a.id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        tabIndex={-1}
+                        style={{ color: "inherit", textDecoration: "none" }}
+                      >
+                        {a.reg}
+                      </Link>
+                    </div>
+                    <div className="ac-tile-type">{a.type ?? "—"}</div>
+                    <div className="ac-tile-serial">{a.serial ?? ""}</div>
+
+                    <div className="ac-tile-foot">
+                      {/* Airworthiness collapsed to the word; hovering says
+                          which item drove it. Replaces a next-due line that
+                          read like a stray sentence in the middle of the card. */}
+                      <button
+                        className={`stat-btn ${st.cls}`}
+                        title={`${st.label} — ${st.full}`}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <span className="fdot" />
+                        <span className="stat-word">{st.label}</span>
+                        <span className="stat-why">{st.why}</span>
+                      </button>
+
+                      <div className="tile-actions">
+                        {/* An aircraft in the air is not at an airport. */}
+                        {!flying && code && (
+                          <span className="tile-loc" title={`${code} — home base, not a live position`}>
+                            {code}
+                          </span>
+                        )}
+                        {flying && (
+                          <button
+                            className="flight-btn"
+                            title="Airborne — view the current flight"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              router.push(`/aircraft/${a.id}?tab=Utilization`);
+                            }}
+                          >
+                            <span className="flight-lbl">View flight</span>
+                            <span className={`fdot ${st.cls}`} />
+                            <Icon name="signal" size={13} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                </>
+              );
+            })()}
           </div>
         ))}
           </div>

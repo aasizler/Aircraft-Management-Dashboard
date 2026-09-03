@@ -100,7 +100,23 @@ export function AircraftDetailClient({
   previewSave?: (next: V1Aircraft) => Promise<void>;
 }) {
   const [data, setData] = useState<V1Aircraft>(aircraft.data ?? {});
-  const [tab, setTab] = useState<TabName>("Dashboard");
+  /**
+   * Deep link into a tab — the hangar's signal control sends an airborne
+   * aircraft straight to its map. Read at initialisation rather than in an
+   * effect, so the right tab renders on the first pass instead of flashing the
+   * dashboard and cascading a second render.
+   */
+  const [tab, setTab] = useState<TabName>(() => {
+    if (typeof window === "undefined") return "Dashboard";
+    const want = new URLSearchParams(window.location.search).get("tab");
+    return TABS.find((t) => t.toLowerCase() === want?.toLowerCase()) ?? "Dashboard";
+  });
+
+  // Same tidy-up as ?access=1: the parameter shouldn't survive a reload.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).has("tab"))
+      window.history.replaceState({}, "", window.location.pathname);
+  }, []);
 
   // Insurance carries premiums, hull values and named pilots — v1 showed that
   // tab only to roles with financial access. Deriving the active tab rather

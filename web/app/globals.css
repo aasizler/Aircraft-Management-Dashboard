@@ -209,14 +209,54 @@ canvas.chart{display:block;width:100%;height:150px}
    earlier fleet's open dropdown. Only the open one is lifted. */
 .section-sub{font-size:12px;color:var(--muted);margin-bottom:16px}
 .ac-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;position:relative;z-index:60}
-.ac-tile{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;cursor:pointer;transition:all .2s;display:flex;flex-direction:column;position:relative;text-decoration:none;color:var(--text)}
+.ac-tile{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;cursor:pointer;display:flex;flex-direction:column;position:relative;text-decoration:none;color:var(--text);transition:border-color .18s,transform .18s}
 .ac-tile:hover{border-color:var(--accent);transform:translateY(-1px)}
-.ac-tile-top{height:46px;background:linear-gradient(135deg,#080e14,#0a1320);display:flex;align-items:center;justify-content:center;position:relative;border-bottom:1px solid var(--border);border-radius:12px 12px 0 0;flex-shrink:0}
-.ac-tile-body{padding:14px 15px 4px;flex:1}
-.ac-tile-reg{font-size:20px;font-weight:800;font-family:var(--body);letter-spacing:.04em}
-.ac-tile-type{font-size:13px;color:var(--accent);font-family:var(--body);font-weight:700;margin-top:4px;letter-spacing:.08em}
-.ac-tile-serial{font-size:11px;color:var(--muted);margin-top:2px;font-family:var(--mono)}
-.ac-tile-foot{display:flex;align-items:center;justify-content:space-between;padding:6px 13px 11px;flex-shrink:0}
+
+/* The band is a photo slot, not the empty gradient stripe it used to be. Until
+   there are photos it carries the aircraft silhouette washed in the status
+   colour, so nothing has to be redesigned the day they arrive. ~48% of the tile. */
+.ac-tile-band{position:relative;height:116px;flex:0 0 auto;display:flex;align-items:flex-end;gap:6px;padding:9px 12px;border-bottom:1px solid var(--border);border-radius:12px 12px 0 0;overflow:hidden}
+.ac-tile:has(.stat-btn.grounded) .ac-tile-band{background:linear-gradient(160deg,rgba(240,75,75,.14),rgba(240,75,75,.03))}
+.ac-tile:has(.stat-btn.due) .ac-tile-band{background:linear-gradient(160deg,rgba(245,158,11,.14),rgba(245,158,11,.03))}
+.ac-tile:has(.stat-btn.current) .ac-tile-band{background:linear-gradient(160deg,rgba(45,212,160,.13),rgba(45,212,160,.03))}
+.ac-tile:has(.stat-btn.untracked) .ac-tile-band{background:linear-gradient(160deg,rgba(255,255,255,.05),rgba(255,255,255,.01))}
+.tile-ghost{position:absolute;right:-8px;top:14px;opacity:.1;color:var(--text);pointer-events:none}
+.band-chip{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted3);background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.09);border-radius:999px;padding:3px 9px;backdrop-filter:blur(3px);white-space:nowrap}
+
+.ac-tile-body{flex:1;display:flex;flex-direction:column;padding:12px 14px 9px}
+.ac-tile-reg{font-size:21px;font-weight:800;font-family:var(--body);letter-spacing:.03em;line-height:1.1}
+/* Was accent blue and bold, which outshouted the registration above it. */
+.ac-tile-type{font-size:12px;color:var(--muted3);font-family:var(--body);margin-top:2px;line-height:1.35}
+.ac-tile-serial{font-size:10px;color:var(--muted);margin-top:1px;font-family:var(--mono);padding-bottom:10px}
+/* margin-top:auto keeps footers aligned across a row; it collapses to 0 when a
+   tile has no slack, which is why the gap above the rule lives on the serial. */
+.ac-tile-foot{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:auto;padding-top:10px;border-top:1px solid var(--border2);min-height:22px}
+.tile-actions{display:flex;align-items:center;gap:6px}
+.tile-loc{font-family:var(--mono);font-size:12px;letter-spacing:.05em;color:var(--muted3)}
+
+/* Airworthiness, collapsed to the word. Hovering swaps in WHY it reads that
+   way — which is what a next-due line used to spend a whole row on. The swap is
+   display, not an animated width: a flex item with overflow:hidden has an
+   automatic minimum size of 0, so a max-width transition collapsed to nothing. */
+.stat-btn{display:inline-flex;align-items:center;gap:6px;flex:0 0 auto;height:22px;padding:0 6px 0 5px;margin-left:-5px;border-radius:var(--ctl-r);border:1px solid transparent;background:transparent;cursor:pointer;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;transition:background .15s,border-color .15s}
+.stat-btn:hover,.stat-btn:focus-visible{background:var(--bg4);border-color:var(--border3)}
+.stat-btn.grounded{color:#ff6b6b}.stat-btn.due{color:#f7b23b}
+.stat-btn.current{color:#2dd4a0}.stat-btn.untracked{color:var(--muted2)}
+.stat-btn .fdot{background:currentColor}
+.stat-word{flex:0 0 auto}
+.stat-why{display:none;text-transform:none;letter-spacing:.01em;font-size:9.5px;font-weight:600;color:var(--muted3);white-space:nowrap}
+.stat-btn:hover .stat-word,.stat-btn:focus-visible .stat-word{display:none}
+.stat-btn:hover .stat-why,.stat-btn:focus-visible .stat-why{display:inline}
+
+/* Only rendered while the aircraft is transmitting from the air. The dot takes
+   its airworthiness colour, so it reinforces the chip rather than adding a hue. */
+.flight-btn{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 6px;border-radius:var(--ctl-r);border:1px solid transparent;background:transparent;color:var(--muted2);cursor:pointer;transition:background .15s,border-color .15s,color .15s}
+.flight-btn:hover,.flight-btn:focus-visible{background:var(--bg4);border-color:var(--border3);color:var(--text)}
+.flight-lbl{flex:0 0 auto;display:none;font-family:var(--mono);font-size:10px;letter-spacing:.03em;white-space:nowrap}
+.flight-btn:hover .flight-lbl,.flight-btn:focus-visible .flight-lbl{display:inline}
+.fdot{width:6px;height:6px;border-radius:50%;flex:0 0 auto}
+.fdot.grounded{background:#ff6b6b}.fdot.due{background:#f7b23b}
+.fdot.current{background:#2dd4a0}.fdot.untracked{background:var(--muted2)}
 /* MODALS */
 /* Every modal blurs its page rather than washing it out — enough that body
    text behind is unreadable, light enough that the app is still visible
@@ -321,6 +361,14 @@ canvas.chart{display:block;width:100%;height:150px}
 .tile-dot-btn:hover{border-color:var(--accent);background:var(--accent-dim)}
 .tile-dot-btn span{width:3px;height:3px;border-radius:50%;background:var(--muted2);display:block}
 .tile-dot-btn:hover span{background:var(--accent)}
+
+/* Ghost ⋮ — transparent until the tile is hovered or the button is tabbed to.
+   Twelve boxed buttons competed with the content they sat on. */
+.dot-ghost{width:var(--ctl-h-sm);height:var(--ctl-h-sm);border-radius:var(--ctl-r);border:1px solid transparent;background:transparent;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:0;opacity:0;transition:background .15s,border-color .15s,opacity .15s}
+.dot-ghost span{width:3px;height:3px;border-radius:50%;background:var(--muted3);display:block}
+.ac-tile:hover .dot-ghost,.dot-ghost:focus-visible,.dot-ghost[data-state="open"]{opacity:1}
+.band-menu{position:absolute;top:8px;right:8px;z-index:10}
+.band-menu:hover{background:rgba(0,0,0,.5);border-color:rgba(255,255,255,.14)}
 .portal-item{width:100%;text-align:left;background:none;border:none;color:var(--muted3);font-size:12px;font-weight:500;padding:9px 12px;cursor:pointer;font-family:var(--body);transition:all .12s}
 .portal-item:hover{background:var(--bg4);color:var(--text)}
 /* ADS-B LIVE */
@@ -576,7 +624,7 @@ canvas.chart{display:block;width:100%;height:150px}
 .tile-status.untracked{color:var(--muted2);background:var(--bg4);border-color:var(--border2)}
 /* A grounded aeroplane should catch the eye from the whole hangar, not just its
    own tile. */
-.ac-tile:has(.tile-status.grounded){border-color:rgba(240,75,75,.34)}
+.ac-tile:has(.stat-btn.grounded){border-color:rgba(240,75,75,.34)}
 
 /* ── ⋮ menus (Radix dropdown-menu) ──────────────────────────────────────────
    Replaces three hand-rolled variants that differed in padding, casing and
