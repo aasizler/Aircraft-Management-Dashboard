@@ -11,6 +11,7 @@ import {
   TypeAutocomplete,
 } from "@/components/ui/autocomplete";
 import { makeCoreInspections, type V1Aircraft } from "@/lib/aircraft";
+import type { AcClass } from "@/lib/reference-data";
 import type { MeterKind } from "@/lib/types";
 
 const METERS: MeterKind[] = ["hobbs", "tach", "flight", "total"];
@@ -52,8 +53,27 @@ export function AddAircraftButton({
     oilInterval: "50",
     fleet_id: "",
   });
+  // Piston until the catalogue says otherwise — that's what a free-typed
+  // aircraft type has always been treated as.
+  const [cls, setCls] = useState<AcClass>("piston");
+  const turbine = cls !== "piston";
 
   const set = (k: keyof typeof f, v: string) => setF((p) => ({ ...p, [k]: v }));
+
+  /**
+   * A turbine carries neither the piston TBO default nor an hours-based oil
+   * interval, so picking one out of the catalogue clears both rather than
+   * leaving 1700/50 sitting in the fields looking authoritative.
+   */
+  function pickType(t: { cls?: AcClass }) {
+    const next = t.cls ?? "piston";
+    setCls(next);
+    setF((p) => ({
+      ...p,
+      tbo: next === "piston" ? (p.tbo || "1700") : p.tbo === "1700" ? "" : p.tbo,
+      oilInterval: next === "piston" ? (p.oilInterval || "50") : "",
+    }));
+  }
 
   async function submit() {
     if (!f.reg.trim()) { setErr("Registration is required."); return; }
@@ -105,7 +125,7 @@ export function AddAircraftButton({
     // oil-interval defaults. The first port inserted `data: {}`, leaving a new
     // aircraft with no inspections and no way to add any.
     const data: V1Aircraft = {
-      inspections: makeCoreInspections(),
+      inspections: makeCoreInspections(cls),
       oil: [],
       squawks: [],
       squawkArchive: [],
@@ -122,10 +142,13 @@ export function AddAircraftButton({
         hull: 0, liability: "", deductible: "", pilots: [], documents: [],
       },
       engineType: f.engineType.trim() || null,
+      acClass: cls,
       tt: hrs,
       engineSMOH: Number(f.engineSMOH) || 0,
-      tbo: Number(f.tbo) || 1700,
-      oilInterval: Number(f.oilInterval) || 50,
+      // No piston fallbacks on a turbine: an unset TBO stays unset, and a zero
+      // oil interval is how oilLife() knows there is no oil clock to show.
+      tbo: Number(f.tbo) || (turbine ? 0 : 1700),
+      oilInterval: Number(f.oilInterval) || (turbine ? 0 : 50),
       oilHobbs: hrs,
       oilChangeDate: "",
       lastUpdated: "Not yet updated",
@@ -190,6 +213,7 @@ export function AddAircraftButton({
       maint_basis: "hobbs", cost_basis: "hobbs", hours: "", fleet_id: "",
       engineSMOH: "", tbo: "1700", oilInterval: "50",
     });
+    setCls("piston");
     toast(`${reg} added to the hangar`, "ok");
     router.refresh();
   }
@@ -215,7 +239,11 @@ export function AddAircraftButton({
 
           <div className="form-row">
             <label>Aircraft Type / Model</label>
-            <TypeAutocomplete value={f.type} onChange={(v) => set("type", v)} />
+            <TypeAutocomplete
+              value={f.type}
+              onChange={(v) => set("type", v)}
+              onResolve={pickType}
+            />
           </div>
 
           <div className="form-row">
@@ -233,23 +261,27 @@ export function AddAircraftButton({
               <input type="number" step="0.1" value={f.hours} onChange={(e) => set("hours", e.target.value)} placeholder="1243" />
             </div>
             <div className="form-row">
-              <label>Engine SMOH Hours</label>
+              <label>{turbine ? "Engine Hours Since Overhaul" : "Engine SMOH Hours"}</label>
               <input type="number" step="0.1" value={f.engineSMOH} onChange={(e) => set("engineSMOH", e.target.value)} placeholder="441" />
             </div>
           </div>
 
+          {/* A turbine has no fixed-hour oil change — oil is serviced on
+              consumption, so the field is dropped rather than shown empty. */}
           <div className="form-grid">
             <div className="form-row">
-              <label>Engine TBO (hrs)</label>
-              <input type="number" value={f.tbo} onChange={(e) => set("tbo", e.target.value)} />
+              <label>{turbine ? "Engine TBO / Program Interval (hrs)" : "Engine TBO (hrs)"}</label>
+              <input type="number" value={f.tbo} onChange={(e) => set("tbo", e.target.value)} placeholder={turbine ? "4000" : "1700"} />
               <div style={{ fontSize: 10, color: "var(--muted2)", marginTop: 4 }}>
                 Auto-filled from engine type — adjust as needed
               </div>
             </div>
-            <div className="form-row">
-              <label>Oil Change Interval (hrs)</label>
-              <input type="number" value={f.oilInterval} onChange={(e) => set("oilInterval", e.target.value)} />
-            </div>
+            {!turbine && (
+              <div className="form-row">
+                <label>Oil Change Interval (hrs)</label>
+                <input type="number" value={f.oilInterval} onChange={(e) => set("oilInterval", e.target.value)} />
+              </div>
+            )}
           </div>
 
           <div className="form-row">

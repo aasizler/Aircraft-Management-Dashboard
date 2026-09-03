@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AIRCRAFT_DB, AP_FULL, ENGINE_DB, type Engine } from "@/lib/reference-data";
+import {
+  AIRCRAFT_DB, AP_FULL, ENGINE_DB, enginePower,
+  type AcType, type Engine,
+} from "@/lib/reference-data";
 
 type Item = { key: string; code: string; label: string; value: string };
 
@@ -88,12 +91,21 @@ function Combo({
 }
 
 export function TypeAutocomplete({
-  value, onChange,
-}: { value: string; onChange: (v: string) => void }) {
+  value, onChange, onResolve,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  /** Fires when a catalogue entry is chosen, so callers can read its class. */
+  onResolve?: (t: AcType) => void;
+}) {
   return (
     <Combo
       value={value}
       onChange={onChange}
+      onPick={(it) => {
+        const t = AIRCRAFT_DB.find((a) => a.icao + a.model === it.key);
+        if (t) onResolve?.(t);
+      }}
       placeholder="Type name or ICAO code"
       search={(q) => {
         const u = q.toUpperCase();
@@ -169,7 +181,7 @@ export function EngineAutocomplete({
             .map((e) => ({
               key: e.id,
               code: e.model,
-              label: `${e.mfr} · ${e.hp}hp · TBO ${e.tbo}`,
+              label: `${e.mfr} · ${enginePower(e)} · TBO ${e.tbo}`,
               value: e.model,
             }));
         }}
@@ -180,7 +192,7 @@ export function EngineAutocomplete({
       />
       {info && (
         <div className="airport-resolved">
-          {info.mfr} {info.model} · {info.hp} hp · TBO {info.tbo} hrs
+          {info.mfr} {info.model} · {enginePower(info)} · TBO {info.tbo.toLocaleString()} hrs
         </div>
       )}
     </>

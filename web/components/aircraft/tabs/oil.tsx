@@ -115,9 +115,11 @@ export function OilTab({ data, maintHrs, save, consumeAction, aircraft }: TabPro
               ? life.hrsLeft >= 0
                 ? `${life.hrsLeft.toFixed(1)} hrs left · ${life.interval}hr interval`
                 : `${life.overdueHrs.toFixed(1)} hrs overdue`
-              : life.hasRecord
-                ? `${METER_LABEL[aircraft.maint_basis].toLowerCase()} reads 0 — can't measure`
-                : "no oil change recorded"}
+              : !life.applicable
+                ? "serviced on condition — no hour interval"
+                : life.hasRecord
+                  ? `${METER_LABEL[aircraft.maint_basis].toLowerCase()} reads 0 — can't measure`
+                  : "no oil change recorded"}
           </div>
         </div>
         <div className="stat-box">

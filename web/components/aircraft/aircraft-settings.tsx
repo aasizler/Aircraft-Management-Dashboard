@@ -11,6 +11,7 @@ import {
   TypeAutocomplete,
 } from "@/components/ui/autocomplete";
 import type { AircraftRow, Meter, V1Aircraft } from "@/lib/aircraft";
+import type { AcClass } from "@/lib/reference-data";
 import type { MeterKind } from "@/lib/types";
 
 const METERS: MeterKind[] = ["hobbs", "tach", "flight", "total"];
@@ -63,8 +64,8 @@ export function AircraftSettings({
     engineType: (data.engineType as string) ?? "",
     tt: data.tt != null ? String(data.tt) : "",
     engineSMOH: data.engineSMOH != null ? String(data.engineSMOH) : "",
-    tbo: data.tbo != null ? String(data.tbo) : "1700",
-    oilInterval: data.oilInterval != null ? String(data.oilInterval) : "50",
+    tbo: data.tbo ? String(data.tbo) : "",
+    oilInterval: data.oilInterval ? String(data.oilInterval) : "",
     maint_basis: aircraft.maint_basis,
     cost_basis: aircraft.cost_basis,
     maintHrs: String(meterOf(aircraft.maint_basis)),
@@ -86,6 +87,10 @@ export function AircraftSettings({
       // eslint-disable-next-line react-hooks/set-state-in-effect
       .then(({ data }) => setFleets(data ?? []));
   }, [open, aircraft.org_id]);
+
+  // Blobs written before the class existed are piston, which is what they were.
+  const [cls, setCls] = useState<AcClass>(data.acClass ?? "piston");
+  const turbine = cls !== "piston";
 
   const set = (k: keyof typeof f, v: string) => setF((p) => ({ ...p, [k]: v }));
 
@@ -146,10 +151,11 @@ export function AircraftSettings({
     await save({
       ...data,
       engineType: f.engineType.trim() || null,
+      acClass: cls,
       tt: f.tt === "" ? undefined : Number(f.tt),
       engineSMOH: f.engineSMOH === "" ? undefined : Number(f.engineSMOH),
-      tbo: Number(f.tbo) || 1700,
-      oilInterval: Number(f.oilInterval) || 50,
+      tbo: Number(f.tbo) || (turbine ? 0 : 1700),
+      oilInterval: Number(f.oilInterval) || (turbine ? 0 : 50),
       lastUpdated:
         "Updated " +
         new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
@@ -184,7 +190,15 @@ export function AircraftSettings({
 
           <div className="form-row">
             <label>Aircraft Type</label>
-            <TypeAutocomplete value={f.type} onChange={(v) => set("type", v)} />
+            <TypeAutocomplete
+              value={f.type}
+              onChange={(v) => set("type", v)}
+              onResolve={(t) => {
+                const next = t.cls ?? "piston";
+                setCls(next);
+                if (next !== "piston") setF((p) => ({ ...p, oilInterval: "" }));
+              }}
+            />
           </div>
 
           <div className="form-row">
@@ -202,20 +216,22 @@ export function AircraftSettings({
               <input type="number" step="0.1" value={f.tt} onChange={(e) => set("tt", e.target.value)} />
             </div>
             <div className="form-row">
-              <label>Engine SMOH Hours</label>
+              <label>{turbine ? "Engine Hours Since Overhaul" : "Engine SMOH Hours"}</label>
               <input type="number" step="0.1" value={f.engineSMOH} onChange={(e) => set("engineSMOH", e.target.value)} />
             </div>
           </div>
 
           <div className="form-grid">
             <div className="form-row">
-              <label>Engine TBO (hrs)</label>
-              <input type="number" value={f.tbo} onChange={(e) => set("tbo", e.target.value)} />
+              <label>{turbine ? "Engine TBO / Program Interval (hrs)" : "Engine TBO (hrs)"}</label>
+              <input type="number" value={f.tbo} onChange={(e) => set("tbo", e.target.value)} placeholder={turbine ? "4000" : "1700"} />
             </div>
-            <div className="form-row">
-              <label>Oil Interval (hrs)</label>
-              <input type="number" value={f.oilInterval} onChange={(e) => set("oilInterval", e.target.value)} />
-            </div>
+            {!turbine && (
+              <div className="form-row">
+                <label>Oil Interval (hrs)</label>
+                <input type="number" value={f.oilInterval} onChange={(e) => set("oilInterval", e.target.value)} />
+              </div>
+            )}
           </div>
 
           <div className="form-row">

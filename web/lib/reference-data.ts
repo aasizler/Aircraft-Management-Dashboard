@@ -1,8 +1,24 @@
 // Reference databases lifted verbatim from aerotrack_v1_07_3_6.html so the
 // type / airport / engine autocompletes behave exactly as they did in v1.
 
-export type AcType = { icao: string; mfr: string; model: string; desc?: string };
+/**
+ * Powerplant class. Drives the inspection set an aircraft is seeded with and
+ * whether an hours-based oil interval means anything — a piston runs a 50-hour
+ * oil change and a 100-hour inspection; a turbine does neither. Absent means
+ * piston, which is what every untagged row below is.
+ */
+export type AcClass = "piston" | "turboprop" | "jet";
+
+export type AcType = { icao: string; mfr: string; model: string; desc?: string; cls?: AcClass };
 export type Engine = { id: string; mfr: string; model: string; hp: number; tbo: number; type: string; app: string };
+
+/**
+ * `hp` holds thrust in pounds for turbofans — the field was named for the
+ * piston rows it was first filled with. Printing "1846hp" next to a Vision Jet
+ * is wrong in a way an owner will notice, so format through this.
+ */
+export const enginePower = (e: Engine) =>
+  e.type === "Turbofan" ? `${e.hp.toLocaleString()} lbf` : `${e.hp} hp`;
 
 export const AIRCRAFT_DB: AcType[] = [
   // Beechcraft / Textron
@@ -16,10 +32,10 @@ export const AIRCRAFT_DB: AcType[] = [
   {icao:'BE24',mfr:'Beechcraft',model:'Sierra',desc:'BE24 · Retractable Musketeer'},
   {icao:'BE60',mfr:'Beechcraft',model:'Duke',desc:'BE60 · Pressurized twin'},
   {icao:'BE80',mfr:'Beechcraft',model:'Queen Air',desc:'BE80 · Light twin'},
-  {icao:'BE90',mfr:'Beechcraft',model:'King Air C90',desc:'BE90 · Turboprop twin'},
-  {icao:'BE9L',mfr:'Beechcraft',model:'King Air B100',desc:'BE9L · Turboprop twin'},
-  {icao:'B350',mfr:'Beechcraft',model:'King Air 350',desc:'B350 · Turboprop twin'},
-  {icao:'B190',mfr:'Beechcraft',model:'1900 Airliner',desc:'B190 · Regional turboprop'},
+  {icao:'BE90',mfr:'Beechcraft',model:'King Air C90',desc:'BE90 · Turboprop twin',cls:'turboprop'},
+  {icao:'BE9L',mfr:'Beechcraft',model:'King Air B100',desc:'BE9L · Turboprop twin',cls:'turboprop'},
+  {icao:'B350',mfr:'Beechcraft',model:'King Air 350',desc:'B350 · Turboprop twin',cls:'turboprop'},
+  {icao:'B190',mfr:'Beechcraft',model:'1900 Airliner',desc:'B190 · Regional turboprop',cls:'turboprop'},
   // Cessna / Textron
   {icao:'C150',mfr:'Cessna',model:'150 / 152',desc:'C150 · 100-110hp trainer'},
   {icao:'C172',mfr:'Cessna',model:'Skyhawk 172',desc:'C172 · 160-180hp, most popular'},
@@ -31,26 +47,26 @@ export const AIRCRAFT_DB: AcType[] = [
   {icao:'C205',mfr:'Cessna',model:'205 / Super Skylane',desc:'C205 · 260hp'},
   {icao:'C206',mfr:'Cessna',model:'Stationair 206',desc:'C206 · Utility, 300hp'},
   {icao:'C207',mfr:'Cessna',model:'Skywagon 207',desc:'C207 · 7-seat utility'},
-  {icao:'C208',mfr:'Cessna',model:'Caravan 208',desc:'C208 · Turboprop utility'},
+  {icao:'C208',mfr:'Cessna',model:'Caravan 208',desc:'C208 · Turboprop utility',cls:'turboprop'},
   {icao:'C210',mfr:'Cessna',model:'Centurion 210',desc:'C210 · Retractable, 285-310hp'},
   {icao:'C310',mfr:'Cessna',model:'310',desc:'C310 · Twin, 260hp × 2'},
   {icao:'C340',mfr:'Cessna',model:'340',desc:'C340 · Pressurized twin'},
   {icao:'C402',mfr:'Cessna',model:'402 Businessliner',desc:'C402 · Commuter twin'},
   {icao:'C414',mfr:'Cessna',model:'Chancellor 414',desc:'C414 · Pressurized twin'},
   {icao:'C421',mfr:'Cessna',model:'Golden Eagle 421',desc:'C421 · Pressurized twin'},
-  {icao:'C425',mfr:'Cessna',model:'Conquest I',desc:'C425 · Turboprop twin'},
-  {icao:'C441',mfr:'Cessna',model:'Conquest II',desc:'C441 · Turboprop twin'},
-  {icao:'C25A',mfr:'Cessna',model:'Citation CJ2',desc:'C25A · Light jet'},
-  {icao:'C25B',mfr:'Cessna',model:'Citation CJ3',desc:'C25B · Light jet'},
-  {icao:'C25C',mfr:'Cessna',model:'Citation CJ4',desc:'C25C · Light jet'},
-  {icao:'C500',mfr:'Cessna',model:'Citation I',desc:'C500 · Light jet'},
-  {icao:'C501',mfr:'Cessna',model:'Citation I/SP',desc:'C501 · Light jet'},
-  {icao:'C510',mfr:'Cessna',model:'Citation Mustang',desc:'C510 · VLJ'},
-  {icao:'C525',mfr:'Cessna',model:'CitationJet CJ1',desc:'C525 · Light jet'},
-  {icao:'C550',mfr:'Cessna',model:'Citation II',desc:'C550 · Light jet'},
-  {icao:'C560',mfr:'Cessna',model:'Citation V / Ultra',desc:'C560 · Mid jet'},
-  {icao:'C680',mfr:'Cessna',model:'Citation Sovereign',desc:'C680 · Mid jet'},
-  {icao:'C750',mfr:'Cessna',model:'Citation X',desc:'C750 · Large cabin jet'},
+  {icao:'C425',mfr:'Cessna',model:'Conquest I',desc:'C425 · Turboprop twin',cls:'turboprop'},
+  {icao:'C441',mfr:'Cessna',model:'Conquest II',desc:'C441 · Turboprop twin',cls:'turboprop'},
+  {icao:'C25A',mfr:'Cessna',model:'Citation CJ2',desc:'C25A · Light jet',cls:'jet'},
+  {icao:'C25B',mfr:'Cessna',model:'Citation CJ3',desc:'C25B · Light jet',cls:'jet'},
+  {icao:'C25C',mfr:'Cessna',model:'Citation CJ4',desc:'C25C · Light jet',cls:'jet'},
+  {icao:'C500',mfr:'Cessna',model:'Citation I',desc:'C500 · Light jet',cls:'jet'},
+  {icao:'C501',mfr:'Cessna',model:'Citation I/SP',desc:'C501 · Light jet',cls:'jet'},
+  {icao:'C510',mfr:'Cessna',model:'Citation Mustang',desc:'C510 · VLJ',cls:'jet'},
+  {icao:'C525',mfr:'Cessna',model:'CitationJet CJ1',desc:'C525 · Light jet',cls:'jet'},
+  {icao:'C550',mfr:'Cessna',model:'Citation II',desc:'C550 · Light jet',cls:'jet'},
+  {icao:'C560',mfr:'Cessna',model:'Citation V / Ultra',desc:'C560 · Mid jet',cls:'jet'},
+  {icao:'C680',mfr:'Cessna',model:'Citation Sovereign',desc:'C680 · Mid jet',cls:'jet'},
+  {icao:'C750',mfr:'Cessna',model:'Citation X',desc:'C750 · Large cabin jet',cls:'jet'},
   // Piper
   {icao:'PA18',mfr:'Piper',model:'Super Cub',desc:'PA18 · Tailwheel, 90-150hp'},
   {icao:'PA28',mfr:'Piper',model:'Cherokee / Archer / Warrior',desc:'PA28 · 140-235hp variants'},
@@ -59,11 +75,11 @@ export const AIRCRAFT_DB: AcType[] = [
   {icao:'PA38',mfr:'Piper',model:'Tomahawk',desc:'PA38 · 112hp trainer'},
   {icao:'PA44',mfr:'Piper',model:'Seminole',desc:'PA44 · Twin trainer, 180hp × 2'},
   {icao:'PA46',mfr:'Piper',model:'Malibu / Mirage / Matrix',desc:'PA46 · Pressurized, 350hp'},
-  {icao:'P46T',mfr:'Piper',model:'Malibu Meridian',desc:'P46T · Turboprop single'},
+  {icao:'P46T',mfr:'Piper',model:'Malibu Meridian',desc:'P46T · Turboprop single',cls:'turboprop'},
   {icao:'PA24',mfr:'Piper',model:'Comanche',desc:'PA24 · Retractable, 180-400hp'},
   {icao:'PA30',mfr:'Piper',model:'Twin Comanche',desc:'PA30 · Light twin'},
   {icao:'PA31',mfr:'Piper',model:'Navajo',desc:'PA31 · Twin, 310hp × 2'},
-  {icao:'PA42',mfr:'Piper',model:'Cheyenne',desc:'PA42 · Turboprop twin'},
+  {icao:'PA42',mfr:'Piper',model:'Cheyenne',desc:'PA42 · Turboprop twin',cls:'turboprop'},
   // Mooney
   {icao:'M20P',mfr:'Mooney',model:'M20 201 / 231 / 252',desc:'M20P · Retractable, 200-231hp'},
   {icao:'M20T',mfr:'Mooney',model:'Acclaim Type S',desc:'M20T · Turbo, 280hp'},
@@ -72,17 +88,18 @@ export const AIRCRAFT_DB: AcType[] = [
   // Cirrus
   {icao:'SR20',mfr:'Cirrus',model:'SR20',desc:'SR20 · CAPS, 200hp'},
   {icao:'SR22',mfr:'Cirrus',model:'SR22 / SR22T',desc:'SR22 · CAPS, 310hp'},
+  {icao:'SF50',mfr:'Cirrus',model:'SF50 Vision Jet',desc:'SF50 · Single-engine VLJ, CAPS',cls:'jet'},
   // Diamond
   {icao:'DA40',mfr:'Diamond',model:'DA40 Diamond Star',desc:'DA40 · 180hp, composite'},
   {icao:'DA42',mfr:'Diamond',model:'DA42 Twin Star',desc:'DA42 · Diesel twin'},
   {icao:'DA62',mfr:'Diamond',model:'DA62',desc:'DA62 · Twin diesel, 7-seat'},
   // Socata / TBM
-  {icao:'TBM7',mfr:'Socata',model:'TBM 700',desc:'TBM7 · Turboprop single'},
-  {icao:'TBM8',mfr:'Socata',model:'TBM 850 / 900',desc:'TBM8 · Turboprop single'},
-  {icao:'TBM9',mfr:'Socata',model:'TBM 940 / 960',desc:'TBM9 · Turboprop single'},
+  {icao:'TBM7',mfr:'Socata',model:'TBM 700',desc:'TBM7 · Turboprop single',cls:'turboprop'},
+  {icao:'TBM8',mfr:'Socata',model:'TBM 850 / 900',desc:'TBM8 · Turboprop single',cls:'turboprop'},
+  {icao:'TBM9',mfr:'Socata',model:'TBM 940 / 960',desc:'TBM9 · Turboprop single',cls:'turboprop'},
   // Pilatus
-  {icao:'PC12',mfr:'Pilatus',model:'PC-12',desc:'PC12 · Turboprop single, utility'},
-  {icao:'PC24',mfr:'Pilatus',model:'PC-24',desc:'PC24 · Business jet'},
+  {icao:'PC12',mfr:'Pilatus',model:'PC-12',desc:'PC12 · Turboprop single, utility',cls:'turboprop'},
+  {icao:'PC24',mfr:'Pilatus',model:'PC-24',desc:'PC24 · Business jet',cls:'jet'},
   // Extra / Aerobatic
   {icao:'EXTR',mfr:'Extra',model:'Extra 300 / 330',desc:'EXTR · Aerobatic, 300hp'},
   // American General / Grumman
@@ -111,10 +128,46 @@ export const AIRCRAFT_DB: AcType[] = [
   {icao:'LNC2',mfr:'Lancair',model:'Lancair 235 / 320',desc:'LNC2 · High-perf kit'},
   {icao:'IV',mfr:'Lancair',model:'Lancair IV / IV-P',desc:'IV · Pressurized kit'},
   // Eurocopter / Airbus Helicopters
-  {icao:'EC35',mfr:'Airbus Helicopters',model:'H135 / EC135',desc:'EC35 · Light twin helo'},
+  {icao:'EC35',mfr:'Airbus Helicopters',model:'H135 / EC135',desc:'EC35 · Light twin helo',cls:'turboprop'},
   {icao:'R22',mfr:'Robinson',model:'R22',desc:'R22 · 2-seat light helo'},
   {icao:'R44',mfr:'Robinson',model:'R44 Raven',desc:'R44 · 4-seat light helo'},
-  {icao:'R66',mfr:'Robinson',model:'R66 Turbine',desc:'R66 · Turbine helo'},
+  {icao:'R66',mfr:'Robinson',model:'R66 Turbine',desc:'R66 · Turbine helo',cls:'turboprop'},
+
+  // ── Very light / light jets ────────────────────────────────────────────────
+  {icao:'E50P',mfr:'Embraer',model:'Phenom 100 / 100EV',desc:'E50P · VLJ, twin turbofan',cls:'jet'},
+  {icao:'E55P',mfr:'Embraer',model:'Phenom 300 / 300E',desc:'E55P · Light jet',cls:'jet'},
+  {icao:'HDJT',mfr:'Honda Aircraft',model:'HondaJet HA-420',desc:'HDJT · VLJ, over-wing engines',cls:'jet'},
+  {icao:'EA50',mfr:'Eclipse',model:'Eclipse 500 / 550',desc:'EA50 · VLJ',cls:'jet'},
+  {icao:'C25M',mfr:'Cessna',model:'Citation M2',desc:'C25M · Light jet',cls:'jet'},
+  {icao:'C56X',mfr:'Cessna',model:'Citation Excel / XLS+',desc:'C56X · Mid-size jet',cls:'jet'},
+  {icao:'C68A',mfr:'Cessna',model:'Citation Latitude',desc:'C68A · Mid-size jet',cls:'jet'},
+  {icao:'C700',mfr:'Cessna',model:'Citation Longitude',desc:'C700 · Super-mid jet',cls:'jet'},
+  // ── Mid / super-mid / heavy ────────────────────────────────────────────────
+  {icao:'LJ35',mfr:'Learjet',model:'Learjet 35 / 36',desc:'LJ35 · Light jet',cls:'jet'},
+  {icao:'LJ45',mfr:'Learjet',model:'Learjet 40 / 45',desc:'LJ45 · Light jet',cls:'jet'},
+  {icao:'LJ60',mfr:'Learjet',model:'Learjet 60 / 60XR',desc:'LJ60 · Mid-size jet',cls:'jet'},
+  {icao:'LJ75',mfr:'Learjet',model:'Learjet 70 / 75',desc:'LJ75 · Light jet',cls:'jet'},
+  {icao:'BE40',mfr:'Beechcraft',model:'Beechjet 400A / Hawker 400XP',desc:'BE40 · Light jet',cls:'jet'},
+  {icao:'H25B',mfr:'Hawker',model:'Hawker 800XP / 850XP / 900XP',desc:'H25B · Mid-size jet',cls:'jet'},
+  {icao:'CL30',mfr:'Bombardier',model:'Challenger 300',desc:'CL30 · Super-mid jet',cls:'jet'},
+  {icao:'CL35',mfr:'Bombardier',model:'Challenger 350 / 3500',desc:'CL35 · Super-mid jet',cls:'jet'},
+  {icao:'CL60',mfr:'Bombardier',model:'Challenger 604 / 605 / 650',desc:'CL60 · Large-cabin jet',cls:'jet'},
+  {icao:'GL5T',mfr:'Bombardier',model:'Global 5000',desc:'GL5T · Long-range jet',cls:'jet'},
+  {icao:'GL6T',mfr:'Bombardier',model:'Global 6000 / XRS',desc:'GL6T · Long-range jet',cls:'jet'},
+  {icao:'F2TH',mfr:'Dassault',model:'Falcon 2000 / 2000EX / LXS',desc:'F2TH · Large-cabin jet',cls:'jet'},
+  {icao:'F900',mfr:'Dassault',model:'Falcon 900 / 900EX / LX',desc:'F900 · Trijet',cls:'jet'},
+  {icao:'FA7X',mfr:'Dassault',model:'Falcon 7X',desc:'FA7X · Long-range trijet',cls:'jet'},
+  {icao:'GALX',mfr:'Gulfstream',model:'G200 / Galaxy',desc:'GALX · Super-mid jet',cls:'jet'},
+  {icao:'G280',mfr:'Gulfstream',model:'G280',desc:'G280 · Super-mid jet',cls:'jet'},
+  {icao:'GLF4',mfr:'Gulfstream',model:'G350 / G450 / GIV',desc:'GLF4 · Large-cabin jet',cls:'jet'},
+  {icao:'GLF5',mfr:'Gulfstream',model:'G500 / G550 / GV',desc:'GLF5 · Long-range jet',cls:'jet'},
+  {icao:'GLF6',mfr:'Gulfstream',model:'G600 / G650 / G650ER',desc:'GLF6 · Long-range jet',cls:'jet'},
+  {icao:'E545',mfr:'Embraer',model:'Legacy 450 / Praetor 500',desc:'E545 · Mid-size jet',cls:'jet'},
+  {icao:'E550',mfr:'Embraer',model:'Legacy 500 / Praetor 600',desc:'E550 · Super-mid jet',cls:'jet'},
+  // ── Turboprops ─────────────────────────────────────────────────────────────
+  {icao:'BE20',mfr:'Beechcraft',model:'King Air 200 / 250 / 260',desc:'BE20 · Turboprop twin',cls:'turboprop'},
+  {icao:'KODI',mfr:'Daher',model:'Kodiak 100 / 900',desc:'KODI · STOL turboprop utility',cls:'turboprop'},
+  {icao:'M600',mfr:'Piper',model:'M500 / M600 SLS',desc:'M600 · Turboprop single',cls:'turboprop'},
 ];
 
 export const AP_FULL: Record<string, string> = {
@@ -449,6 +502,11 @@ export const ENGINE_DB: Engine[] = [
   {id:'PT6A-114A',     mfr:'Pratt & Whitney Canada',model:'PT6A-114A',hp:870,  tbo:3600,type:'Turboprop',app:'Cessna Grand Caravan'},
   {id:'PT6A-135A',     mfr:'Pratt & Whitney Canada',model:'PT6A-135A',hp:750,  tbo:3600,type:'Turboprop',app:'King Air C90B/GT'},
   {id:'PT6A-140',      mfr:'Pratt & Whitney Canada',model:'PT6A-140', hp:875,  tbo:3600,type:'Turboprop',app:'TBM 940 / TBM 960'},
+  {id:'PT6A-140A',     mfr:'Pratt & Whitney Canada',model:'PT6A-140A',hp:900,  tbo:3600,type:'Turboprop',app:'Daher Kodiak 100 / 900'},
+  {id:'PT6A-42A',      mfr:'Pratt & Whitney Canada',model:'PT6A-42A',  hp:850,  tbo:3500,type:'Turboprop',app:'Pilatus PC-12/45 late'},
+  {id:'PT6A-42A (M600)',mfr:'Pratt & Whitney Canada',model:'PT6A-42A (M600)',hp:600,tbo:3600,type:'Turboprop',app:'Piper M600 SLS'},
+  {id:'PT6E-67XP',     mfr:'Pratt & Whitney Canada',model:'PT6E-67XP', hp:1845, tbo:3500,type:'Turboprop',app:'Pilatus PC-12 NGX'},
+  {id:'PT6A-42A (M500)',mfr:'Pratt & Whitney Canada',model:'PT6A-42A (M500)',hp:500,tbo:3600,type:'Turboprop',app:'Piper M500 / Meridian'},
 
   // ════════════════════════════════════════════════════════════════════════════
   // HONEYWELL (Garrett) — TPE331 Turboprop
@@ -487,6 +545,13 @@ export const ENGINE_DB: Engine[] = [
   // ════════════════════════════════════════════════════════════════════════════
   // WILLIAMS / P&WC — Turbofan (VLJ / Light Jet)
   // ════════════════════════════════════════════════════════════════════════════
+  {id:'FJ33-5A',       mfr:'Williams International',model:'FJ33-5A',hp:1846, tbo:4000,type:'Turbofan',app:'Cirrus SF50 Vision Jet'},
+  {id:'PW615F-A',      mfr:'Pratt & Whitney Canada',model:'PW615F-A',  hp:1460, tbo:3500,type:'Turbofan',app:'Citation Mustang'},
+  {id:'PW617F-E',      mfr:'Pratt & Whitney Canada',model:'PW617F-E',  hp:1695, tbo:3500,type:'Turbofan',app:'Embraer Phenom 100'},
+  {id:'PW617F1-E',     mfr:'Pratt & Whitney Canada',model:'PW617F1-E', hp:1730, tbo:3500,type:'Turbofan',app:'Embraer Phenom 100EV'},
+  {id:'PW610F-A',      mfr:'Pratt & Whitney Canada',model:'PW610F-A',  hp:950,  tbo:3000,type:'Turbofan',app:'Eclipse 500 / 550'},
+  {id:'HF120',         mfr:'GE Honda',model:'HF120',                   hp:2095, tbo:5000,type:'Turbofan',app:'HondaJet HA-420'},
+  {id:'PW535E1',       mfr:'Pratt & Whitney Canada',model:'PW535E1',   hp:3478, tbo:5000,type:'Turbofan',app:'Embraer Phenom 300E'},
   {id:'FJ44-1A',       mfr:'Williams International',model:'FJ44-1A',  hp:1900, tbo:5000,type:'Turbofan',app:'Citation CJ / SJ30'},
   {id:'FJ44-1AP',      mfr:'Williams International',model:'FJ44-1AP', hp:1965, tbo:5000,type:'Turbofan',app:'Citation CJ'},
   {id:'FJ44-2A',       mfr:'Williams International',model:'FJ44-2A',  hp:2400, tbo:5000,type:'Turbofan',app:'Citation CJ2 / Beechjet'},
@@ -495,7 +560,7 @@ export const ENGINE_DB: Engine[] = [
   {id:'FJ44-3A-24',    mfr:'Williams International',model:'FJ44-3A-24',hp:2820,tbo:5000,type:'Turbofan',app:'Citation CJ3+'},
   {id:'FJ44-4A',       mfr:'Williams International',model:'FJ44-4A',  hp:3600, tbo:5000,type:'Turbofan',app:'Citation CJ4'},
   {id:'FJ44-4A-QPM',   mfr:'Williams International',model:'FJ44-4A-QPM',hp:3600,tbo:5000,type:'Turbofan',app:'Citation CJ4 quiet pkg'},
-  {id:'PW530A',        mfr:'Pratt & Whitney Canada',model:'PW530A',    hp:2887, tbo:5000,type:'Turbofan',app:'Citation Mustang'},
+  {id:'PW530A',        mfr:'Pratt & Whitney Canada',model:'PW530A',    hp:2887, tbo:5000,type:'Turbofan',app:'Citation Bravo'},
   {id:'PW535A',        mfr:'Pratt & Whitney Canada',model:'PW535A',    hp:3400, tbo:5000,type:'Turbofan',app:'Cessna Citation Bravo'},
   {id:'PW535E',        mfr:'Pratt & Whitney Canada',model:'PW535E',    hp:3400, tbo:5000,type:'Turbofan',app:'Learjet 60 / Embraer'},
   {id:'PW545A',        mfr:'Pratt & Whitney Canada',model:'PW545A',    hp:4119, tbo:5000,type:'Turbofan',app:'Cessna XLS+'},
@@ -524,6 +589,20 @@ export const ENGINE_DB: Engine[] = [
   {id:'TFE731-40',     mfr:'Honeywell',model:'TFE731-40',    hp:4250, tbo:5000,type:'Turbofan',app:'Hawker 800XP / 900XP'},
   {id:'TFE731-40AR',   mfr:'Honeywell',model:'TFE731-40AR',  hp:4250, tbo:5000,type:'Turbofan',app:'Hawker 900XP'},
   {id:'TFE731-60',     mfr:'Honeywell',model:'TFE731-60',    hp:5000, tbo:5000,type:'Turbofan',app:'Falcon 900 / Learjet 60'},
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // MID / SUPER-MID / HEAVY — Turbofan
+  // ════════════════════════════════════════════════════════════════════════════
+  {id:'PW306D',        mfr:'Pratt & Whitney Canada',model:'PW306D',    hp:5907, tbo:6000,type:'Turbofan',app:'Citation Latitude'},
+  {id:'PW306C',        mfr:'Pratt & Whitney Canada',model:'PW306C',    hp:5770, tbo:6000,type:'Turbofan',app:'Citation Sovereign'},
+  {id:'PW307A',        mfr:'Pratt & Whitney Canada',model:'PW307A',    hp:6402, tbo:6000,type:'Turbofan',app:'Dassault Falcon 7X'},
+  {id:'PW308C',        mfr:'Pratt & Whitney Canada',model:'PW308C',    hp:7000, tbo:6000,type:'Turbofan',app:'Falcon 2000EX / Hawker 4000'},
+  {id:'AS907 (HTF7000)',mfr:'Honeywell',model:'HTF7000 / AS907',       hp:7000, tbo:6000,type:'Turbofan',app:'Challenger 300 / 350'},
+  {id:'AE3007C',       mfr:'Rolls-Royce',model:'AE3007C',              hp:6442, tbo:6000,type:'Turbofan',app:'Cessna Citation X'},
+  {id:'CF34-3B',       mfr:'General Electric',model:'CF34-3B',         hp:9220, tbo:6000,type:'Turbofan',app:'Challenger 604 / 605'},
+  {id:'BR710A2-20',    mfr:'Rolls-Royce',model:'BR710',                hp:14750,tbo:8000,type:'Turbofan',app:'Gulfstream G550 / Global'},
+  {id:'BR725A1-12',    mfr:'Rolls-Royce',model:'BR725',                hp:16900,tbo:8000,type:'Turbofan',app:'Gulfstream G650 / G650ER'},
+  {id:'PW814GA',       mfr:'Pratt & Whitney Canada',model:'PW814GA',   hp:15144,tbo:8000,type:'Turbofan',app:'Gulfstream G500 / G600'},
 
   // ════════════════════════════════════════════════════════════════════════════
   // ROBINSON — Helicopter Piston

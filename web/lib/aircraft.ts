@@ -1,4 +1,5 @@
 import type { MeterKind } from "./types";
+import type { AcClass } from "./reference-data";
 
 // The v1 aircraft object, carried inside aircraft.data. Loosely typed — it is
 // the same shape the HTML app used, ported as-is. Every field the legacy app
@@ -25,6 +26,8 @@ export type V1Aircraft = Record<string, unknown> & {
   airportData?: Record<string, number> | null;
   engineSMOH?: number;
   engineType?: string | null;
+  /** Powerplant class. Absent means piston — every v1 blob predates this. */
+  acClass?: AcClass;
   tbo?: number;
   tt?: number;
   oilInterval?: number;
@@ -176,20 +179,46 @@ export const meterValue = (meters: Meter[], kind: MeterKind) =>
 
 // ── Constants ported from the HTML ──────────────────────────────────────────
 
-export const CORE_INSP: Insp[] = [
+// The airworthiness certificate items that apply to any registered aircraft,
+// piston or turbine — 91.413, 91.411, 91.207, 91.171.
+const REG_INSP: Insp[] = [
   { name: "Annual Inspection",        intervalDays: 365,  intervalHrs: null, intervalLabel: "12 months", core: true },
-  { name: "50-Hour",                  intervalDays: null, intervalHrs: 50,   intervalLabel: "50 hrs",    core: true },
-  { name: "100-Hour",                 intervalDays: null, intervalHrs: 100,  intervalLabel: "100 hrs",   core: true },
   { name: "ELT Battery / Check",      intervalDays: 365,  intervalHrs: null, intervalLabel: "12 months", core: true },
   { name: "Transponder Cert.",        intervalDays: 730,  intervalHrs: null, intervalLabel: "24 months", core: true },
   { name: "Pitot-Static / IFR Cert.", intervalDays: 730,  intervalHrs: null, intervalLabel: "24 months", core: true },
   { name: "VOR Check",                intervalDays: 30,   intervalHrs: null, intervalLabel: "30 days",   core: true },
 ];
 
-// Seeds a new aircraft with the regulatory inspection set, exactly as v1's
+export const CORE_INSP: Insp[] = [
+  REG_INSP[0],
+  { name: "50-Hour",  intervalDays: null, intervalHrs: 50,  intervalLabel: "50 hrs",  core: true },
+  { name: "100-Hour", intervalDays: null, intervalHrs: 100, intervalLabel: "100 hrs", core: true },
+  ...REG_INSP.slice(1),
+];
+
+/**
+ * Turbines don't fly the piston set. There is no 50-hour oil change and no
+ * 100-hour inspection; scheduled maintenance runs off the manufacturer's
+ * program, whose phases and intervals differ by model and by which program the
+ * owner bought. Seeding invented numbers there would be worse than seeding
+ * nothing, so the program line ships with no interval and the owner fills in
+ * what their AMM actually says.
+ */
+export const CORE_INSP_TURBINE: Insp[] = [
+  ...REG_INSP,
+  {
+    name: "Scheduled / Phase Inspection",
+    intervalDays: null,
+    intervalHrs: null,
+    intervalLabel: "Per maintenance program",
+    core: true,
+  },
+];
+
+// Seeds a new aircraft with the regulatory inspection set, as v1's
 // makeCoreInspections() did. Without this a new aircraft has no inspections.
-export const makeCoreInspections = (): Insp[] =>
-  CORE_INSP.map((c) => ({
+export const makeCoreInspections = (cls: AcClass = "piston"): Insp[] =>
+  (cls === "piston" ? CORE_INSP : CORE_INSP_TURBINE).map((c) => ({
     ...c,
     lastDate: null,
     lastHobbs: null,
@@ -345,6 +374,12 @@ export function ic(i: Insp, maintHrs: number) {
   if (hoursBlocked && !nl)
     return { ...blank, s: "unknown" as InspStatus, nl: "hours not set" };
 
+  // Recorded, but with no interval on either clock — a phase inspection whose
+  // program interval hasn't been entered yet. There is no due date to be ahead
+  // of, so it can't be "ok"; saying so paints it green forever.
+  if (!i.intervalHrs && !i.intervalDays)
+    return { ...blank, s: "unknown" as InspStatus, nl: "no interval set" };
+
   let s: InspStatus = "ok";
   if (pastDue) s = "overdue";
   else if (p >= 80) s = "warn";
@@ -376,19 +411,25 @@ export function intervalText(i: Insp): string {
 // the declared maintenance clock. `tracked` is false when there is nothing to
 // measure against, so the UI can show "—" instead of a confident 100%.
 export function oilLife(a: V1Aircraft, maintHrs: number) {
-  const interval = Number(a.oilInterval) || 50;
+  // A turbine has no fixed-hour oil change to count down to — oil is serviced
+  // on consumption and condition. Falling back to 50 there invents a countdown
+  // the airframe doesn't have, so an explicit zero means "not on a clock".
+  const declared = Number(a.oilInterval);
+  const turbine = a.acClass === "jet" || a.acClass === "turboprop";
+  const applicable = declared > 0 || (!turbine && a.oilInterval == null);
+  const interval = declared > 0 ? declared : 50;
   const base = Number(a.oilHobbs ?? 0);
   // Two different reasons this can't be computed, and they need different
   // words: nothing was ever logged, versus something was logged but the
   // maintenance clock reads zero so there is nothing to measure from.
   const hasRecord = a.oilHobbs != null || (a.oil ?? []).length > 0;
   const meterReadable = maintHrs > 0;
-  const tracked = meterReadable && hasRecord;
+  const tracked = applicable && meterReadable && hasRecord;
   const used = Math.max(0, maintHrs - base);
   const hrsLeft = interval - used;
   const pct = Math.max(0, Math.min(100, (hrsLeft / interval) * 100));
   return {
-    pct, hrsLeft, used, interval, tracked, hasRecord, meterReadable,
+    pct, hrsLeft, used, interval, tracked, applicable, hasRecord, meterReadable,
     overdueHrs: hrsLeft < 0 ? -hrsLeft : 0,
   };
 }

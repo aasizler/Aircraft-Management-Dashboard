@@ -256,7 +256,11 @@ export function DashboardTab({
           <div className="kpi-val" style={{ color: life.tracked && life.pct < 15 ? "var(--warn)" : undefined }}>
             {life.tracked ? `${Math.round(life.pct)}%` : "—"}
           </div>
-          <div className="kpi-sub">{life.tracked ? `${life.hrsLeft.toFixed(0)} hrs left` : "not tracked"}</div>
+          <div className="kpi-sub">
+            {life.tracked
+              ? `${life.hrsLeft.toFixed(0)} hrs left`
+              : life.applicable ? "not tracked" : "on condition"}
+          </div>
         </div>
         <div className="kpi" onClick={() => go("Squawks")}>
           <div className="kpi-lbl">Active Squawks</div>

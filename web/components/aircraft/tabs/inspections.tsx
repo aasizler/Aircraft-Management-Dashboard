@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CORE_INSP, ic, INSP_BADGE, intervalText, METER_LABEL, today, type Insp } from "@/lib/aircraft";
+import {
+  CORE_INSP, CORE_INSP_TURBINE, ic, INSP_BADGE, intervalText, METER_LABEL, today,
+  type Insp,
+} from "@/lib/aircraft";
 import type { TabProps } from "../detail-client";
 import { Modal } from "@/components/ui/modal";
 import { Confirm } from "@/components/ui/confirm";
@@ -32,6 +35,10 @@ export function InspectionsTab({
   data, maintHrs, aircraft, save, consumeAction, allow, focusInsp, clearFocusInsp,
 }: TabProps) {
   const all = (data.inspections ?? []) as Insp[];
+  // A Vision Jet has no 50-hour oil change and no 100-hour inspection, so the
+  // type dropdown must not offer them. Untagged blobs are piston, as they were.
+  const CORE =
+    data.acClass === "jet" || data.acClass === "turboprop" ? CORE_INSP_TURBINE : CORE_INSP;
   const active = all.map((i, idx) => ({ i, idx })).filter((x) => !x.i.inactive);
   const inactive = all.map((i, idx) => ({ i, idx })).filter((x) => x.i.inactive);
 
@@ -63,12 +70,17 @@ export function InspectionsTab({
   }
 
   const set = (k: keyof FormState, v: string) => setForm((f) => ({ ...f, [k]: v }));
-  const corePreset = CORE_INSP.find((c) => c.name === form.type);
+  // A preset only short-circuits the interval fields when it actually carries
+  // an interval. The turbine program line deliberately ships without one — the
+  // owner enters what their AMM says, so it has to fall through to the inputs.
+  const corePreset = CORE.find(
+    (c) => c.name === form.type && (c.intervalHrs || c.intervalDays),
+  );
   const isCustom = form.type === "Custom...";
 
   function openEdit(idx: number) {
     const i = all[idx];
-    const preset = CORE_INSP.find((c) => c.name === i.name);
+    const preset = CORE.find((c) => c.name === i.name);
     setForm({
       type: preset ? i.name : "Custom...",
       custom: preset ? "" : i.name,
@@ -327,7 +339,7 @@ export function InspectionsTab({
           <div className="form-row">
             <label>Inspection Type</label>
             <select value={form.type} onChange={(e) => set("type", e.target.value)}>
-              {CORE_INSP.map((c) => <option key={c.name}>{c.name}</option>)}
+              {CORE.map((c) => <option key={c.name}>{c.name}</option>)}
               <option>Custom...</option>
             </select>
           </div>
