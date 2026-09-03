@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { sessionScoped } from "./cookie-lifetime";
 
 // Server-side Supabase client for Server Components, Route Handlers, and Server
 // Actions. Reads/writes the auth cookie so the session survives navigation.
@@ -19,7 +20,7 @@ export async function createClient() {
           // refresh path handles writes, so swallowing here is correct.
           try {
             cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options),
+              cookieStore.set(name, value, sessionScoped(options)),
             );
           } catch {
             /* called from a Server Component — safe to ignore */

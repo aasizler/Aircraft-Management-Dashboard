@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { sessionScoped } from "./cookie-lifetime";
 
 // Refreshes the Supabase session on every request and gates the app behind
 // auth. Public routes (login / auth callback) are allowed through unauthenticated.
@@ -19,8 +20,10 @@ export async function updateSession(request: NextRequest) {
             request.cookies.set(name, value),
           );
           response = NextResponse.next({ request });
+          // Session-scoped: the refreshed token must not come back with the
+          // library's 400-day expiry, or every request undoes the client's work.
           cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options),
+            response.cookies.set(name, value, sessionScoped(options)),
           );
         },
       },
