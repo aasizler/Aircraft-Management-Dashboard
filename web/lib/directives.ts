@@ -123,7 +123,13 @@ function engineMakerOf(engineType: string | null | undefined): string | null {
   return hit?.mfr ?? null;
 }
 
-export type Craft = { reg: string; type: string | null; engineType?: string | null };
+export type Craft = {
+  reg: string;
+  type: string | null;
+  engineType?: string | null;
+  /** Present from the hangar, so a gap note can link to the aircraft. */
+  id?: string;
+};
 
 /**
  * Beech and Cessna both file under Textron now, so both search the same term
@@ -413,4 +419,30 @@ export function coverageGaps(fleet: Craft[]): { regs: string[]; why: Coverage }[
     byReason.set(k, hit);
   }
   return [...byReason.values()];
+}
+
+
+/**
+ * Whether ENGINE directives are being checked, which is a separate question
+ * from the airframe: a Bonanza with no engine on record still gets its Textron
+ * directives, and the list looks complete while every Continental one is
+ * missing from it.
+ */
+export type EngineCoverage = "ok" | "missing" | "no-source";
+
+export function engineCoverageOf(c: Craft): EngineCoverage {
+  if (!(c.engineType ?? "").trim()) return "missing";
+  const mk = engineMakerOf(c.engineType);
+  if (!mk || !ENGINE_TERMS[mk]) return "no-source";
+  return "ok";
+}
+
+/** Aircraft whose engine directives aren't being checked, and why. */
+export function engineGaps(fleet: Craft[]): { craft: Craft; why: EngineCoverage }[] {
+  return fleet
+    // Only meaningful where the airframe itself resolved; otherwise the
+    // aircraft is already reported as unchecked entirely.
+    .filter((c) => coverageOf(c).kind === "ok")
+    .map((c) => ({ craft: c, why: engineCoverageOf(c) }))
+    .filter((x) => x.why !== "ok");
 }

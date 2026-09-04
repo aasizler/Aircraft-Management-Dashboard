@@ -170,6 +170,7 @@ export default async function Home() {
             </div>
             <AdRibbon
               fleet={tiles.map((t) => ({
+                id: t.id,
                 reg: t.reg,
                 type: t.type,
                 engineType: (t.data?.engineType as string | null) ?? null,

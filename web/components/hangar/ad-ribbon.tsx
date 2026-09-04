@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Icon } from "@/components/ui/icon";
 import {
-  coverageGaps, fetchDirectives, loadSeen, saveSeen, type Craft, type Directive,
+  coverageGaps, engineGaps, fetchDirectives, loadSeen, saveSeen, type Craft, type Directive,
 } from "@/lib/directives";
 
 /**
@@ -63,6 +63,7 @@ export function AdRibbon({ fleet }: { fleet: Craft[] }) {
   // Relevant means: names a model you operate, or names none at all. The rest
   // are published for your manufacturers but for other types.
   const gaps = useMemo(() => coverageGaps(fleet), [fleet]);
+  const engGaps = useMemo(() => engineGaps(fleet), [fleet]);
   const mine = (rows ?? []).filter((r) => !r.other);
   const other = (rows ?? []).filter((r) => r.other);
   const unread = mine.filter((r) => !seen.has(r.id));
@@ -139,6 +140,22 @@ export function AdRibbon({ fleet }: { fleet: Craft[] }) {
             : g.why.kind === "no-source"
               ? `no directive source is set up for ${g.why.maker}.`
               : "its type wasn't picked from the list, so no make could be resolved and nothing is being checked. Re-pick it in Aircraft Settings."}
+        </div>
+      ))}
+
+      {/* Separate from the airframe gaps above: these aircraft ARE being
+          checked, just not for their engines, which is the more misleading of
+          the two because the list looks complete. */}
+      {ready && engGaps.map(({ craft, why }) => (
+        <div key={craft.reg} className="ad-note">
+          {craft.id ? (
+            <a className="ad-gap-link" href={`/aircraft/${craft.id}`}>{craft.reg}</a>
+          ) : (
+            <b>{craft.reg}</b>
+          )}
+          {why === "missing"
+            ? " — airframe only. No engine is set, so engine directives aren't being checked."
+            : " — no directive source is set up for this engine's maker."}
         </div>
       ))}
 
