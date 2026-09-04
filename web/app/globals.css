@@ -216,7 +216,7 @@ canvas.chart{display:block;width:100%;height:150px}
 .roll-item.grounded{color:#ff4c60}.roll-item.grounded i{background:#ff4c60}
 .roll-item.due{color:#ffa023}.roll-item.due i{background:#ffa023}
 .roll-item.current i{background:#22e2a6}
-.roll-item.untracked i{background:var(--muted2)}
+.roll-item.untracked i{background:#b4b4b4}
 
 .fl-empty{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--muted);border:1px dashed var(--border2);border-radius:12px;padding:18px 16px}
 /* Fleet actions live behind the same ⋮ the aircraft tiles use. */
@@ -236,7 +236,7 @@ canvas.chart{display:block;width:100%;height:150px}
 .ac-tile:has(.stat-btn.grounded) .ac-tile-band{background:linear-gradient(160deg,rgba(255,64,80,.52),rgba(255,64,80,.05))}
 .ac-tile:has(.stat-btn.due) .ac-tile-band{background:linear-gradient(160deg,rgba(255,148,28,.52),rgba(255,148,28,.05))}
 .ac-tile:has(.stat-btn.current) .ac-tile-band{background:linear-gradient(160deg,rgba(40,226,166,.52),rgba(40,226,166,.05))}
-.ac-tile:has(.stat-btn.untracked) .ac-tile-band{background:linear-gradient(160deg,rgba(255,255,255,.10),rgba(255,255,255,.015))}
+.ac-tile:has(.stat-btn.untracked) .ac-tile-band{background:linear-gradient(160deg,rgba(255,255,255,.34),rgba(255,255,255,.04))}
 .tile-ghost{position:absolute;right:-8px;top:14px;opacity:.1;color:var(--text);pointer-events:none}
 .band-chip{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted3);background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.09);border-radius:999px;padding:3px 9px;backdrop-filter:blur(3px);white-space:nowrap}
 
@@ -258,7 +258,7 @@ canvas.chart{display:block;width:100%;height:150px}
 .stat-btn{display:inline-flex;align-items:center;gap:6px;flex:0 0 auto;height:22px;padding:0 6px 0 5px;margin-left:-5px;border-radius:var(--ctl-r);border:1px solid transparent;background:transparent;cursor:pointer;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;transition:background .15s,border-color .15s}
 .stat-btn:hover,.stat-btn:focus-visible{background:var(--bg4);border-color:var(--border3)}
 .stat-btn.grounded{color:#ff4c60}.stat-btn.due{color:#ffa023}
-.stat-btn.current{color:#22e2a6}.stat-btn.untracked{color:var(--muted2)}
+.stat-btn.current{color:#22e2a6}.stat-btn.untracked{color:#b4b4b4}
 .stat-btn .fdot{background:currentColor}
 .stat-word{flex:0 0 auto}
 .stat-why{display:none;text-transform:none;letter-spacing:.01em;font-size:9.5px;font-weight:600;color:var(--muted3);white-space:nowrap}
@@ -273,7 +273,7 @@ canvas.chart{display:block;width:100%;height:150px}
 .flight-btn:hover .flight-lbl,.flight-btn:focus-visible .flight-lbl{display:inline}
 .fdot{width:6px;height:6px;border-radius:50%;flex:0 0 auto}
 .fdot.grounded{background:#ff4c60}.fdot.due{background:#ffa023}
-.fdot.current{background:#22e2a6}.fdot.untracked{background:var(--muted2)}
+.fdot.current{background:#22e2a6}.fdot.untracked{background:#b4b4b4}
 /* MODALS */
 /* Every modal blurs its page rather than washing it out — enough that body
    text behind is unreadable, light enough that the app is still visible
