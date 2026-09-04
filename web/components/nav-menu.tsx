@@ -58,7 +58,7 @@ export function NavMenu({ email, name }: { email?: string | null; name?: string 
 
       <Menu>
         <MenuTrigger asChild>
-          <button className="dot-menu-btn" aria-label="Menu">
+          <button className="dot-ghost" aria-label="Menu">
             <span /><span /><span />
           </button>
         </MenuTrigger>

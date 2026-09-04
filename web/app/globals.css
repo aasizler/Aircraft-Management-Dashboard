@@ -208,11 +208,7 @@ canvas.chart{display:block;width:100%;height:150px}
 .fl-name{font-family:var(--display);font-size:18px;font-weight:800;letter-spacing:.02em;white-space:nowrap}
 .fl-count{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--muted2);background:var(--bg3);border:1px solid var(--border2);border-radius:999px;padding:2px 7px;flex:0 0 auto}
 .fl-rule{flex:1;height:1px;background:var(--border2);min-width:16px}
-/* Always visible: unlike a tile's ⋮ there is nothing to hover it out of.
-   Qualified with .dot-ghost because that rule's opacity:0 is declared later in
-   this file and would otherwise win on source order. */
-.dot-ghost.fl-menu{opacity:1;flex:0 0 auto}
-.dot-ghost.fl-menu:hover{background:var(--bg4);border-color:var(--border3)}
+.fl-menu{flex:0 0 auto}
 
 .roll{display:flex;align-items:center;gap:12px;flex:0 0 auto}
 .roll-item{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;letter-spacing:.04em;color:var(--muted2);white-space:nowrap}
@@ -377,20 +373,21 @@ canvas.chart{display:block;width:100%;height:150px}
 @media(max-width:700px){.two-col,.stat-row{grid-template-columns:1fr}}
 .receipt-spinner{width:44px;height:44px;border:3px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
 /* TILE DOT MENU */
-.tile-dot-btn{width:var(--ctl-h-sm);height:var(--ctl-h-sm);border-radius:var(--ctl-r);border:1px solid var(--border2);background:var(--bg4);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:0;transition:all .15s;z-index:10}
-.tile-dot-btn:hover{border-color:var(--accent);background:var(--accent-dim)}
-.tile-dot-btn span{width:3px;height:3px;border-radius:50%;background:var(--muted2);display:block}
-.tile-dot-btn:hover span{background:var(--accent)}
-
-/* Ghost ⋮ — transparent until the tile is hovered or the button is tabbed to.
-   Twelve boxed buttons competed with the content they sat on. */
-.dot-ghost{width:var(--ctl-h-sm);height:var(--ctl-h-sm);border-radius:var(--ctl-r);border:1px solid transparent;background:transparent;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:0;opacity:0;transition:background .15s,border-color .15s,opacity .15s}
+/* The one ⋮ in the app — nav, fleet headers, tiles. It replaced three rules
+   that differed only in background, two of which nothing rendered any more.
+   Borderless until you engage with it: a dozen outlined boxes competed with
+   the content they sat on. */
+.dot-ghost{width:var(--ctl-h-sm);height:var(--ctl-h-sm);border-radius:var(--ctl-r);border:1px solid transparent;background:transparent;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:0;transition:background .15s,border-color .15s,opacity .15s}
 .dot-ghost span{width:3px;height:3px;border-radius:50%;background:var(--muted3);display:block}
-.ac-tile:hover .dot-ghost,.dot-ghost:focus-visible,.dot-ghost[data-state="open"]{opacity:1}
+.dot-ghost:hover,.dot-ghost:focus-visible,.dot-ghost[data-state="open"]{background:var(--bg4);border-color:var(--border3)}
+.dot-ghost:hover span,.dot-ghost[data-state="open"] span{background:var(--text)}
+/* A tile is the only place with a surface big enough to reveal it, so it is
+   the only place that hides it. Declared as an opt-IN so the visible default
+   never depends on which rule comes later in this file. */
+.ac-tile .dot-ghost{opacity:0}
+.ac-tile:hover .dot-ghost,.ac-tile .dot-ghost:focus-visible,.ac-tile .dot-ghost[data-state="open"]{opacity:1}
 .band-menu{position:absolute;top:8px;right:8px;z-index:10}
-.band-menu:hover{background:rgba(0,0,0,.5);border-color:rgba(255,255,255,.14)}
-.portal-item{width:100%;text-align:left;background:none;border:none;color:var(--muted3);font-size:12px;font-weight:500;padding:9px 12px;cursor:pointer;font-family:var(--body);transition:all .12s}
-.portal-item:hover{background:var(--bg4);color:var(--text)}
+.band-menu:hover,.band-menu[data-state="open"]{background:rgba(0,0,0,.5);border-color:rgba(255,255,255,.14)}
 /* ADS-B LIVE */
 .adsb-banner{margin:0 28px 14px;background:rgba(0,225,100,.06);border:1px solid rgba(0,225,100,.2);border-radius:10px;padding:12px 18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
 .adsb-banner.ground{background:var(--bg2);border-color:var(--border2)}
@@ -468,11 +465,6 @@ canvas.chart{display:block;width:100%;height:150px}
 .role-badge{display:inline-flex;align-items:center;font-size:10px;font-weight:700;color:var(--muted2);font-family:var(--mono);letter-spacing:.05em;background:var(--bg4);border:1px solid var(--border2);border-radius:4px;padding:2px 7px}
 .tile-airborne{position:absolute;top:8px;right:8px;display:inline-flex;align-items:center;gap:4px;background:rgba(0,225,100,.14);border:1px solid rgba(0,225,100,.3);color:#00e164;font-size:9px;font-weight:700;letter-spacing:.06em;padding:2px 7px;border-radius:3px;font-family:var(--mono)}
 .tile-airborne .tp{width:5px;height:5px;border-radius:50%;background:#00e164;animation:adsb-blink 1.4s ease-in-out infinite}
-/* NAV DOT MENU */
-.dot-menu-btn{width:var(--ctl-h-sm);height:var(--ctl-h-sm);border-radius:var(--ctl-r);border:1px solid var(--border2);background:var(--bg3);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:0;transition:all .15s}
-.dot-menu-btn:hover{border-color:var(--accent)}
-.dot-menu-btn span{width:3px;height:3px;border-radius:50%;background:var(--muted2);display:block}
-.dot-menu-btn:hover span{background:var(--accent)}
 /* TOASTS — v1 showToast() */
 .toast-wrap{position:fixed;right:20px;bottom:20px;display:flex;flex-direction:column;gap:8px;z-index:4000;pointer-events:none}
 .toast{pointer-events:all;display:flex;align-items:center;gap:9px;background:var(--bg3);border:1px solid var(--border3);border-radius:9px;padding:11px 16px;font-size:13px;color:var(--text);box-shadow:0 10px 32px rgba(0,0,0,.55);cursor:pointer;max-width:380px;animation:toast-in .18s ease-out}
