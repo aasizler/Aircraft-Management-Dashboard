@@ -705,3 +705,18 @@ canvas.chart{display:block;width:100%;height:150px}
 .empty-title{font-size:14px;font-weight:600;color:var(--text)}
 .empty-body{font-size:12.5px;color:var(--muted2);line-height:1.6;max-width:44ch;margin:0}
 .empty .btn{margin-top:14px}
+
+/* PUBLICATIONS — Documents tab */
+.pub-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;align-items:start}
+.pub-card{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:13px 14px}
+.pub-hd{display:flex;align-items:center;gap:7px;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2);margin-bottom:9px}
+.pub-note{font-size:11.5px;line-height:1.55;color:var(--muted);padding:3px 0 6px}
+.pub-note.warn{color:var(--warn)}
+.pub-ad{display:block;text-decoration:none;color:inherit;border-top:1px solid var(--border2);padding:8px 0}
+.pub-ad:hover .pub-ad-title{color:var(--accent)}
+.pub-date{display:block;font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;color:var(--muted);margin-bottom:2px}
+.pub-ad-title{display:block;font-size:12px;line-height:1.45;color:var(--muted3);transition:color .15s}
+.pub-link{display:flex;align-items:center;gap:10px;text-decoration:none;border-top:1px solid var(--border2);padding:9px 0}
+.pub-link:hover .pub-link-name{color:var(--accent)}
+.pub-link-name{font-size:12.5px;color:var(--muted3);transition:color .15s}
+.pub-link-role{margin-left:auto;font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;color:var(--muted);white-space:nowrap}

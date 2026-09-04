@@ -6,6 +6,7 @@ import { newId, today, type DocEntry } from "@/lib/aircraft";
 import type { TabProps } from "../detail-client";
 import { Confirm } from "@/components/ui/confirm";
 import { useToast } from "@/components/ui/toast";
+import { Publications } from "@/components/aircraft/publications";
 import { EmptyState } from "@/components/ui/empty-state";
 
 const MAX_MB = 25;
@@ -155,6 +156,12 @@ export function DocumentsTab({ aircraft, data, save, allow }: TabProps) {
           onCancel={() => setConfirmDoc(null)}
         />
       )}
+
+      <Publications
+        reg={aircraft.reg}
+        type={aircraft.type}
+        engineType={(data.engineType as string | null) ?? null}
+      />
     </div>
   );
 }
