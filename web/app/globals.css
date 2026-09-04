@@ -732,7 +732,7 @@ canvas.chart{display:block;width:100%;height:150px}
 .news-src{font-family:var(--mono);font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted3)}
 .news-age{margin-left:auto;font-family:var(--mono);font-size:9px;color:var(--muted)}
 .news-title{font-size:12px;line-height:1.45;color:var(--muted3);transition:color .15s}
-.news-lead{display:block;text-decoration:none;color:inherit;border-radius:10px;overflow:hidden;background:var(--bg3);border:1px solid var(--border2);margin-bottom:4px;transition:border-color .15s}
+.news-lead{display:block;text-decoration:none;color:inherit;border-radius:10px;overflow:hidden;background:var(--bg3);border:1px solid var(--border2);margin-bottom:8px;transition:border-color .15s}
 .news-lead:hover{border-color:var(--border3)}
 .news-lead:hover .news-lead-title{color:var(--accent)}
 .news-lead-img{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;background:var(--bg4)}
@@ -754,3 +754,5 @@ canvas.chart{display:block;width:100%;height:150px}
 /* A calm answer beats four uncertain rows */
 .ad-clear{display:flex;align-items:flex-start;gap:8px;font-size:11.5px;line-height:1.5;color:var(--muted2);padding:4px 2px 2px}
 .ad-clear svg{color:var(--ok);flex:0 0 auto;margin-top:1px}
+.news-lead + .news-lead .news-lead-img{aspect-ratio:2/1}
+.news-lead + .news-lead .news-lead-title{font-size:12px;font-weight:600}

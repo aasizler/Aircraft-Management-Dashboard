@@ -12,8 +12,7 @@ import { NextResponse } from "next/server";
  * with one that silently never loads.
  */
 const FEEDS = [
-  // Flying leads the panel, so its newest story supplies the picture.
-  { source: "Flying", url: "https://www.flyingmag.com/feed/", lead: true },
+  { source: "Flying", url: "https://www.flyingmag.com/feed/" },
   { source: "AVweb", url: "https://www.avweb.com/feed/" },
   { source: "NBAA", url: "https://nbaa.org/feed/" },
 ];
@@ -86,26 +85,40 @@ export async function GET() {
     // follows by date. Ranking by whether a headline names something in the
     // hangar was tried and dropped — with a mixed fleet the keyword list grows
     // until most headlines match and the signal disappears.
-    const lead = items.find((i) => i.source === "Flying");
+    // ORDERING, in full, because it used to favour a publisher and should not:
+    //
+    //  1. Everything sorts by publication date, newest first. No source is
+    //     preferred — Flying was hardcoded to lead and that was wrong.
+    //  2. The two picture cards are the newest item, then the newest from a
+    //     DIFFERENT source. Two publishers at the top without ranking either.
+    //  3. The remaining rows round-robin the sources, because straight date
+    //     order buried NBAA entirely — its newest was a day older than the
+    //     magazines' and an association feed never surfaced.
+    const first = items[0];
+    const second = items.find((i) => i.source !== first?.source) ?? items[1];
+    const heroes = [first, second].filter(Boolean) as Item[];
 
-    // Round-robin the rest across sources rather than taking the newest six.
-    // Straight date order buried NBAA entirely — its newest was a day older
-    // than the magazines', so an association feed never surfaced at all.
     const queues = new Map<string, Item[]>();
     for (const i of items) {
-      if (i === lead) continue;
+      if (heroes.includes(i)) continue;
       queues.set(i.source, [...(queues.get(i.source) ?? []), i]);
     }
     const rest: Item[] = [];
-    while (rest.length < 5 && [...queues.values()].some((q) => q.length)) {
+    while (rest.length < 4 && [...queues.values()].some((q) => q.length)) {
       for (const q of queues.values()) {
         const n = q.shift();
         if (n) rest.push(n);
-        if (rest.length >= 5) break;
+        if (rest.length >= 4) break;
       }
     }
-    const top = [...(lead ? [lead] : []), ...rest].slice(0, 6);
-    if (top[0]) top[0].image = await leadImage(top[0].link, ac.signal);
+
+    // Both picture cards get an image; a story without an og:image falls back
+    // to text rather than leaving a hole.
+    await Promise.all(
+      heroes.map(async (h) => { h.image = await leadImage(h.link, ac.signal); }),
+    );
+
+    const top = [...heroes, ...rest];
 
     return NextResponse.json({ items: top }, {
       headers: { "cache-control": "public, max-age=60, stale-while-revalidate=1800" },

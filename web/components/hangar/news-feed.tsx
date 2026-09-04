@@ -21,17 +21,19 @@ export function NewsFeed() {
   const [state, setState] = useState<{ items: Item[] | null; err: boolean }>(
     { items: null, err: false },
   );
-  // A hotlinked publisher image can 403; drop to text rather than an icon.
-  const [imgFailed, setImgFailed] = useState(false);
+  // A hotlinked publisher image can 403; drop that card to text, not an icon.
+  const [failed, setFailed] = useState<Record<string, boolean>>({});
 
   // A headline naming one of your makes is worth more than a newer one that
   // doesn't, so relevance outranks recency — but only for the handful that
   // match, and the lead card keeps whatever ends up first.
   const items = state.items ?? [];
-  const lead = items[0];
+  // Whichever of the top two carry a picture get the card treatment; the rest
+  // are rows. No publisher is favoured — see the ordering note in /api/news.
+  const heroes = items.slice(0, 2);
   // Four, not seven. Eight equally weighted rows is a wall, and the rail has a
   // second section under it that deserves the room.
-  const rest = items.slice(1, 5);
+  const rest = items.slice(2, 6);
 
   useEffect(() => {
     const ac = new AbortController();
@@ -55,30 +57,30 @@ export function NewsFeed() {
       {/* Lead story as a front page: picture, then the headline over it. The
           rest stay as text rows — ten thumbnails in a sidebar is a gallery, not
           a news panel. */}
-      {lead && (
-        <a className="news-lead" href={lead.link} target="_blank" rel="noopener noreferrer">
-          {lead.image && !imgFailed && (
+      {heroes.map((n) => (
+        <a key={n.link} className="news-lead" href={n.link} target="_blank" rel="noopener noreferrer">
+          {n.image && !failed[n.link] && (
             /* Remote publisher images on hosts that change with the feed list.
                next/image would need each one allow-listed in next.config and
                would bill optimisation for a sidebar thumbnail. */
             // eslint-disable-next-line @next/next/no-img-element
             <img
               className="news-lead-img"
-              src={lead.image}
+              src={n.image}
               alt=""
               loading="lazy"
-              onError={() => setImgFailed(true)}
+              onError={() => setFailed((f) => ({ ...f, [n.link]: true }))}
             />
           )}
           <div className="news-lead-body">
             <div className="news-meta">
-              <span className="news-src">{lead.source}</span>
-              <span className="news-age">{ago(lead.date)}</span>
+              <span className="news-src">{n.source}</span>
+              <span className="news-age">{ago(n.date)}</span>
             </div>
-            <div className="news-lead-title">{lead.title}</div>
+            <div className="news-lead-title">{n.title}</div>
           </div>
         </a>
-      )}
+      ))}
 
       {rest.map((n) => (
         <a key={n.link} className="news-item" href={n.link} target="_blank" rel="noopener noreferrer">
