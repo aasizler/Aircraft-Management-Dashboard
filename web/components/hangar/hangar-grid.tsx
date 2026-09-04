@@ -46,6 +46,31 @@ export type Tile = {
 
 export type Fleet = { id: string; name: string; org_id: string };
 
+type Level = "grounded" | "due" | "current" | "untracked";
+const ROLL_WORD: Record<Level, string> = {
+  grounded: "grounded", due: "due soon", current: "current", untracked: "not tracked",
+};
+// Worst first: a grounded aircraft is the reason to look at the fleet at all.
+const ROLL_ORDER: Level[] = ["grounded", "due", "current", "untracked"];
+
+/**
+ * The counts beside a fleet name. Only non-zero levels are rendered — "0
+ * grounded" is noise, and a healthy fleet should read as one short phrase.
+ */
+function FleetRoll({ counts }: { counts: Record<Level, number> }) {
+  const shown = ROLL_ORDER.filter((k) => counts[k] > 0);
+  if (!shown.length) return null;
+  return (
+    <span className="roll">
+      {shown.map((k) => (
+        <span key={k} className={`roll-item ${k}`}>
+          <i />{counts[k]} {ROLL_WORD[k]}
+        </span>
+      ))}
+    </span>
+  );
+}
+
 export function HangarGrid({
   aircraft,
   fleets = [],
@@ -167,6 +192,13 @@ export function HangarGrid({
       full = why = "Nothing recorded";
     }
     return { label: a.label, cls: a.level, why, full };
+  }
+
+  /** Airworthiness tally for a fleet header. */
+  function rollUp(tiles: Tile[]): Record<Level, number> {
+    const out: Record<Level, number> = { grounded: 0, due: 0, current: 0, untracked: 0 };
+    for (const t of tiles) out[tileStatus(t).cls as Level] += 1;
+    return out;
   }
 
   /**
@@ -345,8 +377,15 @@ export function HangarGrid({
     <>
       {sections.map((section) => (
         <div key={section.key}>
-          <h2 className="section-lbl">
-            {section.label}
+          {/* Name, how many, and what needs doing — a fleet answers "is anything
+              here my problem" before you read a tile. The rule carries the eye
+              to the ⋮, which used to sit welded to the last letter of the name
+              and read as punctuation rather than a control. */}
+          <div className="fl-hd">
+            <span className="fl-name">{section.label}</span>
+            <span className="fl-count">{section.tiles.length}</span>
+            <FleetRoll counts={rollUp(section.tiles)} />
+            <span className="fl-rule" />
             {/* Sharing a fleet lives on the fleet, not on any one aircraft in
                 it — a grant here covers every aircraft in the section, and
                 anything filed into it later. */}
@@ -357,7 +396,7 @@ export function HangarGrid({
               <Menu>
                 <MenuTrigger asChild>
                   <button
-                    className="tile-dot-btn"
+                    className="dot-ghost fl-menu"
                     title="Fleet options"
                     aria-label={`Options for ${section.label}`}
                   >
@@ -399,11 +438,14 @@ export function HangarGrid({
                 </MenuContent>
               </Menu>
             )}
-          </h2>
+          </div>
           {section.sub && <div className="section-sub">{section.sub}</div>}
+          {/* An empty fleet used to be a heading over an apologetic sentence.
+              It reads as a slot waiting to be filled now. */}
           {section.fleet && section.tiles.length === 0 && (
-            <div className="section-sub">
-              No aircraft in this fleet yet — set one&apos;s fleet in its settings.
+            <div className="fl-empty">
+              <Icon name="hangar" size={17} />
+              Empty — set an aircraft&apos;s fleet in its settings
             </div>
           )}
           <div className={`ac-cards${rearrange ? " rearrange-mode" : ""}`}>
