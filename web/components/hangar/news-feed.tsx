@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Icon } from "@/components/ui/icon";
 
-type Item = { title: string; link: string; date: string; source: string };
+type Item = { title: string; link: string; date: string; source: string; image?: string };
 
 /** Relative age — a headline's value is mostly how new it is. */
 function ago(iso: string) {
@@ -21,6 +21,11 @@ export function NewsFeed() {
   const [state, setState] = useState<{ items: Item[] | null; err: boolean }>(
     { items: null, err: false },
   );
+  // A hotlinked publisher image can 403; drop to text rather than an icon.
+  const [imgFailed, setImgFailed] = useState(false);
+
+  const lead = state.items?.[0];
+  const rest = state.items?.slice(1) ?? [];
 
   useEffect(() => {
     const ac = new AbortController();
@@ -41,7 +46,35 @@ export function NewsFeed() {
       {state.items === null && !state.err && <div className="ad-note">Loading headlines…</div>}
       {state.err && <div className="ad-note">Headlines unavailable right now.</div>}
 
-      {state.items?.map((n) => (
+      {/* Lead story as a front page: picture, then the headline over it. The
+          rest stay as text rows — ten thumbnails in a sidebar is a gallery, not
+          a news panel. */}
+      {lead && (
+        <a className="news-lead" href={lead.link} target="_blank" rel="noopener noreferrer">
+          {lead.image && !imgFailed && (
+            /* Remote publisher images on hosts that change with the feed list.
+               next/image would need each one allow-listed in next.config and
+               would bill optimisation for a sidebar thumbnail. */
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              className="news-lead-img"
+              src={lead.image}
+              alt=""
+              loading="lazy"
+              onError={() => setImgFailed(true)}
+            />
+          )}
+          <div className="news-lead-body">
+            <div className="news-meta">
+              <span className="news-src">{lead.source}</span>
+              <span className="news-age">{ago(lead.date)}</span>
+            </div>
+            <div className="news-lead-title">{lead.title}</div>
+          </div>
+        </a>
+      )}
+
+      {rest.map((n) => (
         <a key={n.link} className="news-item" href={n.link} target="_blank" rel="noopener noreferrer">
           <div className="news-meta">
             <span className="news-src">{n.source}</span>

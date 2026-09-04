@@ -16,7 +16,27 @@ const FEEDS = [
   { source: "AVweb", url: "https://www.avweb.com/feed/" },
 ];
 
-type Item = { title: string; link: string; date: string; source: string };
+type Item = { title: string; link: string; date: string; source: string; image?: string };
+
+/**
+ * Neither feed carries an image — no media:content, no enclosure, nothing in
+ * content:encoded — but both articles publish og:image, so the lead story's
+ * picture costs one extra fetch. Only the lead: a thumbnail for every headline
+ * would mean ten page loads for a sidebar.
+ */
+async function leadImage(url: string, signal: AbortSignal): Promise<string | undefined> {
+  try {
+    const res = await fetch(url, { signal, next: { revalidate: 1800 } });
+    if (!res.ok) return undefined;
+    const html = (await res.text()).slice(0, 60_000); // og tags live in <head>
+    const m =
+      /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)/i.exec(html) ??
+      /<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)/i.exec(html);
+    return m?.[1]?.startsWith("http") ? m[1] : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 const tag = (block: string, name: string) =>
   new RegExp(`<${name}[^>]*>(?:<!\\[CDATA\\[)?([\\s\\S]*?)(?:\\]\\]>)?</${name}>`).exec(block)?.[1]?.trim() ?? "";
@@ -53,7 +73,12 @@ export async function GET() {
     const items = settled.flatMap((s) => (s.status === "fulfilled" ? s.value : []));
     items.sort((a, b) => Date.parse(b.date || "") - Date.parse(a.date || ""));
     if (!items.length) return NextResponse.json({ error: "no feeds reachable" }, { status: 502 });
-    return NextResponse.json({ items: items.slice(0, 8) }, {
+
+    const top = items.slice(0, 8);
+    // A missing picture is not a failure — the card falls back to text.
+    top[0].image = await leadImage(top[0].link, ac.signal);
+
+    return NextResponse.json({ items: top }, {
       headers: { "cache-control": "public, max-age=900" },
     });
   } catch {

@@ -72,6 +72,9 @@ export function AdRibbon({ fleet }: { fleet: Craft[] }) {
 
   return (
     <aside className="ad-rail" aria-label="Hangar rail">
+      <NewsFeed />
+
+      <div className="rail-block">
       <div className="ad-hd">
         <Icon name="shield" size={15} />
         <span className="ad-title">Airworthiness</span>
@@ -160,7 +163,7 @@ export function AdRibbon({ fleet }: { fleet: Craft[] }) {
         </div>
       ))}
 
-      <NewsFeed />
+      </div>
     </aside>
   );
 }
