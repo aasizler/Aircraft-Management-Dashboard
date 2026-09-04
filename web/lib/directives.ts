@@ -77,7 +77,21 @@ const MAKER_TERMS: Record<string, string[]> = {
   Eclipse: ["Eclipse Aerospace"],
   "Honda Aircraft": ["Honda Aircraft"],
   "Airbus Helicopters": ["Airbus Helicopters"],
+  Extra: ["Extra Flugzeugbau"],
+  Grumman: ["Grumman American", "True Flight Aerospace"],
+  Columbia: ["Columbia Aircraft", "Textron Aviation"],
+  Lancair: ["Lancair"],
+  Maule: ["Maule Aerospace"],
 };
+
+/**
+ * Amateur-built types. They hold no type certificate, so the FAA issues them no
+ * airworthiness directives — an empty list is the correct answer, not a gap,
+ * and saying so beats leaving the panel silent.
+ */
+const AMATEUR_BUILT = new Set([
+  "Van's Aircraft", "Kitfox", "Zenith", "Glasair", "Velocity",
+]);
 
 /** Engine makers, matched off the engine's own manufacturer in ENGINE_DB. */
 const ENGINE_TERMS: Record<string, string[]> = {
@@ -89,6 +103,7 @@ const ENGINE_TERMS: Record<string, string[]> = {
   "Rolls-Royce": ["Rolls-Royce"],
   "General Electric": ["General Electric"],
   "GE Honda": ["GE Honda Aero Engines"],
+  Rotax: ["BRP-Rotax", "Rotax"],
 };
 
 /** Catalogue lookup for a v1 free-text type string, e.g. "Cirrus SR22T". */
@@ -360,4 +375,22 @@ export function saveSeen(ids: Set<string>) {
     /* private window or storage disabled — the panel still works, it just
        forgets what you have read. */
   }
+}
+
+
+/**
+ * Makers in a hangar that no search covers, so the caller can say "nothing is
+ * being checked for this one" rather than showing an empty list that reads as
+ * "nothing is wrong". Amateur-built types are reported separately because for
+ * them an empty list is the right answer.
+ */
+export function coverageGaps(fleet: Craft[]): { maker: string; amateur: boolean }[] {
+  const out = new Map<string, boolean>();
+  for (const c of fleet) {
+    const mk = makerOf(c.type);
+    if (!mk) continue;
+    if (AMATEUR_BUILT.has(mk)) out.set(mk, true);
+    else if (!MAKER_TERMS[mk]) out.set(mk, false);
+  }
+  return [...out].map(([maker, amateur]) => ({ maker, amateur }));
 }

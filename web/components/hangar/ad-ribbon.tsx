@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Icon } from "@/components/ui/icon";
 import {
-  fetchDirectives, loadSeen, saveSeen, type Craft, type Directive,
+  coverageGaps, fetchDirectives, loadSeen, saveSeen, type Craft, type Directive,
 } from "@/lib/directives";
 
 /**
@@ -62,6 +62,7 @@ export function AdRibbon({ fleet }: { fleet: Craft[] }) {
 
   // Relevant means: names a model you operate, or names none at all. The rest
   // are published for your manufacturers but for other types.
+  const gaps = useMemo(() => coverageGaps(fleet), [fleet]);
   const mine = (rows ?? []).filter((r) => !r.other);
   const other = (rows ?? []).filter((r) => r.other);
   const unread = mine.filter((r) => !seen.has(r.id));
@@ -127,6 +128,16 @@ export function AdRibbon({ fleet }: { fleet: Craft[] }) {
           Show all {rows!.length} — {other.length} are for other types
         </button>
       )}
+
+      {/* An aircraft nothing is being checked for must say so. An empty list
+          otherwise reads as "nothing is wrong". */}
+      {ready && gaps.map((g) => (
+        <div key={g.maker} className="ad-note">
+          {g.amateur
+            ? `${g.maker} types are amateur-built — the FAA issues them no directives.`
+            : `No directive source is set up for ${g.maker}, so none are being checked.`}
+        </div>
+      ))}
 
       {rows && rows.length > 0 && (
         <div className="ad-foot">
