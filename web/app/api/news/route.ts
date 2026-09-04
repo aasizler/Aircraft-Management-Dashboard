@@ -12,11 +12,19 @@ import { NextResponse } from "next/server";
  * with one that silently never loads.
  */
 const FEEDS = [
-  { source: "Flying", url: "https://www.flyingmag.com/feed/" },
+  // Flying leads the panel, so its newest story supplies the picture.
+  { source: "Flying", url: "https://www.flyingmag.com/feed/", lead: true },
   { source: "AVweb", url: "https://www.avweb.com/feed/" },
+  { source: "NBAA", url: "https://nbaa.org/feed/" },
 ];
 
-type Item = { title: string; link: string; date: string; source: string; image?: string; hits?: string[] };
+/*
+ * Checked and rejected: AOPA, EAA and AIN serve HTML at every feed URL tried,
+ * and General Aviation News answers "RSS2 feeds are currently broken". Three
+ * working sources beat six where half never load.
+ */
+
+type Item = { title: string; link: string; date: string; source: string; image?: string };
 
 /**
  * Neither feed carries an image — no media:content, no enclosure, nothing in
@@ -64,7 +72,7 @@ async function read(feed: (typeof FEEDS)[number], signal: AbortSignal): Promise<
   return out;
 }
 
-export async function GET(req: Request) {
+export async function GET() {
   const ac = new AbortController();
   const t = setTimeout(() => ac.abort(), 8000);
   try {
@@ -74,26 +82,33 @@ export async function GET(req: Request) {
     items.sort((a, b) => Date.parse(b.date || "") - Date.parse(a.date || ""));
     if (!items.length) return NextResponse.json({ error: "no feeds reachable" }, { status: 502 });
 
-    // Ranking happens HERE, not in the browser, because the lead's picture is
-    // fetched by document and the two must agree on which document leads. When
-    // the client reordered afterwards, the image stayed on the story it had
-    // displaced and the new lead rendered bare.
-    const keywords = (new URL(req.url).searchParams.get("fleet") ?? "")
-      .split(",").map((k) => k.trim()).filter((k) => k.length >= 4);
-    for (const it of items) {
-      it.hits = keywords.filter((k) =>
-        new RegExp(`\\b${k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(it.title),
-      );
-    }
-    // Relevance first, then recency within each group.
-    items.sort((a, b) => (b.hits!.length ? 1 : 0) - (a.hits!.length ? 1 : 0));
+    // Flying's newest story leads and supplies the photograph; everything else
+    // follows by date. Ranking by whether a headline names something in the
+    // hangar was tried and dropped — with a mixed fleet the keyword list grows
+    // until most headlines match and the signal disappears.
+    const lead = items.find((i) => i.source === "Flying");
 
-    const top = items.slice(0, 8);
-    // A missing picture is not a failure — the card falls back to text.
-    top[0].image = await leadImage(top[0].link, ac.signal);
+    // Round-robin the rest across sources rather than taking the newest six.
+    // Straight date order buried NBAA entirely — its newest was a day older
+    // than the magazines', so an association feed never surfaced at all.
+    const queues = new Map<string, Item[]>();
+    for (const i of items) {
+      if (i === lead) continue;
+      queues.set(i.source, [...(queues.get(i.source) ?? []), i]);
+    }
+    const rest: Item[] = [];
+    while (rest.length < 5 && [...queues.values()].some((q) => q.length)) {
+      for (const q of queues.values()) {
+        const n = q.shift();
+        if (n) rest.push(n);
+        if (rest.length >= 5) break;
+      }
+    }
+    const top = [...(lead ? [lead] : []), ...rest].slice(0, 6);
+    if (top[0]) top[0].image = await leadImage(top[0].link, ac.signal);
 
     return NextResponse.json({ items: top }, {
-      headers: { "cache-control": "public, max-age=900" },
+      headers: { "cache-control": "public, max-age=60, stale-while-revalidate=1800" },
     });
   } catch {
     return NextResponse.json({ error: "unreachable" }, { status: 502 });

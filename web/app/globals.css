@@ -738,23 +738,18 @@ canvas.chart{display:block;width:100%;height:150px}
 .news-lead-img{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;background:var(--bg4)}
 .news-lead-body{padding:9px 11px 11px}
 .news-lead-title{font-size:13px;font-weight:700;line-height:1.35;color:var(--text);margin-top:3px;transition:color .15s}
-/* Fleet line — the rail's own opening statement */
-.fleet-line{padding:0 0 13px;border-bottom:1px solid var(--border2);margin-bottom:14px}
-.fleet-line-top{display:flex;align-items:baseline;gap:7px;flex-wrap:wrap}
-.fleet-count{font-family:var(--display);font-size:22px;font-weight:800;line-height:1;color:var(--text)}
-.fleet-word{font-size:11px;color:var(--muted2)}
-.fleet-pill{margin-left:auto;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border-radius:999px;padding:2px 8px;white-space:nowrap}
-.fleet-pill.grounded{color:var(--danger);background:rgba(var(--danger-rgb),.13);border:1px solid rgba(var(--danger-rgb),.32)}
-.fleet-pill.due{color:var(--warn);background:rgba(var(--warn-rgb),.13);border:1px solid rgba(var(--warn-rgb),.32)}
-.fleet-pill.ok{color:var(--ok);background:rgba(var(--ok-rgb),.12);border:1px solid rgba(var(--ok-rgb),.3)}
-.fleet-next{margin-top:8px;font-size:11.5px;line-height:1.45;color:var(--muted2)}
-.fleet-next b{color:var(--text);font-family:var(--mono);font-size:11px;letter-spacing:.04em}
-.fleet-next.grounded b{color:var(--danger)}
-.fleet-next.due b{color:var(--warn)}
-
-/* Headlines that name something in the hangar */
-.news-hit{font-family:var(--mono);font-size:8.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--accent);background:var(--accent-dim);border:1px solid rgba(59,158,255,.3);border-radius:3px;padding:1px 5px}
-.news-item.hit .news-title{color:var(--text)}
+/* Fleet line — operating facts the page cannot show elsewhere */
+.fleet-line{padding:0 0 13px;border-bottom:1px solid var(--border2);margin-bottom:14px;display:flex;flex-direction:column;gap:8px}
+.fleet-stat{display:flex;align-items:baseline;gap:7px}
+.fleet-num{font-family:var(--display);font-size:22px;font-weight:800;line-height:1;color:var(--text)}
+.fleet-lbl{font-size:11px;color:var(--muted2)}
+.fleet-row{display:flex;align-items:center;gap:8px;font-size:11.5px;line-height:1.4;color:var(--muted2)}
+.fleet-row svg{color:var(--muted);flex:0 0 auto}
+.fleet-row b{color:var(--text);font-family:var(--mono);font-size:11px;letter-spacing:.04em;font-weight:700}
+.fleet-row span:nth-of-type(1){flex:1;min-width:0}
+.fleet-when{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--muted);white-space:nowrap}
+.fleet-row.warn{color:var(--warn)}
+.fleet-row.warn svg,.fleet-row.warn b,.fleet-row.warn .fleet-when{color:var(--warn)}
 
 /* A calm answer beats four uncertain rows */
 .ad-clear{display:flex;align-items:flex-start;gap:8px;font-size:11.5px;line-height:1.5;color:var(--muted2);padding:4px 2px 2px}

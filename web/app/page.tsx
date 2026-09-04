@@ -3,7 +3,7 @@ import { AddAircraftButton } from "@/components/hangar/add-aircraft";
 import { NewFleetButton } from "@/components/hangar/new-fleet";
 import { HangarGrid, type Fleet, type Tile } from "@/components/hangar/hangar-grid";
 import { AdRibbon, type FleetSummary } from "@/components/hangar/ad-ribbon";
-import { airworthiness, meterValue } from "@/lib/aircraft";
+import { readMonthly, type SchedEvent } from "@/lib/aircraft";
 import { PageHeader } from "@/components/ui/page-header";
 import type { Meter } from "@/lib/aircraft";
 import { resolveRole } from "@/lib/permissions";
@@ -23,6 +23,7 @@ export default async function Home() {
     { data: meters },
     { data: grants },
     { data: fleets },
+    { data: financials },
   ] =
     await Promise.all([
       supabase
@@ -45,7 +46,12 @@ export default async function Home() {
       // Fleets are sections in the hangar, so they're needed to render it —
       // not just to edit one.
       supabase.from("fleets").select("id, name, org_id").order("name"),
+      // Insurance expiry for the rail. RLS gates this to viewers with financial
+      // access, so a pilot simply gets no rows and no expiry line.
+      supabase.from("aircraft_financials").select("aircraft_id, insurance"),
     ]);
+
+  type FinRow = { aircraft_id: string; insurance: { expiration?: string } | null };
 
   type GrantRow = {
     id: string;
@@ -171,39 +177,58 @@ export default async function Home() {
             </div>
             <AdRibbon
               summary={(() => {
-                // Computed here rather than in the rail: the server already has
-                // every aircraft's data and meters, and airworthiness() is the
-                // same judgement the tiles and fleet headers use.
-                const scored = tiles.map((t) => ({
-                  reg: t.reg,
-                  a: airworthiness(t.data ?? {}, meterValue(t.meters, t.maint_basis)),
-                }));
-                const grounded = scored.filter((s) => s.a.level === "grounded");
-                const due = scored.filter((s) => s.a.level === "due");
-                const worst = grounded[0] ?? due[0] ?? null;
-                const item = worst
-                  ? worst.a.grounding[0]
-                    ? `grounded — ${worst.a.grounding[0].desc.slice(0, 34)}`
-                    : (() => {
-                        const n = worst.a.overdue[0] ?? worst.a.dueSoon[0];
-                        if (!n) return "";
-                        // remUnit carries "Days"/"Hours"; without it this read
-                        // "Annual Inspection · 4 overdue".
-                        const unit = n.st.remUnit ? ` ${n.st.remUnit.toLowerCase()}` : "";
-                        const tail = n.st.remFoot === "overdue" ? " overdue" : " left";
-                        return `${n.i.name} · ${n.st.remNum}${unit}${tail}`;
-                      })()
-                  : "";
+                // Computed on the server, which already holds every aircraft's
+                // data blob and financial row.
+                const now = new Date();
+
+
+                // monthlyHours is a plain array indexed by month, newest last —
+                // readMonthly() is the shape-tolerant reader for it.
+                const hours = tiles.reduce((sum, t) => {
+                  const m = readMonthly(t.data?.monthlyHours, 6);
+                  return sum + (m.length ? m[m.length - 1].hours : 0);
+                }, 0);
+
+                // Nearest future booking or maintenance slot across the hangar.
+                const upcoming = tiles
+                  .flatMap((t) =>
+                    ((t.data?.schedule ?? []) as SchedEvent[])
+                      .filter((e) => e.start && new Date(e.start) >= now)
+                      .map((e) => ({ reg: t.reg, e })),
+                  )
+                  .sort((a, b) => (a.e.start ?? "").localeCompare(b.e.start ?? ""));
+                const soonest = upcoming[0];
+                const days = (iso: string) =>
+                  Math.round((new Date(iso).getTime() - now.getTime()) / 86_400_000);
+
+                // Insurance lives in aircraft_financials, not the data blob;
+                // a viewer without financial access simply gets no rows.
+                const expiring = ((financials ?? []) as FinRow[])
+                  .map((f) => {
+                    const exp = f.insurance?.expiration;
+                    const reg = tiles.find((t) => t.id === f.aircraft_id)?.reg;
+                    if (!exp || !reg) return null;
+                    const d = days(exp);
+                    return d >= 0 && d <= 60 ? { reg, date: exp, days: d } : null;
+                  })
+                  .filter((x): x is { reg: string; date: string; days: number } => x != null)
+                  .sort((a, b) => a.days - b.days);
+
                 const out: FleetSummary = {
-                  count: tiles.length,
-                  grounded: grounded.length,
-                  due: due.length,
-                  next: worst && item
-                    ? { reg: worst.reg, text: item, level: worst.a.level === "grounded" ? "grounded" : "due" }
+                  hours: Math.round(hours * 10) / 10,
+                  next: soonest
+                    ? {
+                        reg: soonest.reg,
+                        text: soonest.e.title || soonest.e.type || "scheduled",
+                        when: `${days(soonest.e.start!)}d`,
+                      }
                     : null,
+                  expiring,
                 };
+
                 return out;
-              })()}
+              })()
+              }
               fleet={tiles.map((t) => ({
                 id: t.id,
                 reg: t.reg,

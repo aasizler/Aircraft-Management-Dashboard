@@ -17,35 +17,47 @@ import {
  * stops repeating itself.
  */
 export type FleetSummary = {
-  count: number;
-  grounded: number;
-  due: number;
-  /** The single most pressing item across the hangar, already phrased. */
-  next: { reg: string; text: string; level: "grounded" | "due" | "ok" } | null;
+  /** Flight hours across the hangar this month. */
+  hours: number;
+  /** Nearest upcoming booking or maintenance slot, already phrased. */
+  next: { reg: string; text: string; when: string } | null;
+  /** Policies lapsing inside 60 days. */
+  expiring: { reg: string; date: string; days: number }[];
 };
 
 /**
- * The rail opens with this hangar's own state, so it earns its place before
- * showing anything from outside it. Everything here is already on the page —
- * it is the roll-ups from the fleet headers, said once.
+ * Operating facts the hangar cannot show anywhere else. Deliberately NOT a
+ * count of aircraft or a tally of grounded ones — the fleet headers already
+ * carry both, and repeating them here made the rail restate the page instead
+ * of adding to it.
  */
 function FleetLine({ summary }: { summary?: FleetSummary }) {
   if (!summary) return null;
-  const { count, grounded, due, next } = summary;
+  const { hours, next, expiring } = summary;
+  if (!hours && !next && !expiring.length) return null;
+
   return (
     <div className="fleet-line">
-      <div className="fleet-line-top">
-        <span className="fleet-count">{count}</span>
-        <span className="fleet-word">{count === 1 ? "aircraft" : "aircraft"}</span>
-        {grounded > 0 && <span className="fleet-pill grounded">{grounded} grounded</span>}
-        {due > 0 && <span className="fleet-pill due">{due} due soon</span>}
-        {!grounded && !due && <span className="fleet-pill ok">all clear</span>}
-      </div>
-      {next && (
-        <div className={`fleet-next ${next.level}`}>
-          <b>{next.reg}</b> {next.text}
+      {hours > 0 && (
+        <div className="fleet-stat">
+          <span className="fleet-num">{hours.toFixed(1)}</span>
+          <span className="fleet-lbl">hours flown this month</span>
         </div>
       )}
+      {next && (
+        <div className="fleet-row">
+          <Icon name="calendar" size={13} />
+          <span><b>{next.reg}</b> {next.text}</span>
+          <span className="fleet-when">{next.when}</span>
+        </div>
+      )}
+      {expiring.map((e) => (
+        <div key={e.reg} className="fleet-row warn">
+          <Icon name="shield" size={13} />
+          <span><b>{e.reg}</b> insurance expires {e.date}</span>
+          <span className="fleet-when">{e.days}d</span>
+        </div>
+      ))}
     </div>
   );
 }
@@ -116,7 +128,7 @@ export function AdRibbon({ fleet, summary }: { fleet: Craft[]; summary?: FleetSu
     <aside className="ad-rail" aria-label="Hangar rail">
       <FleetLine summary={summary} />
 
-      <NewsFeed fleet={fleet} />
+      <NewsFeed />
 
       <div className="rail-block">
       <div className="ad-hd">
