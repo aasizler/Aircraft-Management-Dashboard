@@ -15,9 +15,9 @@
   /* One set of status colours for the whole app — hangar tiles, detail-page
      ribbons, badges, toasts. Previously the tiles carried their own brighter
      hexes and everything else stayed on the old dim ones. */
-  --ok: #22e2a6; --warn: #ffa023; --danger: #ff4c60;
-  --ok-rgb: 34,226,166; --warn-rgb: 255,160,35; --danger-rgb: 255,76,96;
-  --ok-dim: rgba(34, 226, 166, .1); --warn-dim: rgba(255, 160, 35, .1); --danger-dim: rgba(255, 76, 96, .1);
+  --ok: #22e2a6; --warn: #ffa023; --danger: #ff4050;
+  --ok-rgb: 34,226,166; --warn-rgb: 255,160,35; --danger-rgb: 255,64,80;
+  --ok-dim: rgba(34, 226, 166, .1); --warn-dim: rgba(255, 160, 35, .1); --danger-dim: rgba(255, 64, 80, .1);
 
   /* One control scale. Buttons previously came from four independent rulesets
      with five corner radii between them, no explicit height, and no nowrap —
@@ -50,7 +50,7 @@ html, body { height: 100%; }
 .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
 .btn.primary:hover{background:#3a8eef}
 .btn.sm{height:var(--ctl-h-sm);padding:0 12px;font-size:12px}
-.btn.danger-btn{border-color:rgba(255,76,96,.35);color:var(--danger);background:none}
+.btn.danger-btn{border-color:rgba(255,64,80,.35);color:var(--danger);background:none}
 .btn.danger-btn:hover{background:var(--danger-dim)}
 /* LAYOUT */
 .breadcrumb{padding:14px 28px 0;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:7px}
@@ -91,7 +91,7 @@ html, body { height: 100%; }
 .data-table tbody tr:last-child td{border-bottom:none}
 .data-table tbody tr:hover td{background:rgba(74,158,255,.04)!important}
 .badge{display:inline-flex;align-items:center;font-size:10px;font-weight:700;padding:4px 9px;border-radius:4px;white-space:nowrap;border:1px solid transparent;font-family:var(--mono)}
-.badge.overdue{background:var(--danger-dim);color:var(--danger);border-color:rgba(255,76,96,.2)}
+.badge.overdue{background:var(--danger-dim);color:var(--danger);border-color:rgba(255,64,80,.2)}
 .badge.warn{background:var(--warn-dim);color:var(--warn);border-color:rgba(255,160,35,.2)}
 .badge.ok{background:var(--ok-dim);color:var(--ok);border-color:rgba(34,226,166,.2)}
 .badge.info{background:var(--accent-dim);color:var(--accent);border-color:rgba(74,158,255,.2)}
@@ -108,7 +108,7 @@ html, body { height: 100%; }
 .action-btn{display:inline-flex;align-items:center;justify-content:center;height:var(--ctl-h-sm);padding:0 11px;white-space:nowrap;line-height:1;border-radius:var(--ctl-r);font-size:12px;font-weight:600;cursor:pointer;font-family:var(--body);transition:all .15s;border:1px solid var(--border2);background:var(--bg4);color:var(--muted2)}
 .action-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
 .action-btn.del{background:none;border-color:transparent;color:var(--muted)}
-.action-btn.del:hover{border-color:rgba(255,76,96,.3);color:var(--danger);background:var(--danger-dim)}
+.action-btn.del:hover{border-color:rgba(255,64,80,.3);color:var(--danger);background:var(--danger-dim)}
 /* STATS */
 .stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px}
 .stat-box{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:16px 20px}
@@ -199,7 +199,7 @@ canvas.chart{display:block;width:100%;height:150px}
 .pdf-drop-sub{font-size:11px;color:var(--muted)}
 .doc-list{list-style:none;display:flex;flex-direction:column;gap:8px}
 .doc-item{display:flex;align-items:center;gap:12px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:10px 14px}
-.doc-pdf-icon{width:36px;height:36px;background:rgba(255,76,96,.1);border:1px solid rgba(255,76,96,.2);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--danger);font-family:var(--mono);flex-shrink:0}
+.doc-pdf-icon{width:36px;height:36px;background:rgba(255,64,80,.1);border:1px solid rgba(255,64,80,.2);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--danger);font-family:var(--mono);flex-shrink:0}
 .doc-name{font-size:13px;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .doc-meta{font-size:11px;color:var(--muted);margin-top:2px;font-family:var(--mono)}
 .cloud-dot{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--ok);font-family:var(--mono);font-weight:600}
@@ -217,7 +217,7 @@ canvas.chart{display:block;width:100%;height:150px}
 .roll{display:flex;align-items:center;gap:12px;flex:0 0 auto}
 .roll-item{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;letter-spacing:.04em;color:var(--muted2);white-space:nowrap}
 .roll-item i{width:6px;height:6px;border-radius:50%;flex:0 0 auto}
-.roll-item.grounded{color:#ff4c60}.roll-item.grounded i{background:#ff4c60}
+.roll-item.grounded{color:#ff4050}.roll-item.grounded i{background:#ff4050}
 .roll-item.due{color:#ffa023}.roll-item.due i{background:#ffa023}
 .roll-item.current i{background:#22e2a6}
 .roll-item.untracked i{background:#b4b4b4}
@@ -237,7 +237,7 @@ canvas.chart{display:block;width:100%;height:150px}
    there are photos it carries the aircraft silhouette washed in the status
    colour, so nothing has to be redesigned the day they arrive. ~48% of the tile. */
 .ac-tile-band{position:relative;aspect-ratio:15/7;max-height:140px;flex:0 0 auto;display:flex;align-items:flex-end;gap:6px;padding:9px 12px;border-bottom:1px solid var(--border);border-radius:12px 12px 0 0;overflow:hidden}
-.ac-tile:has(.stat-btn.grounded) .ac-tile-band{background:linear-gradient(160deg,rgba(255,76,96,.52),rgba(255,76,96,.05))}
+.ac-tile:has(.stat-btn.grounded) .ac-tile-band{background:linear-gradient(160deg,rgba(255,64,80,.52),rgba(255,64,80,.05))}
 .ac-tile:has(.stat-btn.due) .ac-tile-band{background:linear-gradient(160deg,rgba(255,160,35,.52),rgba(255,160,35,.05))}
 .ac-tile:has(.stat-btn.current) .ac-tile-band{background:linear-gradient(160deg,rgba(34,226,166,.52),rgba(34,226,166,.05))}
 .ac-tile:has(.stat-btn.untracked) .ac-tile-band{background:linear-gradient(160deg,rgba(255,255,255,.34),rgba(255,255,255,.04))}
@@ -261,7 +261,7 @@ canvas.chart{display:block;width:100%;height:150px}
    automatic minimum size of 0, so a max-width transition collapsed to nothing. */
 .stat-btn{display:inline-flex;align-items:center;gap:6px;flex:0 0 auto;height:22px;padding:0 6px 0 5px;margin-left:-5px;border-radius:var(--ctl-r);border:1px solid transparent;background:transparent;cursor:pointer;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;transition:background .15s,border-color .15s}
 .stat-btn:hover,.stat-btn:focus-visible{background:var(--bg4);border-color:var(--border3)}
-.stat-btn.grounded{color:#ff4c60}.stat-btn.due{color:#ffa023}
+.stat-btn.grounded{color:#ff4050}.stat-btn.due{color:#ffa023}
 .stat-btn.current{color:#22e2a6}.stat-btn.untracked{color:#b4b4b4}
 .stat-btn .fdot{background:currentColor}
 .stat-word{flex:0 0 auto}
@@ -276,7 +276,7 @@ canvas.chart{display:block;width:100%;height:150px}
 .flight-lbl{flex:0 0 auto;display:none;font-family:var(--mono);font-size:10px;letter-spacing:.03em;white-space:nowrap}
 .flight-btn:hover .flight-lbl,.flight-btn:focus-visible .flight-lbl{display:inline}
 .fdot{width:6px;height:6px;border-radius:50%;flex:0 0 auto}
-.fdot.grounded{background:#ff4c60}.fdot.due{background:#ffa023}
+.fdot.grounded{background:#ff4050}.fdot.due{background:#ffa023}
 .fdot.current{background:#22e2a6}.fdot.untracked{background:#b4b4b4}
 /* MODALS */
 /* Every modal blurs its page rather than washing it out — enough that body
@@ -323,7 +323,7 @@ canvas.chart{display:block;width:100%;height:150px}
 .alert-feed{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
 .alert-item{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:8px;border:1px solid transparent;cursor:pointer;transition:all .15s}
 .alert-item:hover{filter:brightness(1.1)}
-.alert-item.adanger{background:rgba(255,76,96,.07);border-color:rgba(255,76,96,.18)}
+.alert-item.adanger{background:rgba(255,64,80,.07);border-color:rgba(255,64,80,.18)}
 .alert-item.awarning{background:rgba(255,160,35,.07);border-color:rgba(255,160,35,.18)}
 .alert-item .al-icon{font-size:15px;flex-shrink:0;width:24px;text-align:center}
 .alert-item .al-text{flex:1}
@@ -368,7 +368,7 @@ canvas.chart{display:block;width:100%;height:150px}
 .sync-badge{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-family:var(--mono);padding:3px 8px;border-radius:20px;border:1px solid transparent;transition:all .3s}
 .sync-badge.synced{color:var(--ok);border-color:rgba(34,226,166,.2);background:rgba(34,226,166,.07)}
 .sync-badge.syncing{color:var(--warn);border-color:rgba(255,160,35,.2);background:rgba(255,160,35,.07)}
-.sync-badge.error{color:var(--danger);border-color:rgba(255,76,96,.2);background:rgba(255,76,96,.07)}
+.sync-badge.error{color:var(--danger);border-color:rgba(255,64,80,.2);background:rgba(255,64,80,.07)}
 .sync-dot{width:5px;height:5px;border-radius:50%;background:currentColor;flex-shrink:0}
 .nav-user{display:inline-flex;align-items:center;gap:8px;background:var(--bg3);border:1px solid var(--border2);border-radius:20px;padding:4px 10px 4px 6px;cursor:pointer;transition:all .15s}
 .nav-user:hover{border-color:var(--accent)}
@@ -474,7 +474,7 @@ canvas.chart{display:block;width:100%;height:150px}
 .toast-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;background:var(--accent)}
 .toast.ok{border-color:rgba(34,226,166,.35)}.toast.ok .toast-dot{background:var(--ok)}
 .toast.warn{border-color:rgba(255,160,35,.35)}.toast.warn .toast-dot{background:var(--warn)}
-.toast.danger{border-color:rgba(255,76,96,.35)}.toast.danger .toast-dot{background:var(--danger)}
+.toast.danger{border-color:rgba(255,64,80,.35)}.toast.danger .toast-dot{background:var(--danger)}
 /* Rich toast — initials, aircraft, and an action. A notification about an
    aircraft you are not currently looking at needs somewhere to take you. */
 .auth-split{display:flex;gap:9px}
@@ -493,7 +493,7 @@ canvas.chart{display:block;width:100%;height:150px}
 .toast-av.glyph{font-size:15px}
 .toast.ok .toast-av{background:rgba(34,226,166,.12);color:var(--ok);border-color:rgba(34,226,166,.3)}
 .toast.warn .toast-av{background:rgba(255,160,35,.12);color:var(--warn);border-color:rgba(255,160,35,.3)}
-.toast.danger .toast-av{background:rgba(255,76,96,.12);color:var(--danger);border-color:rgba(255,76,96,.3)}
+.toast.danger .toast-av{background:rgba(255,64,80,.12);color:var(--danger);border-color:rgba(255,64,80,.3)}
 .toast-body{flex:1;min-width:0}
 .toast-hd{display:flex;align-items:baseline;gap:7px;flex-wrap:wrap}
 .toast-ttl{font-size:12.5px;font-weight:700}
@@ -631,7 +631,7 @@ canvas.chart{display:block;width:100%;height:150px}
    anyone who can't separate the hues. */
 /* A grounded aeroplane should catch the eye from the whole hangar, not just its
    own tile. */
-.ac-tile:has(.stat-btn.grounded){border-color:rgba(255,76,96,.75)}
+.ac-tile:has(.stat-btn.grounded){border-color:rgba(255,64,80,.75)}
 
 /* ── ⋮ menus (Radix dropdown-menu) ──────────────────────────────────────────
    Replaces three hand-rolled variants that differed in padding, casing and
@@ -652,7 +652,7 @@ canvas.chart{display:block;width:100%;height:150px}
 .menu-item{display:flex;align-items:center;gap:9px;width:100%;padding:7px 9px;border:0;background:none;border-radius:6px;font-size:13px;font-family:var(--body);color:var(--text);text-align:left;cursor:pointer;outline:none;user-select:none}
 .menu-item[data-highlighted]{background:var(--bg4)}
 .menu-item.danger{color:var(--danger)}
-.menu-item.danger[data-highlighted]{background:rgba(255,76,96,.12)}
+.menu-item.danger[data-highlighted]{background:rgba(255,64,80,.12)}
 .menu-icon{color:var(--muted2);flex-shrink:0}
 .menu-item.danger .menu-icon{color:currentColor}
 .menu-item[data-highlighted] .menu-icon{color:var(--text)}

@@ -40,10 +40,10 @@ export function DashboardTab({
   // Status ribbon — a grounding squawk outranks everything, as in v1.
   const ribbon =
     grounding.length > 0
-      ? { icon: "grounded" as const, title: "Grounding Squawk Open", glow: "rgba(255,76,96,.20)",
+      ? { icon: "grounded" as const, title: "Grounding Squawk Open", glow: "rgba(255,64,80,.20)",
           sub: `${grounding.length} grounding item — ${grounding[0].desc.slice(0, 70)}` }
       : overdue.length > 0
-        ? { icon: "alert" as const, title: "Attention Required", glow: "rgba(255,76,96,.20)",
+        ? { icon: "alert" as const, title: "Attention Required", glow: "rgba(255,64,80,.20)",
             sub: `${overdue.length} inspection${overdue.length > 1 ? "s" : ""} overdue` }
         : dueSoon.length > 0 || (life.tracked && life.pct < 15)
           ? { icon: "alert" as const, title: "Coming Due", glow: "rgba(255,160,35,.20)",
