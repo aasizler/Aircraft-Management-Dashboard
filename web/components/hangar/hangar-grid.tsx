@@ -360,8 +360,13 @@ export function HangarGrid({
       ,
     {
       key: "__none__",
-      label: "Active Aircraft",
-      sub: "All aircraft you currently own or are managing.",
+      // Only "ungrouped" once there is something to be grouped into. With no
+      // fleets this section IS the hangar, and naming it after a filing system
+      // the owner hasn't adopted would be nonsense.
+      label: fleets.length ? "Ungrouped" : "Active Aircraft",
+      sub: fleets.length
+        ? "Not filed into a fleet yet."
+        : "All aircraft you currently own or are managing.",
       // Explicitly undefined so this shares a shape with the fleet sections;
       // without it the array is a union and `s.fleet` isn't reachable below.
       fleet: undefined as Fleet | undefined,
