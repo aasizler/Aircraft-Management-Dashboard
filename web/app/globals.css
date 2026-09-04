@@ -209,6 +209,7 @@ canvas.chart{display:block;width:100%;height:150px}
 /* Grid and rail. The rail is fixed-width so the tiles keep the sizing they
    were tuned at; below 1100 it stacks rather than squeezing them. */
 .hangar-cols{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:24px;align-items:start}
+.hangar-cols > *{min-width:0}
 @media (max-width:1100px){.hangar-cols{grid-template-columns:minmax(0,1fr)}}
 
 .ad-rail{position:sticky;top:16px;background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:14px}
@@ -231,16 +232,15 @@ canvas.chart{display:block;width:100%;height:150px}
 
 .ad-more{width:100%;margin-top:10px;height:var(--ctl-h-sm);border-radius:var(--ctl-r);border:1px solid var(--border2);background:var(--bg3);color:var(--muted3);font-family:var(--body);font-size:11.5px;font-weight:600;cursor:pointer;transition:all .15s}
 .ad-more:hover{border-color:var(--border3);color:var(--text)}
-.ad-foot{margin-top:12px;padding-top:10px;border-top:1px solid var(--border2);font-size:10px;line-height:1.5;color:var(--muted)}
 /* A fleet header is a row, not a heading with a button stuck to it: name,
    count, what needs doing, then a rule carrying the eye to the ⋮ at the end. */
-.fl-hd{display:flex;align-items:center;gap:10px;margin:0 0 12px}
+.fl-hd{display:flex;align-items:center;gap:10px;margin:0 0 12px;min-width:0}
 .fl-name{font-family:var(--display);font-size:18px;font-weight:800;letter-spacing:.02em;white-space:nowrap}
 .fl-count{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--muted2);background:var(--bg3);border:1px solid var(--border2);border-radius:999px;padding:2px 7px;flex:0 0 auto}
 .fl-rule{flex:1;height:1px;background:var(--border2);min-width:16px}
 .fl-menu{flex:0 0 auto}
 
-.roll{display:flex;align-items:center;gap:12px;flex:0 0 auto}
+.roll{display:flex;align-items:center;gap:12px;flex:0 1 auto;min-width:0;overflow:hidden}
 .roll-item{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;letter-spacing:.04em;color:var(--muted2);white-space:nowrap}
 .roll-item i{width:6px;height:6px;border-radius:50%;flex:0 0 auto}
 .roll-item.grounded{color:#ff4050}.roll-item.grounded i{background:#ff4050}
@@ -723,3 +723,11 @@ canvas.chart{display:block;width:100%;height:150px}
 .ad-regs.unsure{color:var(--muted);font-style:normal;text-transform:none;letter-spacing:.03em}
 .ad-gap-link{color:var(--muted3);font-weight:600;text-decoration:none}
 .ad-gap-link:hover{color:var(--accent)}
+.rail-block{margin-top:16px;padding-top:14px;border-top:1px solid var(--border2)}
+.news-item{display:block;text-decoration:none;color:inherit;border-top:1px solid var(--border2);padding:9px 2px 10px}
+.news-item:first-of-type{border-top:0}
+.news-item:hover .news-title{color:var(--accent)}
+.news-meta{display:flex;align-items:center;gap:8px;margin-bottom:3px}
+.news-src{font-family:var(--mono);font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted3)}
+.news-age{margin-left:auto;font-family:var(--mono);font-size:9px;color:var(--muted)}
+.news-title{font-size:12px;line-height:1.45;color:var(--muted3);transition:color .15s}

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Icon } from "@/components/ui/icon";
+import { NewsFeed } from "./news-feed";
 import {
   coverageGaps, engineGaps, fetchDirectives, loadSeen, saveSeen, type Craft, type Directive,
 } from "@/lib/directives";
@@ -70,7 +71,7 @@ export function AdRibbon({ fleet }: { fleet: Craft[] }) {
   const shown = showAll ? [...mine, ...other] : unread.length ? unread : mine.slice(0, 6);
 
   return (
-    <aside className="ad-rail" aria-label="Airworthiness directives">
+    <aside className="ad-rail" aria-label="Hangar rail">
       <div className="ad-hd">
         <Icon name="shield" size={15} />
         <span className="ad-title">Airworthiness</span>
@@ -159,13 +160,7 @@ export function AdRibbon({ fleet }: { fleet: Craft[] }) {
         </div>
       ))}
 
-      {rows && rows.length > 0 && (
-        <div className="ad-foot">
-          Matched on the models a directive names. Where it names none, or names
-          a variant of one you operate, it says check applicability rather than
-          claiming it applies.
-        </div>
-      )}
+      <NewsFeed />
     </aside>
   );
 }
