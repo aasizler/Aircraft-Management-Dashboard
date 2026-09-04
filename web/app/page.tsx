@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { AddAircraftButton } from "@/components/hangar/add-aircraft";
 import { NewFleetButton } from "@/components/hangar/new-fleet";
 import { HangarGrid, type Fleet, type Tile } from "@/components/hangar/hangar-grid";
+import { AdRibbon } from "@/components/hangar/ad-ribbon";
 import { PageHeader } from "@/components/ui/page-header";
 import type { Meter } from "@/lib/aircraft";
 import { resolveRole } from "@/lib/permissions";
@@ -154,12 +155,27 @@ export default async function Home() {
             Could not load aircraft: {error.message}
           </div>
         ) : tiles.length > 0 ? (
-          <HangarGrid
-            aircraft={tiles}
-            fleets={(fleets ?? []) as Fleet[]}
-            canManageFleets={isStaff}
-            shareableFleetIds={shareableFleetIds}
-          />
+          // The rail takes the width the grid was leaving empty at three
+          // aircraft, and pays for it with something the hangar could not say
+          // before. It drops below the grid under 1100px rather than squeezing
+          // the tiles.
+          <div className="hangar-cols">
+            <div>
+              <HangarGrid
+                aircraft={tiles}
+                fleets={(fleets ?? []) as Fleet[]}
+                canManageFleets={isStaff}
+                shareableFleetIds={shareableFleetIds}
+              />
+            </div>
+            <AdRibbon
+              fleet={tiles.map((t) => ({
+                reg: t.reg,
+                type: t.type,
+                engineType: (t.data?.engineType as string | null) ?? null,
+              }))}
+            />
+          </div>
         ) : (
           <div className="how-box">
             {membership?.org_id ? (
