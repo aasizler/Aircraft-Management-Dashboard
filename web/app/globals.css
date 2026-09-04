@@ -218,12 +218,13 @@ canvas.chart{display:block;width:100%;height:150px}
 .roll-item.current i{background:#2dd4a0}
 .roll-item.untracked i{background:var(--muted2)}
 
-.fl-empty{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--muted);border:1px dashed var(--border2);border-radius:12px;padding:18px 16px;margin-bottom:22px}
+.fl-empty{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--muted);border:1px dashed var(--border2);border-radius:12px;padding:18px 16px}
 /* Fleet actions live behind the same ⋮ the aircraft tiles use. */
 /* No z-index while closed — a stacking context on every heading meant equal
    values resolved by DOM order, so a later fleet's button painted over an
    earlier fleet's open dropdown. Only the open one is lifted. */
 .section-sub{font-size:12px;color:var(--muted);margin-bottom:16px}
+.fleet-sec{margin-bottom:30px}
 .ac-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;position:relative;z-index:60}
 .ac-tile{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;cursor:pointer;display:flex;flex-direction:column;position:relative;text-decoration:none;color:var(--text);transition:border-color .18s,transform .18s}
 .ac-tile:hover{border-color:var(--accent);transform:translateY(-1px)}
@@ -462,9 +463,6 @@ canvas.chart{display:block;width:100%;height:150px}
 .rearrange-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:55;pointer-events:none}
 .rearrange-bar{position:fixed;bottom:36px;left:50%;transform:translateX(-50%);background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:14px 24px;display:flex;align-items:center;gap:16px;box-shadow:0 8px 32px rgba(0,0,0,.5);z-index:500;pointer-events:all}
 /* HANGAR TILE — role chip, LIVE badge and reg watermark (v1 renderHangar) */
-.role-badge{display:inline-flex;align-items:center;font-size:10px;font-weight:700;color:var(--muted2);font-family:var(--mono);letter-spacing:.05em;background:var(--bg4);border:1px solid var(--border2);border-radius:4px;padding:2px 7px}
-.tile-airborne{position:absolute;top:8px;right:8px;display:inline-flex;align-items:center;gap:4px;background:rgba(0,225,100,.14);border:1px solid rgba(0,225,100,.3);color:#00e164;font-size:9px;font-weight:700;letter-spacing:.06em;padding:2px 7px;border-radius:3px;font-family:var(--mono)}
-.tile-airborne .tp{width:5px;height:5px;border-radius:50%;background:#00e164;animation:adsb-blink 1.4s ease-in-out infinite}
 /* TOASTS — v1 showToast() */
 .toast-wrap{position:fixed;right:20px;bottom:20px;display:flex;flex-direction:column;gap:8px;z-index:4000;pointer-events:none}
 .toast{pointer-events:all;display:flex;align-items:center;gap:9px;background:var(--bg3);border:1px solid var(--border3);border-radius:9px;padding:11px 16px;font-size:13px;color:var(--text);box-shadow:0 10px 32px rgba(0,0,0,.55);cursor:pointer;max-width:380px;animation:toast-in .18s ease-out}
@@ -575,7 +573,6 @@ canvas.chart{display:block;width:100%;height:150px}
 .adsb-row-v{font-family:var(--mono);color:var(--text)}
 .adsb-panel-reopen{position:fixed;right:18px;bottom:18px;z-index:1500;display:inline-flex;align-items:center;gap:7px;background:var(--bg2);border:1px solid var(--border3);border-radius:20px;padding:7px 14px;font-size:12px;font-family:var(--body);font-weight:600;color:var(--muted3);cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.5)}
 .adsb-panel-reopen:hover{border-color:var(--accent);color:var(--accent)}
-.tile-live{position:absolute;top:8px;right:38px;display:inline-flex;align-items:center;gap:4px;background:rgba(0,225,100,.14);border:1px solid rgba(0,225,100,.3);color:#00e164;font-size:9px;font-weight:700;letter-spacing:.06em;padding:2px 7px;border-radius:3px;font-family:var(--mono)}
 /* ACCENT SWATCHES */
 .accent-swatch{width:28px;height:28px;border-radius:50%;background:var(--sw);border:2px solid transparent;cursor:pointer;transition:transform .15s;flex-shrink:0}
 .accent-swatch:hover{transform:scale(1.12)}
@@ -628,12 +625,6 @@ canvas.chart{display:block;width:100%;height:150px}
    colour was the only thing distinguishing "grounded" from "current". Colour
    here carries meaning, and never carries it alone — the word does the work for
    anyone who can't separate the hues. */
-.tile-status{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:4px 11px;border-radius:999px;border:1px solid}
-.tile-status::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0}
-.tile-status.grounded{color:#ff6b6b;background:rgba(240,75,75,.13);border-color:rgba(240,75,75,.34)}
-.tile-status.due{color:#f7b23b;background:rgba(245,158,11,.13);border-color:rgba(245,158,11,.34)}
-.tile-status.current{color:#2dd4a0;background:rgba(45,212,160,.12);border-color:rgba(45,212,160,.3)}
-.tile-status.untracked{color:var(--muted2);background:var(--bg4);border-color:var(--border2)}
 /* A grounded aeroplane should catch the eye from the whole hangar, not just its
    own tile. */
 .ac-tile:has(.stat-btn.grounded){border-color:rgba(240,75,75,.34)}

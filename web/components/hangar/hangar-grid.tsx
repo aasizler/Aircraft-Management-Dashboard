@@ -381,7 +381,7 @@ export function HangarGrid({
   return (
     <>
       {sections.map((section) => (
-        <div key={section.key}>
+        <div className="fleet-sec" key={section.key}>
           {/* Name, how many, and what needs doing — a fleet answers "is anything
               here my problem" before you read a tile. The rule carries the eye
               to the ⋮, which used to sit welded to the last letter of the name
