@@ -4,8 +4,7 @@ import { useEffect, useState } from "react";
 import { Icon } from "@/components/ui/icon";
 
 type Item = { title: string; link: string; date: string; source: string; image?: string };
-type Headline = Item & { pubs: number; outlets: string[] };
-type Payload = { pinned: Item | null; headlines: Headline[]; items: Item[] };
+type Payload = { pinned: Item | null; cards: Item[]; items: Item[] };
 
 /** Relative age — a headline's value is mostly how new it is. */
 function ago(iso: string) {
@@ -30,7 +29,7 @@ export function NewsFeed() {
   // doesn't, so relevance outranks recency — but only for the handful that
   // match, and the lead card keeps whatever ends up first.
   const pinned = state.data?.pinned ?? null;
-  const heads = state.data?.headlines ?? [];
+  const cards = state.data?.cards ?? [];
   // Four, not seven. Eight equally weighted rows is a wall, and the rail has a
   // second section under it that deserves the room.
   const rest = state.data?.items ?? [];
@@ -77,13 +76,10 @@ export function NewsFeed() {
         </a>
       )}
 
-      {/* The day's biggest stories, measured by how many outlets ran each. A
-          thumbnail only appears where the story also reached a direct feed,
-          because Google's own links never leave news.google.com. */}
-      {heads.length > 0 && (
-        <div className="news-sec">{heads[0].pubs > 0 ? "Making headlines" : "Latest"}</div>
-      )}
-      {heads.map((h) => (
+      {/* Two picture cards from two different publishers. Prominence ranking
+            was tried and dropped — see the note in /api/news. */}
+      {cards.length > 0 && <div className="news-sec">Latest</div>}
+      {cards.map((h) => (
         <a key={h.link} className="news-head" href={h.link} target="_blank" rel="noopener noreferrer">
           {h.image && !failed[h.link] && (
             // eslint-disable-next-line @next/next/no-img-element
@@ -93,13 +89,7 @@ export function NewsFeed() {
           <div className="news-head-body">
             <div className="news-meta">
               <span className="news-src">{h.source}</span>
-              {h.pubs > 0 ? (
-                <span className="news-pubs" title={h.outlets.slice(0, 6).join(" · ")}>
-                  {h.pubs} outlets
-                </span>
-              ) : (
-                <span className="news-age">{ago(h.date)}</span>
-              )}
+              <span className="news-age">{ago(h.date)}</span>
             </div>
             <div className="news-title">{h.title}</div>
           </div>

@@ -762,4 +762,3 @@ canvas.chart{display:block;width:100%;height:150px}
 .news-head:hover .news-title{color:var(--accent)}
 .news-thumb{width:64px;height:44px;object-fit:cover;border-radius:6px;flex:0 0 auto;background:var(--bg4)}
 .news-head-body{min-width:0;flex:1}
-.news-pubs{margin-left:auto;font-family:var(--mono);font-size:9px;letter-spacing:.05em;color:var(--accent);background:var(--accent-dim);border:1px solid rgba(59,158,255,.28);border-radius:3px;padding:1px 5px;white-space:nowrap}
