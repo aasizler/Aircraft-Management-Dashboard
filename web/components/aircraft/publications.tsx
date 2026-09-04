@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Icon } from "@/components/ui/icon";
-import { fetchDirectives, publishersFor, type Directive } from "@/lib/directives";
+import { citedBulletins, fetchDirectives, publishersFor, type Directive } from "@/lib/directives";
 
 /**
  * Where to look for what the FAA and the manufacturers have published about
@@ -38,6 +38,30 @@ export function Publications({
   const rows = ready ? data.rows : null;
   const publishers = publishersFor(type, engineType);
 
+  // Scanned on demand: each directive is ~26KB of plain text, which is not a
+  // cost worth paying on every visit to the tab.
+  const [scan, setScan] = useState<{ busy: boolean; done: boolean; refs: Record<string, string[]> }>(
+    { busy: false, done: false, refs: {} },
+  );
+
+  async function findBulletins() {
+    if (!rows?.length) return;
+    setScan({ busy: true, done: false, refs: {} });
+    const ac = new AbortController();
+    const out: Record<string, string[]> = {};
+    await Promise.all(
+      rows.slice(0, 10).map(async (d) => {
+        try {
+          const refs = await citedBulletins(d, ac.signal);
+          if (refs.length) out[d.id] = refs;
+        } catch { /* one unreadable document shouldn't empty the whole scan */ }
+      }),
+    );
+    setScan({ busy: false, done: true, refs: out });
+  }
+
+  const cited = Object.entries(scan.refs);
+
   return (
     <div style={{ marginTop: 26 }}>
       <div className="section-label" style={{ marginBottom: 4 }}>Publications</div>
@@ -61,7 +85,10 @@ export function Publications({
           )}
           {rows?.slice(0, 8).map((d) => (
             <a key={d.id} className="pub-ad" href={d.url} target="_blank" rel="noopener noreferrer">
-              <span className="pub-date">{d.date}</span>
+              <span className="pub-date">
+                {d.date}
+                {d.proposed && <span className="pub-proposed">Proposed</span>}
+              </span>
               <span className="pub-ad-title">{d.title}</span>
             </a>
           ))}
@@ -97,6 +124,34 @@ export function Publications({
             No open feed exists for these. Each manufacturer publishes its own,
             and most sit behind a customer login.
           </div>
+
+          {/* The one route to real bulletin numbers: a directive names the
+              manufacturer document that prompted it, in its full text. Only
+              ever finds bulletins an AD already cites — a bulletin issued on the
+              manufacturer's own initiative, which is most of them, is not here
+              and cannot be. */}
+          {(rows?.length ?? 0) > 0 && !scan.done && (
+            <button className="btn sm" style={{ width: "100%", marginTop: 4 }}
+                    onClick={findBulletins} disabled={scan.busy}>
+              {scan.busy ? "Reading directives…" : "Find bulletins cited by directives"}
+            </button>
+          )}
+
+          {scan.done && cited.length === 0 && (
+            <div className="pub-note">
+              None of the directives above cite a manufacturer bulletin by number.
+            </div>
+          )}
+
+          {cited.map(([id, refs]) => {
+            const d = rows!.find((x) => x.id === id)!;
+            return (
+              <div key={id} className="pub-cited">
+                <span className="pub-date">{d.date} · cited by AD</span>
+                {refs.map((r) => <span key={r} className="pub-sb">{r}</span>)}
+              </div>
+            );
+          })}
           {publishers.map((p) => (
             <a key={p.url} className="pub-link" href={p.url} target="_blank" rel="noopener noreferrer">
               <span className="pub-link-name">{p.name}</span>

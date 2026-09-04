@@ -723,3 +723,7 @@ canvas.chart{display:block;width:100%;height:150px}
 .pub-prompt{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:10px;padding:10px 11px;border:1px dashed rgba(var(--warn-rgb),.35);border-radius:10px;background:rgba(var(--warn-rgb),.06);color:var(--warn);font-size:11.5px;line-height:1.5}
 .pub-prompt span{flex:1;min-width:150px}
 .pub-prompt .btn{flex:0 0 auto}
+.pub-proposed{margin-left:7px;font-family:var(--mono);font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--warn);background:rgba(var(--warn-rgb),.12);border:1px solid rgba(var(--warn-rgb),.3);border-radius:3px;padding:1px 5px}
+.pub-cited{border-top:1px solid var(--border2);padding:9px 0 8px;display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.pub-cited .pub-date{width:100%;margin-bottom:2px}
+.pub-sb{font-family:var(--mono);font-size:11px;color:var(--accent);background:var(--accent-dim);border:1px solid rgba(59,158,255,.28);border-radius:4px;padding:2px 7px}

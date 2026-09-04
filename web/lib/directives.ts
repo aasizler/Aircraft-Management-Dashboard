@@ -29,6 +29,14 @@ export type Directive = {
   url: string;
   /** Which search term found it, i.e. the make it belongs to. */
   maker: string;
+  /**
+   * "Proposed Rule" is an NPRM — the FAA intends to mandate this, but has not
+   * yet. Showing one identically to a final rule tells an owner something is
+   * required when it is not, so it is labelled.
+   */
+  proposed: boolean;
+  /** Full text, for pulling out the bulletins it cites. */
+  textUrl: string | null;
   /** Registrations in the hangar this maker covers. */
   affects: string[];
 };
@@ -165,13 +173,16 @@ async function search(term: string, signal: AbortSignal) {
   q.append("conditions[agencies][]", "federal-aviation-administration");
   q.set("per_page", "20");
   q.set("order", "newest");
-  for (const f of ["title", "publication_date", "document_number", "html_url"]) {
+  for (const f of ["title", "publication_date", "document_number", "html_url", "type", "raw_text_url"]) {
     q.append("fields[]", f);
   }
   const res = await fetch(`${API}?${q}`, { signal });
   if (!res.ok) throw new Error(`Federal Register ${res.status}`);
   const json = (await res.json()) as {
-    results?: { title: string; publication_date: string; document_number: string; html_url: string }[];
+    results?: {
+      title: string; publication_date: string; document_number: string;
+      html_url: string; type?: string; raw_text_url?: string | null;
+    }[];
   };
   // Two filters, both needed. The first drops proposed rules and certification
   // notices; the second drops ADs for OTHER manufacturers that merely name this
@@ -217,6 +228,8 @@ export async function fetchDirectives(fleet: Craft[], signal: AbortSignal): Prom
         date: r.publication_date,
         url: r.html_url,
         maker: s.value.term,
+        proposed: r.type === "Proposed Rule",
+        textUrl: r.raw_text_url ?? null,
         affects: [...scoped],
       });
     }
@@ -309,4 +322,30 @@ export function publishersFor(
     url: "https://drs.faa.gov/",
   });
   return out;
+}
+
+
+// ── Bulletins an AD cites ───────────────────────────────────────────────────
+
+/**
+ * The one route to real service bulletin NUMBERS from an open source.
+ *
+ * A directive names the manufacturer document it was prompted by — "Cirrus
+ * Service Bulletin SB2X-76-05" — in its full text, though not in its abstract.
+ * So the bulletins that matter most, the ones the FAA thought worth mandating,
+ * can be surfaced by name even though no bulletin feed exists.
+ *
+ * The limit is worth being clear about: this only ever finds bulletins an AD
+ * already cites. A bulletin the manufacturer issued on its own, which is most
+ * of them, is not here and cannot be.
+ *
+ * On demand only — each document is ~26KB of plain text.
+ */
+export async function citedBulletins(d: Directive, signal: AbortSignal): Promise<string[]> {
+  // Through our own route: the Federal Register's full-text path sends no CORS
+  // header, so a direct fetch from here fails and looks like "none cited".
+  const res = await fetch(`/api/ad-bulletins/${d.id}`, { signal });
+  if (!res.ok) throw new Error(`bulletin scan ${res.status}`);
+  const json = (await res.json()) as { refs?: string[] };
+  return json.refs ?? [];
 }
