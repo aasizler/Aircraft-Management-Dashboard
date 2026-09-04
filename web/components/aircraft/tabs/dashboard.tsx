@@ -40,18 +40,18 @@ export function DashboardTab({
   // Status ribbon — a grounding squawk outranks everything, as in v1.
   const ribbon =
     grounding.length > 0
-      ? { icon: "grounded" as const, title: "Grounding Squawk Open", glow: "rgba(240,75,75,.18)",
+      ? { icon: "grounded" as const, title: "Grounding Squawk Open", glow: "rgba(255,76,96,.20)",
           sub: `${grounding.length} grounding item — ${grounding[0].desc.slice(0, 70)}` }
       : overdue.length > 0
-        ? { icon: "alert" as const, title: "Attention Required", glow: "rgba(240,75,75,.18)",
+        ? { icon: "alert" as const, title: "Attention Required", glow: "rgba(255,76,96,.20)",
             sub: `${overdue.length} inspection${overdue.length > 1 ? "s" : ""} overdue` }
         : dueSoon.length > 0 || (life.tracked && life.pct < 15)
-          ? { icon: "alert" as const, title: "Coming Due", glow: "rgba(245,158,11,.18)",
+          ? { icon: "alert" as const, title: "Coming Due", glow: "rgba(255,160,35,.20)",
               sub: `${dueSoon.length} inspection${dueSoon.length !== 1 ? "s" : ""} due soon${life.tracked && life.pct < 15 ? " · oil life low" : ""}` }
           : tracked.length === 0
             ? { icon: "eye" as const, title: "Not Yet Tracked", glow: "rgba(59,158,255,.16)",
                 sub: "No inspection has been recorded — nothing to report on yet" }
-            : { icon: "check" as const, title: "All Clear", glow: "rgba(45,212,160,.18)",
+            : { icon: "check" as const, title: "All Clear", glow: "rgba(34,226,166,.20)",
                 sub: "No overdue items — aircraft is current" };
 
   const pctColor = (p: number) =>
