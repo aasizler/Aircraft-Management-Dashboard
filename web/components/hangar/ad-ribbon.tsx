@@ -60,8 +60,12 @@ export function AdRibbon({ fleet }: { fleet: Craft[] }) {
     });
   }, []);
 
-  const unread = (rows ?? []).filter((r) => !seen.has(r.id));
-  const shown = showAll ? (rows ?? []) : unread.length ? unread : (rows ?? []).slice(0, 5);
+  // Relevant means: names a model you operate, or names none at all. The rest
+  // are published for your manufacturers but for other types.
+  const mine = (rows ?? []).filter((r) => !r.other);
+  const other = (rows ?? []).filter((r) => r.other);
+  const unread = mine.filter((r) => !seen.has(r.id));
+  const shown = showAll ? [...mine, ...other] : unread.length ? unread : mine.slice(0, 6);
 
   return (
     <aside className="ad-rail" aria-label="Airworthiness directives">
@@ -81,8 +85,11 @@ export function AdRibbon({ fleet }: { fleet: Craft[] }) {
       )}
 
       {rows?.length === 0 && (
+        <div className="ad-note">No directives found for the makes in your hangar.</div>
+      )}
+      {rows && rows.length > 0 && mine.length === 0 && !showAll && (
         <div className="ad-note">
-          No directives found for the makes in your hangar.
+          Nothing in the last 24 months names a model you operate.
         </div>
       )}
 
@@ -96,25 +103,36 @@ export function AdRibbon({ fleet }: { fleet: Craft[] }) {
           onClick={() => markSeen(d.id)}
         >
           <div className="ad-item-top">
-            <span className="ad-date">{d.date}</span>
-            {d.affects.length > 0 && (
+            <span className="ad-date">
+              {d.date}
+              {d.proposed && <span className="ad-proposed">Proposed</span>}
+            </span>
+            {/* A registration is shown only where the directive names a model
+                you actually operate. Where it names none, or names a variant of
+                one, it says so instead of asserting. */}
+            {d.affects.length > 0 ? (
               <span className="ad-regs">{d.affects.join(" · ")}</span>
+            ) : (
+              <span className="ad-regs unsure" title="This directive names no model, or a variant of one you operate — check applicability">
+                check applicability
+              </span>
             )}
           </div>
           <div className="ad-item-title">{d.title}</div>
         </a>
       ))}
 
-      {(rows?.length ?? 0) > shown.length && (
+      {!showAll && (rows?.length ?? 0) > shown.length && (
         <button className="ad-more" onClick={() => setShowAll(true)}>
-          Show all {rows!.length}
+          Show all {rows!.length} — {other.length} are for other types
         </button>
       )}
 
       {rows && rows.length > 0 && (
         <div className="ad-foot">
-          Directives only. Manufacturer service bulletins are not published
-          through any open feed — find them from an aircraft&rsquo;s Documents tab.
+          Matched on the models a directive names. Where it names none, or names
+          a variant of one you operate, it says check applicability rather than
+          claiming it applies.
         </div>
       )}
     </aside>

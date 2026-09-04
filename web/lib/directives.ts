@@ -35,10 +35,21 @@ export type Directive = {
    * required when it is not, so it is labelled.
    */
   proposed: boolean;
-  /** Full text, for pulling out the bulletins it cites. */
-  textUrl: string | null;
-  /** Registrations in the hangar this maker covers. */
+  /** Registrations whose MODEL the directive names. A real match. */
   affects: string[];
+  /**
+   * Registrations where applicability could not be settled — the directive
+   * names no models, or names a variant of one you own ("182Q" against a
+   * "182"). Listed, never claimed.
+   */
+  unclear: string[];
+  /**
+   * Names models, none of which resolve to yours. Kept rather than dropped: a
+   * King Air 350's certificate model is "B300", and no token match bridges the
+   * two, so "doesn't apply" is a weaker claim than it looks. Shown behind an
+   * expander so nothing published for your makes is invisible.
+   */
+  other: boolean;
 };
 
 /**
@@ -125,6 +136,77 @@ function narrow(title: string, regs: string[], fleet: Craft[]): string[] {
   });
 }
 
+/**
+ * Model designators a directive says it applies to, read from its abstract.
+ *
+ * This is the whole difference between "an AD exists for Textron" and "an AD
+ * exists for your aeroplane". Textron builds King Airs and Citations;
+ * Continental's directives get issued against Diamond airframes. Matching on
+ * manufacturer alone tagged a Diamond DA42 diesel AD to a Bonanza and an
+ * SR20/SR22 AD to an SF50.
+ */
+function appliesTo(abstract: string): string[] {
+  const out = new Set<string>();
+  for (const m of abstract.matchAll(/\bmodels?\s+([^.]{0,170})/gi)) {
+    for (const part of m[1].split(/[,;]|\band\b|\bor\b/)) {
+      const t = part
+        .replace(/\b(airplanes?|aeroplanes?|engines?|helicopters?|series|certain|the)\b/gi, "")
+        .trim();
+      if (/^[A-Z0-9][A-Z0-9\-. /]{1,16}$/i.test(t) && /\d/.test(t)) out.add(t.toUpperCase());
+    }
+  }
+  return [...out];
+}
+
+/** Designators an aircraft answers to — airframe and engine. */
+function craftTokens(c: Craft): string[] {
+  const out = new Set<string>();
+  // Match the aircraft's OWN catalogue entry, not merely its manufacturer's
+  // first. Finding by mfr prefix returned the SR20 for a Vision Jet, which
+  // handed an SR20/SR22 directive an "SR20" token to match on and reported it
+  // as applying to an SF50.
+  const t = (c.type ?? "").toUpperCase();
+  const hit =
+    AIRCRAFT_DB.find((a) => t === `${a.mfr} ${a.model}`.toUpperCase()) ??
+    AIRCRAFT_DB.find(
+      (a) =>
+        t.startsWith(a.mfr.toUpperCase()) &&
+        a.model
+          .split(/[^A-Za-z0-9]+/)
+          .some((w) => w.length > 1 && t.includes(w.toUpperCase())),
+    );
+  for (const src of [c.type ?? "", hit?.model ?? "", hit?.icao ?? ""]) {
+    for (const tok of src.split(/[^A-Za-z0-9-]+/)) {
+      if (tok.length >= 2 && /\d/.test(tok)) out.add(tok.toUpperCase());
+    }
+  }
+  if (c.engineType) out.add(c.engineType.trim().toUpperCase());
+  return [...out];
+}
+
+type Verdict = "match" | "unclear" | "no";
+
+/**
+ * Three answers, not two. "This names a model you don't have" and "this names
+ * no model at all" are different facts, and collapsing them either hides a
+ * directive or asserts one that may not apply.
+ */
+function verdict(abstract: string, c: Craft): Verdict {
+  const named = appliesTo(abstract);
+  if (!named.length) return "unclear";
+  const mine = craftTokens(c);
+  if (!mine.length) return "unclear";
+  for (const n of named) {
+    for (const m of mine) {
+      if (n === m) return "match";
+      // "182" against "182Q", or "IO-550" against "IO-550-B": a variant of
+      // something you own, and nothing here says which variant you have.
+      if (n.startsWith(m) || m.startsWith(n)) return "unclear";
+    }
+  }
+  return "no";
+}
+
 /** Search terms for a hangar, each mapped to the registrations it covers. */
 export function termsFor(fleet: Craft[]): Map<string, string[]> {
   const out = new Map<string, string[]>();
@@ -173,7 +255,7 @@ async function search(term: string, signal: AbortSignal) {
   q.append("conditions[agencies][]", "federal-aviation-administration");
   q.set("per_page", "20");
   q.set("order", "newest");
-  for (const f of ["title", "publication_date", "document_number", "html_url", "type", "raw_text_url"]) {
+  for (const f of ["title", "publication_date", "document_number", "html_url", "type", "abstract"]) {
     q.append("fields[]", f);
   }
   const res = await fetch(`${API}?${q}`, { signal });
@@ -181,7 +263,7 @@ async function search(term: string, signal: AbortSignal) {
   const json = (await res.json()) as {
     results?: {
       title: string; publication_date: string; document_number: string;
-      html_url: string; type?: string; raw_text_url?: string | null;
+      html_url: string; type?: string; abstract?: string | null;
     }[];
   };
   // Two filters, both needed. The first drops proposed rules and certification
@@ -215,11 +297,27 @@ export async function fetchDirectives(fleet: Craft[], signal: AbortSignal): Prom
     for (const r of s.value.rows) {
       // Beech and Cessna both search "Textron Aviation", so the same AD can
       // arrive twice — merge the registrations rather than listing it twice.
+      // Legacy-make scoping first (Beech vs Cessna both file under Textron),
+      // then the model check, which is what actually decides applicability.
       const scoped = narrow(r.title, regs, fleet);
       if (!scoped.length) continue;
+
+      const abstract = r.abstract ?? "";
+      const yes: string[] = [];
+      const maybe: string[] = [];
+      for (const reg of scoped) {
+        const c = fleet.find((x) => x.reg === reg);
+        if (!c) continue;
+        const v = verdict(abstract, c);
+        if (v === "match") yes.push(reg);
+        else if (v === "unclear") maybe.push(reg);
+      }
+
       const prev = byId.get(r.document_number);
       if (prev) {
-        for (const reg of scoped) if (!prev.affects.includes(reg)) prev.affects.push(reg);
+        for (const reg of yes) if (!prev.affects.includes(reg)) prev.affects.push(reg);
+        for (const reg of maybe) if (!prev.unclear.includes(reg)) prev.unclear.push(reg);
+        if (yes.length || maybe.length) prev.other = false;
         continue;
       }
       byId.set(r.document_number, {
@@ -229,12 +327,15 @@ export async function fetchDirectives(fleet: Craft[], signal: AbortSignal): Prom
         url: r.html_url,
         maker: s.value.term,
         proposed: r.type === "Proposed Rule",
-        textUrl: r.raw_text_url ?? null,
-        affects: [...scoped],
+        affects: yes,
+        unclear: maybe,
+        other: !yes.length && !maybe.length,
       });
     }
   }
-  return [...byId.values()].sort((a, b) => b.date.localeCompare(a.date));
+  return [...byId.values()].sort(
+    (a, b) => Number(a.other) - Number(b.other) || b.date.localeCompare(a.date),
+  );
 }
 
 // ── "Seen" state ────────────────────────────────────────────────────────────

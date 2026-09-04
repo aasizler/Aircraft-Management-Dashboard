@@ -67,6 +67,9 @@ export function Publications({
             <span className="pub-date">
               {d.date}
               {d.proposed && <span className="pub-proposed">Proposed</span>}
+              {d.affects.length === 0 && (
+                <span className="pub-unsure">check applicability</span>
+              )}
             </span>
             <span className="pub-ad-title">{d.title}</span>
           </a>

@@ -719,3 +719,5 @@ canvas.chart{display:block;width:100%;height:150px}
 .pub-prompt span{flex:1;min-width:150px}
 .pub-prompt .btn{flex:0 0 auto}
 .pub-proposed{margin-left:7px;font-family:var(--mono);font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--warn);background:rgba(var(--warn-rgb),.12);border:1px solid rgba(var(--warn-rgb),.3);border-radius:3px;padding:1px 5px}
+.ad-proposed,.pub-unsure{margin-left:7px;font-family:var(--mono);font-size:9px;letter-spacing:.05em;text-transform:uppercase;color:var(--warn);background:rgba(var(--warn-rgb),.12);border:1px solid rgba(var(--warn-rgb),.3);border-radius:3px;padding:1px 5px}
+.ad-regs.unsure{color:var(--muted);font-style:normal;text-transform:none;letter-spacing:.03em}
