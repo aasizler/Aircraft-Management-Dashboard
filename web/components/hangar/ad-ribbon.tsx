@@ -132,10 +132,13 @@ export function AdRibbon({ fleet }: { fleet: Craft[] }) {
       {/* An aircraft nothing is being checked for must say so. An empty list
           otherwise reads as "nothing is wrong". */}
       {ready && gaps.map((g) => (
-        <div key={g.maker} className="ad-note">
-          {g.amateur
-            ? `${g.maker} types are amateur-built — the FAA issues them no directives.`
-            : `No directive source is set up for ${g.maker}, so none are being checked.`}
+        <div key={g.regs.join()} className="ad-note">
+          <b>{g.regs.join(" · ")}</b>{" — "}
+          {g.why.kind === "amateur"
+            ? `${g.why.maker} types are amateur-built, so the FAA issues them no directives.`
+            : g.why.kind === "no-source"
+              ? `no directive source is set up for ${g.why.maker}.`
+              : "its type wasn't picked from the list, so no make could be resolved and nothing is being checked. Re-pick it in Aircraft Settings."}
         </div>
       ))}
 

@@ -379,18 +379,38 @@ export function saveSeen(ids: Set<string>) {
 
 
 /**
- * Makers in a hangar that no search covers, so the caller can say "nothing is
- * being checked for this one" rather than showing an empty list that reads as
- * "nothing is wrong". Amateur-built types are reported separately because for
- * them an empty list is the right answer.
+ * Whether directives are actually being checked for one aircraft, and if not,
+ * why. Four answers, because "nothing found" means something different in each
+ * case and an empty list alone reads as "nothing is wrong".
  */
-export function coverageGaps(fleet: Craft[]): { maker: string; amateur: boolean }[] {
-  const out = new Map<string, boolean>();
+export type Coverage =
+  | { kind: "ok" }
+  /** Type was typed by hand, not chosen — nothing resolves it to a maker. */
+  | { kind: "unrecognised" }
+  /** Amateur-built: holds no type certificate, so an empty list is correct. */
+  | { kind: "amateur"; maker: string }
+  /** In the catalogue, but no search term is configured for its maker. */
+  | { kind: "no-source"; maker: string };
+
+export function coverageOf(c: Craft): Coverage {
+  if (!(c.type ?? "").trim()) return { kind: "unrecognised" };
+  const maker = makerOf(c.type);
+  if (!maker) return { kind: "unrecognised" };
+  if (AMATEUR_BUILT.has(maker)) return { kind: "amateur", maker };
+  if (!MAKER_TERMS[maker]) return { kind: "no-source", maker };
+  return { kind: "ok" };
+}
+
+/** Everything in a hangar that isn't being checked, with the aircraft it is about. */
+export function coverageGaps(fleet: Craft[]): { regs: string[]; why: Coverage }[] {
+  const byReason = new Map<string, { regs: string[]; why: Coverage }>();
   for (const c of fleet) {
-    const mk = makerOf(c.type);
-    if (!mk) continue;
-    if (AMATEUR_BUILT.has(mk)) out.set(mk, true);
-    else if (!MAKER_TERMS[mk]) out.set(mk, false);
+    const why = coverageOf(c);
+    if (why.kind === "ok") continue;
+    const k = why.kind + ("maker" in why ? why.maker : "");
+    const hit = byReason.get(k) ?? { regs: [], why };
+    hit.regs.push(c.reg);
+    byReason.set(k, hit);
   }
-  return [...out].map(([maker, amateur]) => ({ maker, amateur }));
+  return [...byReason.values()];
 }

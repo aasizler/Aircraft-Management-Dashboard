@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Icon } from "@/components/ui/icon";
-import { fetchDirectives, type Directive } from "@/lib/directives";
+import { coverageOf, fetchDirectives, type Directive } from "@/lib/directives";
 
 /**
  * Airworthiness directives for this airframe and engine, from the Federal
@@ -36,6 +36,7 @@ export function Publications({
 
   const ready = data.key === key;
   const rows = ready ? data.rows : null;
+  const cover = coverageOf({ reg, type, engineType });
 
   return (
     <div style={{ marginTop: 26 }}>
@@ -58,7 +59,27 @@ export function Publications({
           </div>
         )}
 
-        {rows?.length === 0 && (
+        {/* Why the list is empty matters more than the fact that it is. */}
+        {ready && cover.kind !== "ok" && (
+          <div className="pub-note warn">
+            {cover.kind === "amateur"
+              ? `${cover.maker} types are amateur-built — the FAA issues them no directives, so an empty list here is the correct answer.`
+              : cover.kind === "no-source"
+                ? `No directive source is set up for ${cover.maker}, so none are being checked.`
+                : "This aircraft's type wasn't picked from the list, so no manufacturer could be resolved and no directives are being checked."}
+          </div>
+        )}
+        {cover.kind === "unrecognised" && ready && (
+          <div className="pub-prompt">
+            <Icon name="alert" size={14} />
+            <span>Pick {reg}&rsquo;s type from the catalogue to switch this on.</span>
+            <button className="btn sm"
+                    onClick={() => window.dispatchEvent(new Event("aerotrack:aircraft-settings"))}>
+              Set type
+            </button>
+          </div>
+        )}
+        {rows?.length === 0 && cover.kind === "ok" && (
           <div className="pub-note">None in the last 24 months for this airframe.</div>
         )}
 
