@@ -16,10 +16,19 @@ import {
  * stops repeating itself.
  */
 export function AdRibbon({ fleet }: { fleet: Craft[] }) {
-  const [rows, setRows] = useState<Directive[] | null>(null);
-  const [err, setErr] = useState<string | null>(null);
-  const [seen, setSeen] = useState<Set<string>>(() => new Set());
+  // Read at initialisation, not in an effect: an effect would render once with
+  // everything unread and then again with the truth, flashing the count.
+  const [seen, setSeen] = useState<Set<string>>(() =>
+    typeof window === "undefined" ? new Set() : loadSeen(),
+  );
   const [showAll, setShowAll] = useState(false);
+
+  // One state object carrying the key it belongs to, so the effect never has
+  // to synchronously reset anything before fetching — a result for a stale key
+  // simply reads as "still loading".
+  const [data, setData] = useState<{ key: string; rows: Directive[]; err: string | null }>(
+    { key: "", rows: [], err: null },
+  );
 
   // Keyed on the fleet's makes so it refetches when an aircraft is added, not
   // on every render of the hangar.
@@ -28,18 +37,20 @@ export function AdRibbon({ fleet }: { fleet: Craft[] }) {
     [fleet],
   );
 
-  useEffect(() => { setSeen(loadSeen()); }, []);
-
   useEffect(() => {
     const ac = new AbortController();
-    setRows(null);
-    setErr(null);
     fetchDirectives(fleet, ac.signal)
-      .then((d) => setRows(d))
-      .catch((e) => { if (e.name !== "AbortError") setErr(String(e.message ?? e)); });
+      .then((rows) => setData({ key, rows, err: null }))
+      .catch((e) => {
+        if (e.name !== "AbortError") setData({ key, rows: [], err: String(e.message ?? e) });
+      });
     return () => ac.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
+
+  const ready = data.key === key;
+  const rows = ready ? data.rows : null;
+  const err = ready ? data.err : null;
 
   const markSeen = useCallback((id: string) => {
     setSeen((prev) => {
