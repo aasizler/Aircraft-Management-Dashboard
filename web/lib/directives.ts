@@ -446,3 +446,35 @@ export function engineGaps(fleet: Craft[]): { craft: Craft; why: EngineCoverage 
     .map((c) => ({ craft: c, why: engineCoverageOf(c) }))
     .filter((x) => x.why !== "ok");
 }
+
+
+/**
+ * Words that mean "this is about something you own" — manufacturer, model and
+ * engine maker, for every aircraft in the hangar. Used to lift the handful of
+ * industry headlines that actually concern this fleet above the rest.
+ */
+export function fleetKeywords(fleet: Craft[]): string[] {
+  const out = new Set<string>();
+  for (const c of fleet) {
+    const t = (c.type ?? "").toUpperCase();
+    const hit =
+      AIRCRAFT_DB.find((a) => t === `${a.mfr} ${a.model}`.toUpperCase()) ??
+      AIRCRAFT_DB.find((a) => t.startsWith(a.mfr.toUpperCase()));
+    if (hit) {
+      out.add(hit.mfr);
+      // Model words only — "SR22", "Bonanza", "Skylane". Digits alone ("182")
+      // match far too much prose to be worth lifting a headline for.
+      for (const w of hit.model.split(/[^A-Za-z0-9]+/)) {
+        if (w.length >= 4 && /[A-Za-z]/.test(w)) out.add(w);
+      }
+    }
+    const em = engineMakerOf(c.engineType);
+    if (em) out.add(em.split(/\s|&/)[0]);
+  }
+  return [...out].filter((w) => w.length >= 4);
+}
+
+/** Keywords a headline mentions, if any. */
+export function mentions(title: string, keywords: string[]): string[] {
+  return keywords.filter((k) => new RegExp(`\\b${k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(title));
+}

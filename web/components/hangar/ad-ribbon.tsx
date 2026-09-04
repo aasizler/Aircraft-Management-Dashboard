@@ -16,7 +16,41 @@ import {
  * read it", and remembers per-browser which ones you have already seen so it
  * stops repeating itself.
  */
-export function AdRibbon({ fleet }: { fleet: Craft[] }) {
+export type FleetSummary = {
+  count: number;
+  grounded: number;
+  due: number;
+  /** The single most pressing item across the hangar, already phrased. */
+  next: { reg: string; text: string; level: "grounded" | "due" | "ok" } | null;
+};
+
+/**
+ * The rail opens with this hangar's own state, so it earns its place before
+ * showing anything from outside it. Everything here is already on the page —
+ * it is the roll-ups from the fleet headers, said once.
+ */
+function FleetLine({ summary }: { summary?: FleetSummary }) {
+  if (!summary) return null;
+  const { count, grounded, due, next } = summary;
+  return (
+    <div className="fleet-line">
+      <div className="fleet-line-top">
+        <span className="fleet-count">{count}</span>
+        <span className="fleet-word">{count === 1 ? "aircraft" : "aircraft"}</span>
+        {grounded > 0 && <span className="fleet-pill grounded">{grounded} grounded</span>}
+        {due > 0 && <span className="fleet-pill due">{due} due soon</span>}
+        {!grounded && !due && <span className="fleet-pill ok">all clear</span>}
+      </div>
+      {next && (
+        <div className={`fleet-next ${next.level}`}>
+          <b>{next.reg}</b> {next.text}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function AdRibbon({ fleet, summary }: { fleet: Craft[]; summary?: FleetSummary }) {
   // Read at initialisation, not in an effect: an effect would render once with
   // everything unread and then again with the truth, flashing the count.
   const [seen, setSeen] = useState<Set<string>>(() =>
@@ -65,14 +99,24 @@ export function AdRibbon({ fleet }: { fleet: Craft[] }) {
   // are published for your manufacturers but for other types.
   const gaps = useMemo(() => coverageGaps(fleet), [fleet]);
   const engGaps = useMemo(() => engineGaps(fleet), [fleet]);
-  const mine = (rows ?? []).filter((r) => !r.other);
+  // Three tiers, and only the first is asserted. Four rows all reading "check
+  // applicability" is noise pretending to be a finding — if nothing definitely
+  // applies, say so and leave the uncertain ones to the expander.
+  const matched = (rows ?? []).filter((r) => r.affects.length);
+  const unsure = (rows ?? []).filter((r) => !r.affects.length && !r.other);
   const other = (rows ?? []).filter((r) => r.other);
-  const unread = mine.filter((r) => !seen.has(r.id));
-  const shown = showAll ? [...mine, ...other] : unread.length ? unread : mine.slice(0, 6);
+  const unread = matched.filter((r) => !seen.has(r.id));
+  const shown = showAll
+    ? [...matched, ...unsure, ...other]
+    : unread.length
+      ? unread
+      : matched.slice(0, 5);
 
   return (
     <aside className="ad-rail" aria-label="Hangar rail">
-      <NewsFeed />
+      <FleetLine summary={summary} />
+
+      <NewsFeed fleet={fleet} />
 
       <div className="rail-block">
       <div className="ad-hd">
@@ -93,9 +137,10 @@ export function AdRibbon({ fleet }: { fleet: Craft[] }) {
       {rows?.length === 0 && (
         <div className="ad-note">No directives found for the makes in your hangar.</div>
       )}
-      {rows && rows.length > 0 && mine.length === 0 && !showAll && (
-        <div className="ad-note">
-          Nothing in the last 24 months names a model you operate.
+      {rows && rows.length > 0 && matched.length === 0 && !showAll && (
+        <div className="ad-clear">
+          <Icon name="check" size={14} />
+          Nothing published in the last 24 months names a model you operate.
         </div>
       )}
 
@@ -130,7 +175,9 @@ export function AdRibbon({ fleet }: { fleet: Craft[] }) {
 
       {!showAll && (rows?.length ?? 0) > shown.length && (
         <button className="ad-more" onClick={() => setShowAll(true)}>
-          Show all {rows!.length} — {other.length} are for other types
+          {unsure.length > 0
+            ? `Show ${unsure.length} to check · ${other.length} other types`
+            : `Show all ${rows!.length}`}
         </button>
       )}
 

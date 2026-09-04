@@ -16,7 +16,7 @@ const FEEDS = [
   { source: "AVweb", url: "https://www.avweb.com/feed/" },
 ];
 
-type Item = { title: string; link: string; date: string; source: string; image?: string };
+type Item = { title: string; link: string; date: string; source: string; image?: string; hits?: string[] };
 
 /**
  * Neither feed carries an image — no media:content, no enclosure, nothing in
@@ -64,7 +64,7 @@ async function read(feed: (typeof FEEDS)[number], signal: AbortSignal): Promise<
   return out;
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   const ac = new AbortController();
   const t = setTimeout(() => ac.abort(), 8000);
   try {
@@ -73,6 +73,20 @@ export async function GET() {
     const items = settled.flatMap((s) => (s.status === "fulfilled" ? s.value : []));
     items.sort((a, b) => Date.parse(b.date || "") - Date.parse(a.date || ""));
     if (!items.length) return NextResponse.json({ error: "no feeds reachable" }, { status: 502 });
+
+    // Ranking happens HERE, not in the browser, because the lead's picture is
+    // fetched by document and the two must agree on which document leads. When
+    // the client reordered afterwards, the image stayed on the story it had
+    // displaced and the new lead rendered bare.
+    const keywords = (new URL(req.url).searchParams.get("fleet") ?? "")
+      .split(",").map((k) => k.trim()).filter((k) => k.length >= 4);
+    for (const it of items) {
+      it.hits = keywords.filter((k) =>
+        new RegExp(`\\b${k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(it.title),
+      );
+    }
+    // Relevance first, then recency within each group.
+    items.sort((a, b) => (b.hits!.length ? 1 : 0) - (a.hits!.length ? 1 : 0));
 
     const top = items.slice(0, 8);
     // A missing picture is not a failure — the card falls back to text.

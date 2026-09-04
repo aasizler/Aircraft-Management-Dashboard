@@ -2,7 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { AddAircraftButton } from "@/components/hangar/add-aircraft";
 import { NewFleetButton } from "@/components/hangar/new-fleet";
 import { HangarGrid, type Fleet, type Tile } from "@/components/hangar/hangar-grid";
-import { AdRibbon } from "@/components/hangar/ad-ribbon";
+import { AdRibbon, type FleetSummary } from "@/components/hangar/ad-ribbon";
+import { airworthiness, meterValue } from "@/lib/aircraft";
 import { PageHeader } from "@/components/ui/page-header";
 import type { Meter } from "@/lib/aircraft";
 import { resolveRole } from "@/lib/permissions";
@@ -169,6 +170,40 @@ export default async function Home() {
               />
             </div>
             <AdRibbon
+              summary={(() => {
+                // Computed here rather than in the rail: the server already has
+                // every aircraft's data and meters, and airworthiness() is the
+                // same judgement the tiles and fleet headers use.
+                const scored = tiles.map((t) => ({
+                  reg: t.reg,
+                  a: airworthiness(t.data ?? {}, meterValue(t.meters, t.maint_basis)),
+                }));
+                const grounded = scored.filter((s) => s.a.level === "grounded");
+                const due = scored.filter((s) => s.a.level === "due");
+                const worst = grounded[0] ?? due[0] ?? null;
+                const item = worst
+                  ? worst.a.grounding[0]
+                    ? `grounded — ${worst.a.grounding[0].desc.slice(0, 34)}`
+                    : (() => {
+                        const n = worst.a.overdue[0] ?? worst.a.dueSoon[0];
+                        if (!n) return "";
+                        // remUnit carries "Days"/"Hours"; without it this read
+                        // "Annual Inspection · 4 overdue".
+                        const unit = n.st.remUnit ? ` ${n.st.remUnit.toLowerCase()}` : "";
+                        const tail = n.st.remFoot === "overdue" ? " overdue" : " left";
+                        return `${n.i.name} · ${n.st.remNum}${unit}${tail}`;
+                      })()
+                  : "";
+                const out: FleetSummary = {
+                  count: tiles.length,
+                  grounded: grounded.length,
+                  due: due.length,
+                  next: worst && item
+                    ? { reg: worst.reg, text: item, level: worst.a.level === "grounded" ? "grounded" : "due" }
+                    : null,
+                };
+                return out;
+              })()}
               fleet={tiles.map((t) => ({
                 id: t.id,
                 reg: t.reg,
