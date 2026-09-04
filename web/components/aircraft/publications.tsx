@@ -57,10 +57,7 @@ export function Publications({
             </div>
           )}
           {rows?.length === 0 && (
-            <div className="pub-note">
-              None in the last 24 months for this make.
-              {!engineType && " No engine is recorded, so engine directives aren't being checked."}
-            </div>
+            <div className="pub-note">None in the last 24 months for this airframe.</div>
           )}
           {rows?.slice(0, 8).map((d) => (
             <a key={d.id} className="pub-ad" href={d.url} target="_blank" rel="noopener noreferrer">
@@ -70,6 +67,23 @@ export function Publications({
           ))}
           {(rows?.length ?? 0) > 8 && (
             <div className="pub-note">+ {rows!.length - 8} more in the hangar rail.</div>
+          )}
+          {/* Airframe directives are listed either way; this says what the list
+              is still missing, which a full airframe list does not reveal. */}
+          {ready && !engineType && (
+            <div className="pub-prompt">
+              <Icon name="alert" size={14} />
+              <span>
+                Airframe only — no engine is set for {reg}, so engine directives
+                aren&rsquo;t being checked.
+              </span>
+              <button
+                className="btn sm"
+                onClick={() => window.dispatchEvent(new Event("aerotrack:aircraft-settings"))}
+              >
+                Set engine
+              </button>
+            </div>
           )}
         </div>
 

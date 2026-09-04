@@ -720,3 +720,6 @@ canvas.chart{display:block;width:100%;height:150px}
 .pub-link:hover .pub-link-name{color:var(--accent)}
 .pub-link-name{font-size:12.5px;color:var(--muted3);transition:color .15s}
 .pub-link-role{margin-left:auto;font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;color:var(--muted);white-space:nowrap}
+.pub-prompt{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:10px;padding:10px 11px;border:1px dashed rgba(var(--warn-rgb),.35);border-radius:10px;background:rgba(var(--warn-rgb),.06);color:var(--warn);font-size:11.5px;line-height:1.5}
+.pub-prompt span{flex:1;min-width:150px}
+.pub-prompt .btn{flex:0 0 auto}
