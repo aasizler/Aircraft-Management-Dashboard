@@ -756,3 +756,10 @@ canvas.chart{display:block;width:100%;height:150px}
 .ad-clear svg{color:var(--ok);flex:0 0 auto;margin-top:1px}
 .news-lead + .news-lead .news-lead-img{aspect-ratio:2/1}
 .news-lead + .news-lead .news-lead-title{font-size:12px;font-weight:600}
+.news-sec{font-family:var(--mono);font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:14px 0 2px;padding-top:11px;border-top:1px solid var(--border2)}
+.news-head{display:flex;gap:9px;text-decoration:none;color:inherit;padding:9px 0;border-top:1px solid var(--border2)}
+.news-sec + .news-head{border-top:0}
+.news-head:hover .news-title{color:var(--accent)}
+.news-thumb{width:64px;height:44px;object-fit:cover;border-radius:6px;flex:0 0 auto;background:var(--bg4)}
+.news-head-body{min-width:0;flex:1}
+.news-pubs{margin-left:auto;font-family:var(--mono);font-size:9px;letter-spacing:.05em;color:var(--accent);background:var(--accent-dim);border:1px solid rgba(59,158,255,.28);border-radius:3px;padding:1px 5px;white-space:nowrap}
