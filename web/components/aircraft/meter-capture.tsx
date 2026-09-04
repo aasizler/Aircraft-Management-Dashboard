@@ -323,6 +323,17 @@ export function MeterCapture({ aircraft }: { aircraft: AircraftRow }) {
                 />
               </div>
               {err && <div className="auth-err">{err}</div>}
+              {/* Every other dialog in the app offers a way out in its footer.
+                  This one had only the file picker: Escape and the backdrop
+                  worked, but nothing on screen said so. */}
+              <div className="form-actions">
+                <button
+                  className="btn-cancel"
+                  onClick={() => { setOpen(false); reset(); }}
+                >
+                  Cancel
+                </button>
+              </div>
             </>
           )}
 
