@@ -2,17 +2,17 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Icon } from "@/components/ui/icon";
-import { citedBulletins, fetchDirectives, publishersFor, type Directive } from "@/lib/directives";
+import { fetchDirectives, type Directive } from "@/lib/directives";
 
 /**
- * Where to look for what the FAA and the manufacturers have published about
- * this airframe and engine.
+ * Airworthiness directives for this airframe and engine, from the Federal
+ * Register's API.
  *
- * Two halves, because the two sources are not alike. Directives come from the
- * Federal Register's API and are listed here directly. Service bulletins have
- * no open feed of any kind — each manufacturer publishes to its own site, most
- * behind a customer login — so this links out rather than pretending to index
- * them.
+ * Service bulletins are deliberately absent. There is no open feed for them —
+ * each manufacturer publishes to its own site, most behind a customer login —
+ * and the two partial workarounds both failed the same test: a panel that
+ * cannot distinguish "no bulletins exist" from "no bulletins reachable" tells
+ * an owner their aircraft is clear when nobody checked.
  */
 export function Publications({
   reg, type, engineType,
@@ -36,129 +36,59 @@ export function Publications({
 
   const ready = data.key === key;
   const rows = ready ? data.rows : null;
-  const publishers = publishersFor(type, engineType);
-
-  // Scanned on demand: each directive is ~26KB of plain text, which is not a
-  // cost worth paying on every visit to the tab.
-  const [scan, setScan] = useState<{ busy: boolean; done: boolean; refs: Record<string, string[]> }>(
-    { busy: false, done: false, refs: {} },
-  );
-
-  async function findBulletins() {
-    if (!rows?.length) return;
-    setScan({ busy: true, done: false, refs: {} });
-    const ac = new AbortController();
-    const out: Record<string, string[]> = {};
-    await Promise.all(
-      rows.slice(0, 10).map(async (d) => {
-        try {
-          const refs = await citedBulletins(d, ac.signal);
-          if (refs.length) out[d.id] = refs;
-        } catch { /* one unreadable document shouldn't empty the whole scan */ }
-      }),
-    );
-    setScan({ busy: false, done: true, refs: out });
-  }
-
-  const cited = Object.entries(scan.refs);
 
   return (
     <div style={{ marginTop: 26 }}>
-      <div className="section-label" style={{ marginBottom: 4 }}>Publications</div>
+      <div className="section-label" style={{ marginBottom: 4 }}>
+        Airworthiness directives
+      </div>
       <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 12 }}>
-        Airworthiness directives for this airframe and engine, and where its
-        manufacturers publish service documents.
+        Published by the FAA for this airframe and engine, last 24 months.
       </div>
 
-      <div className="pub-cols">
-        <div className="pub-card">
-          <div className="pub-hd"><Icon name="shield" size={14} />Airworthiness directives</div>
-          {rows === null && !ready && <div className="pub-note">Checking the Federal Register…</div>}
-          {ready && data.err && (
-            <div className="pub-note warn">
-              Couldn&rsquo;t reach the Federal Register — this says nothing about
-              whether any directives exist.
-            </div>
-          )}
-          {rows?.length === 0 && (
-            <div className="pub-note">None in the last 24 months for this airframe.</div>
-          )}
-          {rows?.slice(0, 8).map((d) => (
-            <a key={d.id} className="pub-ad" href={d.url} target="_blank" rel="noopener noreferrer">
-              <span className="pub-date">
-                {d.date}
-                {d.proposed && <span className="pub-proposed">Proposed</span>}
-              </span>
-              <span className="pub-ad-title">{d.title}</span>
-            </a>
-          ))}
-          {(rows?.length ?? 0) > 8 && (
-            <div className="pub-note">+ {rows!.length - 8} more in the hangar rail.</div>
-          )}
-          {/* Airframe directives are listed either way; this says what the list
-              is still missing, which a full airframe list does not reveal. */}
-          {ready && !engineType && (
-            <div className="pub-prompt">
-              <Icon name="alert" size={14} />
-              <span>
-                Airframe only — no engine is set for {reg}, so engine directives
-                aren&rsquo;t being checked.
-              </span>
-              <button
-                className="btn sm"
-                onClick={() => window.dispatchEvent(new Event("aerotrack:aircraft-settings"))}
-              >
-                Set engine
-              </button>
-            </div>
-          )}
-        </div>
+      <div className="pub-card">
+        <div className="pub-hd"><Icon name="shield" size={14} />Federal Register</div>
 
-        <div className="pub-card">
-          <div className="pub-hd"><Icon name="file" size={14} />Service bulletins</div>
-          {/* Deliberately links to each publisher's front door rather than a
-              deep path. Manufacturer document URLs move, and several return 404
-              to anything that isn't a browser — a link that lands somewhere real
-              beats a precise one that rots. */}
-          <div className="pub-note">
-            No open feed exists for these. Each manufacturer publishes its own,
-            and most sit behind a customer login.
+        {!ready && <div className="pub-note">Checking…</div>}
+
+        {ready && data.err && (
+          <div className="pub-note warn">
+            Couldn&rsquo;t reach the Federal Register — this says nothing about
+            whether any directives exist.
           </div>
+        )}
 
-          {/* The one route to real bulletin numbers: a directive names the
-              manufacturer document that prompted it, in its full text. Only
-              ever finds bulletins an AD already cites — a bulletin issued on the
-              manufacturer's own initiative, which is most of them, is not here
-              and cannot be. */}
-          {(rows?.length ?? 0) > 0 && !scan.done && (
-            <button className="btn sm" style={{ width: "100%", marginTop: 4 }}
-                    onClick={findBulletins} disabled={scan.busy}>
-              {scan.busy ? "Reading directives…" : "Find bulletins cited by directives"}
+        {rows?.length === 0 && (
+          <div className="pub-note">None in the last 24 months for this airframe.</div>
+        )}
+
+        {rows?.map((d) => (
+          <a key={d.id} className="pub-ad" href={d.url} target="_blank" rel="noopener noreferrer">
+            <span className="pub-date">
+              {d.date}
+              {d.proposed && <span className="pub-proposed">Proposed</span>}
+            </span>
+            <span className="pub-ad-title">{d.title}</span>
+          </a>
+        ))}
+
+        {/* Airframe directives list either way; this says what is still missing,
+            which a full airframe list does not reveal. */}
+        {ready && !engineType && (
+          <div className="pub-prompt">
+            <Icon name="alert" size={14} />
+            <span>
+              Airframe only — no engine is set for {reg}, so engine directives
+              aren&rsquo;t being checked.
+            </span>
+            <button
+              className="btn sm"
+              onClick={() => window.dispatchEvent(new Event("aerotrack:aircraft-settings"))}
+            >
+              Set engine
             </button>
-          )}
-
-          {scan.done && cited.length === 0 && (
-            <div className="pub-note">
-              None of the directives above cite a manufacturer bulletin by number.
-            </div>
-          )}
-
-          {cited.map(([id, refs]) => {
-            const d = rows!.find((x) => x.id === id)!;
-            return (
-              <div key={id} className="pub-cited">
-                <span className="pub-date">{d.date} · cited by AD</span>
-                {refs.map((r) => <span key={r} className="pub-sb">{r}</span>)}
-              </div>
-            );
-          })}
-          {publishers.map((p) => (
-            <a key={p.url} className="pub-link" href={p.url} target="_blank" rel="noopener noreferrer">
-              <span className="pub-link-name">{p.name}</span>
-              <span className="pub-link-role">{p.role}</span>
-            </a>
-          ))}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
