@@ -181,8 +181,8 @@ export type AircraftRow = {
 
 export type Meter = { kind: MeterKind; current: number; label: string | null };
 
-export const meterValue = (meters: Meter[], kind: MeterKind) =>
-  meters.find((m) => m.kind === kind)?.current ?? 0;
+export const meterValue = (meters: Meter[], kind: MeterKind, fallbackTT?: unknown) =>
+  meters.find((m) => m.kind === kind)?.current || Number(fallbackTT ?? 0) || 0;
 
 // ── Constants ported from the HTML ──────────────────────────────────────────
 
@@ -300,7 +300,7 @@ function calMonthDue(lastDate: string, days: number): Date {
  *    not, which made empty aircraft read as airworthy.
  */
 export function ic(i: Insp, maintHrs: number) {
-  const blank = { p: 0, nl: "—", remNum: "—" as string | number, remUnit: "", remFoot: "" };
+  const blank = { p: 0, nl: "—", due: "", remNum: "—" as string | number, remUnit: "", remFoot: "" };
 
   // Never recorded → not tracked. Never green.
   if (!i.lastDate && !i.populated && i.lastHobbs == null)
@@ -310,7 +310,10 @@ export function ic(i: Insp, maintHrs: number) {
     nl = "",
     remNum: string | number = "",
     remUnit = "",
-    remFoot = "";
+    remFoot = "",
+    // When it is next due, without the countdown. `nl` carries both, which
+    // reads as one number twice anywhere the countdown is already on screen.
+    due = "";
   let hoursBlocked = false;
   // "Overdue" is a claim about the DUE DATE, not about a progress bar reaching
   // 100%. The calendar bar fills the moment the due day starts, so deriving the
@@ -329,13 +332,13 @@ export function ic(i: Insp, maintHrs: number) {
       p = Math.min(100, (u / i.intervalHrs) * 100);
       const rem = Math.max(0, i.intervalHrs - u);
       pastDue = u >= i.intervalHrs;
-      nl = `${(i.lastHobbs + i.intervalHrs).toFixed(0)} hrs (${rem.toFixed(0)} hrs rem)`;
+      due = `${(i.lastHobbs + i.intervalHrs).toFixed(1)} hrs`;
+      nl = `${due} (${rem.toFixed(1)} hrs rem)`;
       if (rem <= 0) {
         remNum = "Due Now";
       } else {
-        const rh = Math.round(rem);
-        remNum = rh;
-        remUnit = rh === 1 ? "Hour" : "Hours";
+        remNum = rem.toFixed(1);
+        remUnit = rem === 1 ? "Hour" : "Hours";
         remFoot = "remaining";
       }
     }
@@ -360,6 +363,7 @@ export function ic(i: Insp, maintHrs: number) {
       // formatting printed the previous day for anyone east of Greenwich.
       const dateStr = `${nx.getFullYear()}-${String(nx.getMonth() + 1).padStart(2, "0")}-${String(nx.getDate()).padStart(2, "0")}`;
       pastDue = dl < 0;
+      due = dateStr;
       if (dl < 0) {
         nl = `${dateStr} (${Math.abs(dl)}d overdue)`;
         remNum = Math.abs(dl);
@@ -390,7 +394,7 @@ export function ic(i: Insp, maintHrs: number) {
   let s: InspStatus = "ok";
   if (pastDue) s = "overdue";
   else if (p >= 80) s = "warn";
-  return { p, s, nl, remNum, remUnit, remFoot, hoursBlocked };
+  return { p, s, nl, due, remNum, remUnit, remFoot, hoursBlocked };
 }
 
 // Labels match v1's _inspRow() exactly — a healthy inspection reads "Current",
@@ -442,7 +446,7 @@ export function oilLife(a: V1Aircraft, maintHrs: number) {
   // Two different reasons this can't be computed, and they need different
   // words: nothing was ever logged, versus something was logged but the
   // maintenance clock reads zero so there is nothing to measure from.
-  const hasRecord = a.oilHobbs != null || (a.oil ?? []).length > 0;
+  const hasRecord = Number(a.oilHobbs ?? 0) > 0 || (a.oil ?? []).length > 0;
   const meterReadable = maintHrs > 0;
   const tracked = applicable && meterReadable && hasRecord;
   const used = Math.max(0, maintHrs - base);

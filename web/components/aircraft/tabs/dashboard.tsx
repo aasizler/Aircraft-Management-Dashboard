@@ -46,7 +46,14 @@ export function DashboardTab({
             sub: `${overdue.length} inspection${overdue.length > 1 ? "s" : ""} overdue` }
         : dueSoon.length > 0 || (life.tracked && life.pct < 15)
           ? { icon: "alert" as const, title: "Coming Due", glow: "rgba(255,160,35,.20)",
-              sub: `${dueSoon.length} inspection${dueSoon.length !== 1 ? "s" : ""} due soon${life.tracked && life.pct < 15 ? " · oil life low" : ""}` }
+              // Only the clauses that are actually true. "0 inspections due
+              // soon" read as a warning about nothing.
+              sub: [
+                dueSoon.length
+                  ? `${dueSoon.length} inspection${dueSoon.length > 1 ? "s" : ""} due soon`
+                  : "",
+                life.tracked && life.pct < 15 ? "oil life low" : "",
+              ].filter(Boolean).join(" · ") }
           : tracked.length === 0
             ? { icon: "eye" as const, title: "Not Yet Tracked", glow: "rgba(59,158,255,.16)",
                 sub: "No inspection has been recorded — nothing to report on yet" }
@@ -131,7 +138,9 @@ export function DashboardTab({
             <div>
               <div className="nc-lbl">Next Inspection Due</div>
               <div className="nc-name">{next.i.name}</div>
-              <div className="nc-sub">{next.st.nl}</div>
+              {/* The date only: the countdown beside it is the same number,
+                  and the card was printing "(268d)" next to "268 Days". */}
+              <div className="nc-sub">{next.st.due || next.st.nl}</div>
             </div>
             <div className="nc-pct-col" style={{ color: pctColor(next.st.p) }}>
               <div className="nc-pct-row">
@@ -163,7 +172,9 @@ export function DashboardTab({
         </button>
       </div>
 
-      {/* Needs attention */}
+      {/* Needs attention — only when something does. */}
+      {(alerts.length > 0 || grounding.length > 0 || untracked.length > 0) && (
+      <>
       <div className="dash-sec-h">
         <span>Needs Attention</span>
         <span className="sec-note">
@@ -224,6 +235,8 @@ export function DashboardTab({
           </div>
         )}
       </div>
+      </>
+      )}
 
       {/* At a glance */}
       <div className="dash-sec-h"><span>At a Glance</span></div>
@@ -247,7 +260,7 @@ export function DashboardTab({
             {tbo > 0 ? `${Math.round(enginePct)}%` : "—"}
           </div>
           <div className="kpi-sub">
-            {tbo > 0 ? `${Math.max(0, tbo - smoh).toFixed(0)} hrs to TBO` : "TBO not set"}
+            {tbo > 0 ? `${Math.max(0, tbo - smoh).toFixed(1)} hrs to TBO` : "TBO not set"}
           </div>
         </div>
         <div className="kpi" onClick={() => go("Oil and Fluids")}>
@@ -257,7 +270,7 @@ export function DashboardTab({
           </div>
           <div className="kpi-sub">
             {life.tracked
-              ? `${life.hrsLeft.toFixed(0)} hrs left`
+              ? `${life.hrsLeft.toFixed(1)} hrs left`
               : life.applicable ? "not tracked" : "on condition"}
           </div>
         </div>
@@ -272,32 +285,6 @@ export function DashboardTab({
           <div className="kpi-lbl">Documents</div>
           <div className="kpi-val">{docs.length}</div>
           <div className="kpi-sub">on file</div>
-        </div>
-      </div>
-
-      <div className="dash-sec-h">
-        <span>Meters</span>
-        <span className="sec-note">
-          maint: {aircraft.maint_basis} · cost: {aircraft.cost_basis}
-        </span>
-      </div>
-      <div className="stat-row">
-        <div className="stat-box">
-          <div className="stat-lbl">{aircraft.maint_basis} (maint)</div>
-          <div className="stat-val">{maintHrs.toFixed(1)}</div>
-          <div className="stat-sub">drives inspections &amp; oil</div>
-        </div>
-        <div className="stat-box">
-          <div className="stat-lbl">{aircraft.cost_basis} (cost)</div>
-          <div className="stat-val">{costHrs.toFixed(1)}</div>
-          <div className="stat-sub">drives billing &amp; $/hr</div>
-        </div>
-        <div className="stat-box">
-          <div className="stat-lbl">Overdue</div>
-          <div className="stat-val" style={{ color: overdue.length ? "var(--danger)" : undefined }}>
-            {overdue.length}
-          </div>
-          <div className="stat-sub">inspections</div>
         </div>
       </div>
 

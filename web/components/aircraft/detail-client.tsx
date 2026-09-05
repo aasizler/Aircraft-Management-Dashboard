@@ -143,8 +143,8 @@ export function AircraftDetailClient({
   const [focusInsp, setFocusInsp] = useState<number | null>(null);
   const toast = useToast();
 
-  const maintHrs = meterValue(meters, aircraft.maint_basis);
-  const costHrs = meterValue(meters, aircraft.cost_basis);
+  const maintHrs = meterValue(meters, aircraft.maint_basis, data.tt);
+  const costHrs = meterValue(meters, aircraft.cost_basis, data.tt);
 
   // The saveLS() replacement: persist the aircraft's data blob to ITS OWN ROW.
   // Per-aircraft rows mean concurrent edits touch disjoint rows — no more
@@ -290,19 +290,22 @@ export function AircraftDetailClient({
                 <span className="status-dot" /> {aircraft.airport}
               </span>
             )}
-            {data.tt != null && (
+            {/* The clocks this aeroplane keeps, named as it names them. A "TT"
+                chip used to sit here too, which was the total-time clock under
+                a different label, two chips from the clock itself. */}
+            <span className="hero-chip">
+              {aircraft.maint_basis} <b>{maintHrs.toFixed(1)}</b> hrs
+            </span>
+            {aircraft.cost_basis !== aircraft.maint_basis && (
               <span className="hero-chip">
-                TT <b>{Number(data.tt).toFixed(0)}</b> hrs
+                {aircraft.cost_basis} <b>{costHrs.toFixed(1)}</b> hrs
               </span>
             )}
             {(data.overhaulAt != null || data.engineSMOH != null) && (
               <span className="hero-chip">
-                SMOH <b>{smohOf(data, maintHrs).toFixed(0)}</b> hrs
+                SMOH <b>{smohOf(data, maintHrs).toFixed(1)}</b> hrs
               </span>
             )}
-            <span className="hero-chip">
-              {aircraft.maint_basis} <b>{maintHrs.toFixed(1)}</b> hrs
-            </span>
           </div>
           {typeof data.lastUpdated === "string" && data.lastUpdated && (
             <span className="last-sync">{data.lastUpdated}</span>
