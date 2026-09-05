@@ -28,12 +28,13 @@
   --ctl-r: 8px;       /* one radius for every control */
   --r: 10px;
   --mono: var(--font-mono), "IBM Plex Mono", monospace;
+  /* Figures line up in every readout: meters, dates, counts, remaining hours. */
   --display: var(--font-display), "Syne", sans-serif;
   --body: var(--font-body), "Inter", sans-serif;
 }
 
 html { color-scheme: dark; }
-body { background: var(--bg); color: var(--text); font-family: var(--body); min-height: 100vh; overflow-x: hidden; }
+body { background: var(--bg); color: var(--text); font-family: var(--body); min-height: 100vh; overflow-x: hidden; font-variant-numeric: tabular-nums; }
 html, body { height: 100%; }
 
 /* Component classes are plain (not @layer) so they are ALWAYS emitted in dev and
@@ -45,10 +46,15 @@ html, body { height: 100%; }
 .nav-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0}
 .nav-right{margin-left:auto;display:flex;gap:8px;align-items:center}
 /* BUTTONS */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:var(--ctl-h);padding:0 16px;white-space:nowrap;line-height:1;border-radius:var(--ctl-r);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--body);transition:all .15s;border:1px solid var(--border3);background:var(--bg3);color:var(--muted3)}
-.btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
-.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
-.btn.primary:hover{background:#3a8eef}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:var(--ctl-h);padding:0 14px;white-space:nowrap;line-height:1;border-radius:var(--ctl-r);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--body);transition:background .15s,border-color .15s,color .15s;border:1px solid transparent;background:var(--bg3);color:var(--muted3)}
+.btn:hover{background:var(--bg4);border-color:var(--border3);color:var(--text)}
+.btn svg{color:var(--muted2);transition:color .15s}
+.btn:hover svg{color:var(--text)}
+/* Primary is a tint, not a slab: one saturated block was the loudest thing on
+   a page of soft dark cards, and it is not the most important thing on it. */
+.btn.primary{background:var(--accent-dim);border-color:rgba(59,158,255,.34);color:var(--accent)}
+.btn.primary:hover{background:rgba(59,158,255,.17);border-color:rgba(59,158,255,.5);color:var(--accent)}
+.btn.primary svg,.btn.primary:hover svg{color:var(--accent)}
 .btn.sm{height:var(--ctl-h-sm);padding:0 12px;font-size:12px}
 .btn.danger-btn{border-color:rgba(255,64,80,.35);color:var(--danger);background:none}
 .btn.danger-btn:hover{background:var(--danger-dim)}
@@ -113,7 +119,7 @@ html, body { height: 100%; }
 .stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px}
 .stat-box{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:16px 20px}
 .stat-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-family:var(--mono)}
-.stat-val{font-size:24px;font-weight:800;font-family:var(--display);margin-top:5px}
+.stat-val{font-size:24px;font-weight:800;font-family:var(--body);font-variant-numeric:tabular-nums;letter-spacing:-.01em;margin-top:5px}
 .stat-sub{font-size:11px;color:var(--muted);margin-top:3px}
 /* DASHBOARD */
 .dash-sec-h{display:flex;align-items:center;justify-content:space-between;margin:22px 0 12px;flex-wrap:wrap;gap:8px}
@@ -147,7 +153,7 @@ html, body { height: 100%; }
 .kpi{position:relative;background:linear-gradient(160deg,var(--bg2),var(--bg3));border:1px solid var(--border2);border-radius:12px;padding:15px 16px;cursor:pointer;transition:transform .15s,border-color .15s;overflow:hidden}
 .kpi:hover{transform:translateY(-2px);border-color:var(--border3)}
 .kpi-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-family:var(--mono)}
-.kpi-val{font-size:26px;font-weight:800;font-family:var(--display);margin-top:6px;line-height:1}
+.kpi-val{font-size:26px;font-weight:800;font-family:var(--body);font-variant-numeric:tabular-nums;letter-spacing:-.01em;margin-top:6px;line-height:1}
 .kpi-sub{font-size:11px;color:var(--muted);margin-top:4px}
 .act-list{display:flex;flex-direction:column;gap:6px}
 .act-item{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:9px;background:var(--bg2);border:1px solid var(--border2)}
@@ -746,7 +752,7 @@ canvas.chart{display:block;width:100%;height:150px}
 /* Fleet line — operating facts the page cannot show elsewhere */
 .fleet-line{display:flex;flex-direction:column;gap:8px}
 .fleet-stat{display:flex;align-items:baseline;gap:7px}
-.fleet-num{font-family:var(--display);font-size:22px;font-weight:800;line-height:1;color:var(--text)}
+.fleet-num{font-family:var(--body);font-variant-numeric:tabular-nums;letter-spacing:-.01em;font-size:22px;font-weight:800;line-height:1;color:var(--text)}
 .fleet-lbl{font-size:11px;color:var(--muted2)}
 .fleet-row{display:flex;align-items:center;gap:8px;font-size:11.5px;line-height:1.4;color:var(--muted2)}
 .fleet-row svg{color:var(--muted);flex:0 0 auto}

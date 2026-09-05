@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Modal } from "@/components/ui/modal";
+import { Icon } from "@/components/ui/icon";
 import { useToast } from "@/components/ui/toast";
 import {
   AirportAutocomplete,
@@ -241,7 +242,7 @@ export function AddAircraftButton({
   return (
     <>
       <button className="btn primary" onClick={() => setOpen(true)}>
-        + Add Aircraft
+        <Icon name="plane" size={15} />Add Aircraft
       </button>
 
       {open && (

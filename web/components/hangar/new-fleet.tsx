@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Modal } from "@/components/ui/modal";
+import { Icon } from "@/components/ui/icon";
 import { useToast } from "@/components/ui/toast";
 
 /**
@@ -45,7 +46,7 @@ export function NewFleetButton({ orgId }: { orgId: string }) {
   return (
     <>
       <button className="btn" onClick={() => setOpen(true)}>
-        + New Fleet
+        <Icon name="hangar" size={15} />New Fleet
       </button>
 
       {open && (
