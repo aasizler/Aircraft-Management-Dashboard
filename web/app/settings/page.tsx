@@ -64,15 +64,6 @@ export default async function SettingsPage() {
             <ChangePassword />
           </div>
         </div>
-
-        <div className="panel">
-          <div className="panel-title">Integrations</div>
-          <p style={{ fontSize: 13, color: "var(--muted2)", lineHeight: 1.6 }}>
-            Live tracking (ADS-B) and meter-photo reading run on the server — no
-            API keys to manage here. Flight-plan data (FlightAware) is a future
-            add-on for the operator plan.
-          </p>
-        </div>
       </div>
     </main>
   );

@@ -23,6 +23,7 @@
      with five corner radii between them, no explicit height, and no nowrap —
      so a squeezed label wrapped and a "small" button rendered 32, 50 or 68px
      tall depending on its text. Height and radius now come from here. */
+  --nav-h: 84px;      /* the top ribbon; anything sticking below it reads this */
   --ctl-h: 32px;      /* default control height */
   --ctl-h-sm: 26px;   /* dense rows and tables */
   --ctl-r: 8px;       /* one radius for every control */
@@ -41,7 +42,7 @@ html, body { height: 100%; }
    prod — Tailwind tree-shakes @layer components by scan detection, which drops
    classes built via template literals or in incrementally-compiled routes. */
 /* NAV */
-.nav{display:flex;align-items:center;padding:0 28px;height:60px;border-bottom:1px solid var(--border2);background:var(--bg);position:sticky;top:0;z-index:100}
+.nav{display:flex;align-items:center;padding:0 28px;height:var(--nav-h);border-bottom:1px solid var(--border2);background:var(--bg);position:sticky;top:0;z-index:100}
 .nav-brand{font-family:var(--display);font-size:19px;font-weight:700;letter-spacing:-.01em;display:flex;align-items:center;gap:8px;color:var(--text);text-decoration:none}
 .nav-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0}
 .nav-right{margin-left:auto;display:flex;gap:8px;align-items:center}
@@ -228,7 +229,7 @@ canvas.chart{display:block;width:100%;height:150px}
 .hangar-actions{display:flex;gap:8px;align-items:center}
 @media (max-width:1100px){.hangar-cols{grid-template-columns:minmax(0,1fr)}}
 
-.ad-rail{position:sticky;top:16px;display:flex;flex-direction:column;gap:12px}
+.ad-rail{position:sticky;top:calc(var(--nav-h) + 16px);display:flex;flex-direction:column;gap:12px}
 .ad-rail > *{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:13px 14px}
 .ad-hd{display:flex;align-items:center;gap:9px;color:var(--muted3);margin-bottom:10px}
 /* Tinted so each section says what KIND of thing it is. Deliberately not tied
