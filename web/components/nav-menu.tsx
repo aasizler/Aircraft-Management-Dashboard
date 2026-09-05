@@ -49,9 +49,11 @@ export function NavMenu({ email, name }: { email?: string | null; name?: string 
 
   return (
     <div className="nav-right">
+      {/* The way back out of an aircraft, so it carries the ribbon's weight
+          rather than the dense-row height every other sm button uses. */}
       {onDetail && (
-        <button className="btn primary sm" onClick={() => router.push("/")}>
-          <Icon name="hangar" size={14} />
+        <button className="btn primary nav-back" onClick={() => router.push("/")}>
+          <Icon name="hangar" size={16} />
           Hangar
         </button>
       )}
