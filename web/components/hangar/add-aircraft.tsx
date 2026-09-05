@@ -68,6 +68,15 @@ export function AddAircraftButton({
 
   const set = (k: keyof typeof f, v: string) => setF((p) => ({ ...p, [k]: v }));
 
+  // A clock needs its own reading only if it is not already on the form. The
+  // total-time clock is: it is Total Airframe Hours. Asking for it again under
+  // Meters put the same number in two places, which is all "Current Total
+  // Time" ever was.
+  const readingKinds =
+    f.maint_basis === f.cost_basis
+      ? []
+      : Array.from(new Set([f.maint_basis, f.cost_basis])).filter((k) => k !== "total");
+
   /**
    * A turbine carries neither the piston TBO default nor an hours-based oil
    * interval, so picking one out of the catalogue clears both rather than
@@ -218,7 +227,9 @@ export function AddAircraftButton({
     // a Cirrus's flight meter, which then inspected against the wrong number.
     // Blank still means "same as airframe hours", which is the single-clock case.
     const reading = (kind: MeterKind) =>
-      Number(kind === f.maint_basis ? f.maintHrs : f.costHrs) || hrs;
+      kind === "total"
+        ? hrs
+        : Number(kind === f.maint_basis ? f.maintHrs : f.costHrs) || hrs;
     const kinds = Array.from(new Set([f.maint_basis, f.cost_basis]));
     await supabase
       .from("aircraft_meters")
@@ -280,6 +291,11 @@ export function AddAircraftButton({
             <div className="form-row">
               <label>Total Airframe Hours</label>
               <input type="number" step="0.1" value={f.hours} onChange={(e) => set("hours", e.target.value)} placeholder="1243" />
+              {(f.maint_basis === "total" || f.cost_basis === "total") && (
+                <div style={{ fontSize: 10, color: "var(--muted2)", marginTop: 4 }}>
+                  Also the total-time meter reading
+                </div>
+              )}
             </div>
             <div className="form-row">
               <label>{turbine ? "Engine Hours Since Overhaul" : "Engine SMOH Hours"}</label>
@@ -352,26 +368,24 @@ export function AddAircraftButton({
             </div>
           </div>
 
-          {/* Two clocks read two different numbers. Left blank they both start
-              at the airframe total, which is only right when there is one. */}
-          {f.maint_basis !== f.cost_basis && (
+          {/* Two clocks read two different numbers, so each one that is not
+              already on the form above gets a field. Blank means the same as
+              the airframe total, which is the single-clock case. */}
+          {readingKinds.length > 0 && (
             <div className="form-grid">
-              <div className="form-row">
-                <label>Current {METER_LABEL[f.maint_basis]}</label>
-                <input
-                  type="number" step="0.1" value={f.maintHrs}
-                  placeholder={f.hours || "0"}
-                  onChange={(e) => set("maintHrs", e.target.value)}
-                />
-              </div>
-              <div className="form-row">
-                <label>Current {METER_LABEL[f.cost_basis]}</label>
-                <input
-                  type="number" step="0.1" value={f.costHrs}
-                  placeholder={f.hours || "0"}
-                  onChange={(e) => set("costHrs", e.target.value)}
-                />
-              </div>
+              {readingKinds.map((k) => {
+                const key = k === f.maint_basis ? "maintHrs" : "costHrs";
+                return (
+                  <div className="form-row" key={k}>
+                    <label>Current {METER_LABEL[k]}</label>
+                    <input
+                      type="number" step="0.1" value={f[key]}
+                      placeholder={f.hours || "0"}
+                      onChange={(e) => set(key, e.target.value)}
+                    />
+                  </div>
+                );
+              })}
             </div>
           )}
 
