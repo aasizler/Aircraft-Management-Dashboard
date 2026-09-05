@@ -46,7 +46,7 @@ export function NewsFeed() {
   return (
     <div className="rail-block">
       <div className="ad-hd">
-        <Icon name="inbox" size={15} />
+        <span className="rail-chip acc"><Icon name="inbox" size={13} /></span>
         <span className="ad-title">Industry</span>
       </div>
 

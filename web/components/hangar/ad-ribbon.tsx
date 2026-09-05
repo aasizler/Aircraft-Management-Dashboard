@@ -130,7 +130,7 @@ export function AdRibbon({ fleet, summary }: { fleet: Craft[]; summary?: FleetSu
 
       <div className="aw-block">
       <div className="ad-hd">
-        <Icon name="shield" size={15} />
+        <span className="rail-chip ok"><Icon name="shield" size={13} /></span>
         <span className="ad-title">Airworthiness</span>
         {unread.length > 0 && <span className="ad-count">{unread.length}</span>}
       </div>
