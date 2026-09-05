@@ -186,18 +186,18 @@ export function DashboardTab({
           </div>
         )}
 
-        <div className="dash-quick">
-          <button className="dash-qbtn" onClick={() => go("Utilization", "log-flight")}>
-            <span className="qi"><Icon name="plane" size={16} /></span>Log Flight
+        <div className="dash-acts">
+          <button className="btn" onClick={() => go("Utilization", "log-flight")}>
+            <Icon name="plane" size={15} />Log Flight
           </button>
-          <button className="dash-qbtn" onClick={() => go("Squawks", "add-squawk")}>
-            <span className="qi"><Icon name="alert" size={16} /></span>Add Squawk
+          <button className="btn" onClick={() => go("Squawks", "add-squawk")}>
+            <Icon name="alert" size={15} />Add Squawk
           </button>
-          <button className="dash-qbtn" onClick={() => go("Oil and Fluids", "log-oil")}>
-            <span className="qi"><Icon name="droplet" size={16} /></span>Log Oil
+          <button className="btn" onClick={() => go("Oil and Fluids", "log-oil")}>
+            <Icon name="droplet" size={15} />Log Oil
           </button>
-          <button className="dash-qbtn" onClick={() => go("Oil and Fluids", "oil-change")}>
-            <span className="qi"><Icon name="wrench" size={16} /></span>Oil Change
+          <button className="btn" onClick={() => go("Oil and Fluids", "oil-change")}>
+            <Icon name="wrench" size={15} />Oil Change
           </button>
         </div>
       </div>
@@ -207,16 +207,10 @@ export function DashboardTab({
         {upcoming.length > 0 && (
           <>
             <div className="dash-sec-h">
-              <span>Due next</span>
-              <span className="sec-note">
-                {tracked.length > upcoming.length ? (
-                  <button className="sec-link" onClick={() => go("Inspections")}>
-                    all {tracked.length} inspections ›
-                  </button>
-                ) : (
-                  "soonest first"
-                )}
-              </span>
+              <button className="sec-link" onClick={() => go("Inspections")}>
+                Due next<span className="sec-chev">›</span>
+              </button>
+              <span className="sec-note">soonest first</span>
             </div>
             <div className="due-list">
               {upcoming.map((x) => (
@@ -273,6 +267,7 @@ export function DashboardTab({
       </div>
 
       <aside className="dash-rail">
+        <div className="dash-sec-h"><span>At a glance</span></div>
         <div className="fact-strip">
           {facts.map((f) => (
             <div className="fact" key={f.lbl} onClick={() => go(f.tab)}>

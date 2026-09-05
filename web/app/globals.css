@@ -128,7 +128,7 @@ html, body { height: 100%; }
 .stat-sub{font-size:11px;color:var(--muted);margin-top:3px}
 /* DASHBOARD */
 .dash-sec-h{display:flex;align-items:center;justify-content:space-between;margin:22px 0 12px;flex-wrap:wrap;gap:8px}
-.dash-sec-h>span:first-child{font-family:var(--display);font-size:17px;font-weight:700;letter-spacing:-.012em}
+.dash-sec-h>span:first-child,.dash-sec-h>.sec-link{font-family:var(--display);font-size:17px;font-weight:700;letter-spacing:-.012em;line-height:1.35}
 .dash-sec-h .sec-note{font-size:11px;color:var(--muted2)}
 .next-card{position:relative;overflow:hidden;border-radius:14px;border:1px solid var(--border2);padding:20px 22px;margin-bottom:18px;cursor:pointer;background:linear-gradient(135deg,var(--bg2),var(--bg3));transition:transform .15s,border-color .15s}
 .next-card:hover{transform:translateY(-2px);border-color:var(--border3)}
@@ -796,7 +796,10 @@ canvas.chart{display:block;width:100%;height:150px}
    it and the numbers you glance at on the right. Collapses to one below 980,
    where a 268px rail would leave the left column too narrow to read. */
 .dash-page{padding-top:16px}
-.dash-cols>div>.dash-sec-h:first-child{margin-top:0}
+.dash-acts{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+@media(max-width:720px){.dash-acts{grid-template-columns:repeat(2,1fr)}}
+.dash-cols>div>.dash-sec-h:first-child,
+.dash-rail>.dash-sec-h:first-child{margin-top:0}
 /* State and the actions you take about it run the full width; the columns
    start beneath them, so the top of the page has one edge rather than two. */
 .dash-top{display:flex;flex-direction:column;gap:12px;margin-bottom:16px}
@@ -824,7 +827,7 @@ canvas.chart{display:block;width:100%;height:150px}
 .due-rem-num{font-family:var(--display);font-size:17px;font-weight:700;line-height:1.1}
 .due-rem-unit{font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
 
-.dash-rail{display:flex;flex-direction:column;gap:12px;position:sticky;top:calc(var(--nav-h) + 16px)}
+.dash-rail{display:flex;flex-direction:column;position:sticky;top:calc(var(--nav-h) + 16px)}
 .fact-strip{display:grid;gap:1px;background:var(--border);border:1px solid var(--border2);border-radius:var(--r);overflow:hidden}
 .fact{background:var(--bg2);padding:10px 13px;cursor:pointer;transition:background .15s}
 .fact:hover{background:var(--bg3)}
@@ -835,5 +838,7 @@ canvas.chart{display:block;width:100%;height:150px}
   .dash-rail{position:static}
   .fact-strip{grid-template-columns:repeat(3,1fr)}
 }
-.sec-link{background:none;border:0;padding:0;font:inherit;color:var(--muted2);cursor:pointer}
+.sec-link{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
 .sec-link:hover{color:var(--accent)}
+.sec-chev{color:var(--muted);font-size:.9em;transition:transform .15s,color .15s}
+.sec-link:hover .sec-chev{color:var(--accent);transform:translateX(2px)}
