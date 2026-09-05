@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { airportCounts, allRoutes, monthLabel, readMonthly } from "@/lib/aircraft";
+import { airportCounts, allRoutes, monthLabel, readMonthly, smohOf } from "@/lib/aircraft";
 import type { TabProps } from "../detail-client";
 import { LabeledBarChart } from "@/components/ui/charts";
 import { MaintCosts } from "../maint-costs";
@@ -26,7 +26,7 @@ export function UtilizationTab(props: TabProps) {
   const totalHours = months.reduce((s, m) => s + m.hours, 0);
   const monthlyAvg = months.length ? totalHours / months.length : 0;
 
-  const smoh = Number(data.engineSMOH ?? 0);
+  const smoh = smohOf(data, maintHrs ?? 0);
   const tbo = Number(data.tbo ?? 0);
   const tt = Number(data.tt ?? maintHrs ?? 0);
   const enginePct = tbo > 0 ? Math.min(100, (smoh / tbo) * 100) : 0;

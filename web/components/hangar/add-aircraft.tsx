@@ -52,7 +52,7 @@ export function AddAircraftButton({
     cost_basis: "hobbs" as MeterKind,
     maintHrs: "",
     costHrs: "",
-    engineSMOH: "",
+    overhaulAt: "",
     tbo: "1700",
     oilInterval: "50",
     fleet_id: "",
@@ -164,7 +164,10 @@ export function AddAircraftButton({
       engineType: f.engineType.trim() || null,
       acClass: cls,
       tt: hrs,
-      engineSMOH: Number(f.engineSMOH) || 0,
+      overhaulAt: Number(f.overhaulAt) || 0,
+      // Written too, so anything still reading the old field sees today's
+      // number rather than nothing. smohOf() prefers overhaulAt.
+      engineSMOH: Math.max(0, meterRead(f.maint_basis) - (Number(f.overhaulAt) || 0)),
       // No piston fallbacks on a turbine: an unset TBO stays unset, and a zero
       // oil interval is how oilLife() knows there is no oil clock to show.
       tbo: Number(f.tbo) || (turbine ? 0 : 1700),
@@ -230,7 +233,7 @@ export function AddAircraftButton({
     setF({
       reg: "", type: "", serial: "", airport: "", engineType: "",
       maint_basis: "hobbs", cost_basis: "hobbs", fleet_id: "",
-      engineSMOH: "", tbo: "1700", oilInterval: "50",
+      overhaulAt: "", tbo: "1700", oilInterval: "50",
       maintHrs: "", costHrs: "",
     });
     setCls("piston");
@@ -280,8 +283,11 @@ export function AddAircraftButton({
               and Meters below is where the readings live. */}
           <div className="form-grid">
             <div className="form-row">
-              <label>{turbine ? "Engine Hours Since Overhaul" : "Engine SMOH Hours"}</label>
-              <input type="number" step="0.1" value={f.engineSMOH} onChange={(e) => set("engineSMOH", e.target.value)} placeholder="441" />
+              <label>Engine Overhauled At (hrs)</label>
+              <input type="number" step="0.1" value={f.overhaulAt} onChange={(e) => set("overhaulAt", e.target.value)} placeholder="0" />
+              <div style={{ fontSize: 10, color: "var(--muted2)", marginTop: 4 }}>
+                {METER_LABEL[f.maint_basis]} reading at overhaul — 0 if never overhauled
+              </div>
             </div>
             <div className="form-row">
               <label>{turbine ? "Engine TBO / Program Interval (hrs)" : "Engine TBO (hrs)"}</label>

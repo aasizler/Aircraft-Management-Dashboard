@@ -74,7 +74,7 @@ export function AircraftSettings({
     type: aircraft.type ?? "",
     airport: aircraft.airport ?? "",
     engineType: (data.engineType as string) ?? "",
-    engineSMOH: data.engineSMOH != null ? String(data.engineSMOH) : "",
+    overhaulAt: data.overhaulAt != null ? String(data.overhaulAt) : "",
     tbo: data.tbo ? String(data.tbo) : "",
     oilInterval: data.oilInterval ? String(data.oilInterval) : "",
     maint_basis: aircraft.maint_basis,
@@ -201,7 +201,8 @@ export function AircraftSettings({
           ? Number(f.cost_basis === "total" ? f.costHrs : f.maintHrs)
           : Number(f.cost_basis === f.maint_basis ? f.maintHrs : f.costHrs)) ||
         (data.tt as number | undefined),
-      engineSMOH: f.engineSMOH === "" ? undefined : Number(f.engineSMOH),
+      overhaulAt: Number(f.overhaulAt) || 0,
+      engineSMOH: Math.max(0, (Number(f.maintHrs) || 0) - (Number(f.overhaulAt) || 0)),
       tbo: Number(f.tbo) || (turbine ? 0 : 1700),
       oilInterval: Number(f.oilInterval) || (turbine ? 0 : 50),
       lastUpdated:
@@ -263,8 +264,11 @@ export function AircraftSettings({
               and Meters below is where the readings live. */}
           <div className="form-grid">
             <div className="form-row">
-              <label>{turbine ? "Engine Hours Since Overhaul" : "Engine SMOH Hours"}</label>
-              <input type="number" step="0.1" value={f.engineSMOH} onChange={(e) => set("engineSMOH", e.target.value)} />
+              <label>Engine Overhauled At (hrs)</label>
+              <input type="number" step="0.1" value={f.overhaulAt} onChange={(e) => set("overhaulAt", e.target.value)} placeholder="0" />
+              <div style={{ fontSize: 10, color: "var(--muted2)", marginTop: 4 }}>
+                {METER_LABEL[f.maint_basis]} reading at overhaul — 0 if never overhauled
+              </div>
             </div>
             <div className="form-row">
               <label>{turbine ? "Engine TBO / Program Interval (hrs)" : "Engine TBO (hrs)"}</label>

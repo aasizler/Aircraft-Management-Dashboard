@@ -2,8 +2,7 @@
 
 import {
   airworthiness, oilLife, readMonthly, SQ_LABELS,
-  type DocEntry, type Insp, type MaintCost, type OilEntry, type Squawk,
-} from "@/lib/aircraft";
+  type DocEntry, type Insp, type MaintCost, type OilEntry, type Squawk, smohOf } from "@/lib/aircraft";
 import { Icon, type IconName } from "@/components/ui/icon";
 import type { TabProps } from "../detail-client";
 import { Sparkline } from "@/components/ui/charts";
@@ -33,7 +32,7 @@ export function DashboardTab({
   const sixMoHours = months.reduce((s, m) => s + m.hours, 0);
   const { status: liveStatus, state: live } = useLivePosition(aircraft.reg);
 
-  const smoh = Number(data.engineSMOH ?? 0);
+  const smoh = smohOf(data, maintHrs);
   const tbo = Number(data.tbo ?? 0);
   const enginePct = tbo > 0 ? Math.min(100, (smoh / tbo) * 100) : 0;
 

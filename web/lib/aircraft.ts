@@ -24,7 +24,14 @@ export type V1Aircraft = Record<string, unknown> & {
   monthlyHours?: number[];
   oilByMonth?: number[];
   airportData?: Record<string, number> | null;
+  /**
+   * @deprecated A snapshot of hours since overhaul, which went stale the next
+   * time the aeroplane flew. `overhaulAt` replaces it; read both through
+   * smohOf(). Kept so aircraft written before that still report something.
+   */
   engineSMOH?: number;
+  /** Maintenance-clock reading when the engine last came off the bench. */
+  overhaulAt?: number;
   engineType?: string | null;
   /** Powerplant class. Absent means piston — every v1 blob predates this. */
   acClass?: AcClass;
@@ -410,6 +417,19 @@ export function intervalText(i: Insp): string {
 // Oil life, ported from oilLife(). Counts up from the last oil change against
 // the declared maintenance clock. `tracked` is false when there is nothing to
 // measure against, so the UI can show "—" instead of a confident 100%.
+/**
+ * Hours since overhaul, read off the maintenance clock rather than typed in.
+ * `overhaulAt` is the clock reading when the engine last came off the bench, so
+ * 0 covers an engine that has never been overhauled — hours since overhaul and
+ * hours since new are the same number there. Aircraft written before the field
+ * existed fall back to their recorded engineSMOH, which is a snapshot: it was
+ * right on the day it was typed and has been drifting since.
+ */
+export function smohOf(a: V1Aircraft, maintHrs: number): number {
+  if (a.overhaulAt == null) return Number(a.engineSMOH ?? 0);
+  return Math.max(0, maintHrs - Number(a.overhaulAt));
+}
+
 export function oilLife(a: V1Aircraft, maintHrs: number) {
   // A turbine has no fixed-hour oil change to count down to — oil is serviced
   // on consumption and condition. Falling back to 50 there invents a countdown

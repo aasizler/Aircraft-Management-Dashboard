@@ -11,6 +11,7 @@ import {
   type Squawk,
   type V1Aircraft,
   canonical,
+  smohOf,
 } from "@/lib/aircraft";
 import { can, type AppRole, type Permission } from "@/lib/permissions";
 import { useAircraftRealtime } from "@/lib/realtime";
@@ -294,9 +295,9 @@ export function AircraftDetailClient({
                 TT <b>{Number(data.tt).toFixed(0)}</b> hrs
               </span>
             )}
-            {data.engineSMOH != null && (
+            {(data.overhaulAt != null || data.engineSMOH != null) && (
               <span className="hero-chip">
-                SMOH <b>{Number(data.engineSMOH).toFixed(0)}</b> hrs
+                SMOH <b>{smohOf(data, maintHrs).toFixed(0)}</b> hrs
               </span>
             )}
             <span className="hero-chip">
