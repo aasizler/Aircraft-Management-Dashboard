@@ -35,11 +35,10 @@ const PATHS: Record<IconName, string> = {
   // An arched hangar with an aircraft tail inside — the hangar, not a house.
   hangar:    "M2 21V11l10-6 10 6v10M2 21h20M8 21v-6a4 4 0 018 0v6",
   plane:     "M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z",
-  // The plane above, twice, in echelon: the wingman walked back along its own
-  // 45 deg axis and stepped out of the lead's wake. Drawn in a 32-wide box —
-  // see WIDE below.
-  fleet:     "M30.46 0.93L23.42 7.97M30.46 0.93L25.98 13.73L23.42 7.97L17.66 5.41Z"
-           + "M14.34 10.27L7.3 17.31M14.34 10.27L9.86 23.07L7.3 17.31L1.54 14.75Z",
+  // The plane above, twice, near enough line abreast: the wingman a short way
+  // out to the side and only a little back. Drawn in a 30-wide box — see WIDE.
+  fleet:     "M28.86 9.03L21.16 16.73M28.86 9.03L23.96 23.03L21.16 16.73L14.86 13.93Z"
+           + "M15.14 0.97L7.44 8.67M15.14 0.97L10.24 14.97L7.44 8.67L1.14 5.87Z",
   landing:   "M3 21h18M6 16l13-2.6a2 2 0 10-1-3.7l-4 .8-5.5-4.6L7 6.3l3 4.9-3.6.7-2-2-1.2.3 1.6 4z",
   signal:    "M4.9 19.1a10 10 0 010-14.2M7.8 16.2a6 6 0 010-8.4M16.2 7.8a6 6 0 010 8.4M19.1 4.9a10 10 0 010 14.2M12.5 12a.5.5 0 11-1 0 .5.5 0 011 0z",
   alert:     "M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L14.7 3.9a2 2 0 00-3.4 0zM12 9v4M12 17h.01",
@@ -60,7 +59,7 @@ const PATHS: Record<IconName, string> = {
  * aeroplanes in formation need room across, and squeezing them into a square
  * costs either the size or the gap between them.
  */
-const WIDE: Partial<Record<IconName, number>> = { fleet: 32 };
+const WIDE: Partial<Record<IconName, number>> = { fleet: 30 };
 
 export function Icon({ name, size = 15 }: { name: IconName; size?: number }) {
   const box = WIDE[name] ?? 24;
