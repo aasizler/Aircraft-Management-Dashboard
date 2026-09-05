@@ -842,3 +842,19 @@ canvas.chart{display:block;width:100%;height:150px}
 .sec-link:hover{color:var(--accent)}
 .sec-chev{color:var(--muted);font-size:.9em;transition:transform .15s,color .15s}
 .sec-link:hover .sec-chev{color:var(--accent);transform:translateX(2px)}
+
+/* The rows are square inside a rounded, clipped container, so a square inset
+   ring lost its corners to the clip — the highlight looked cut off at the top
+   and bottom of the list. Matching the container's radius on the end rows makes
+   the ring follow the same curve the clip does. */
+.due-list>.due-row:first-child{border-radius:var(--r) var(--r) 0 0}
+.due-list>.due-row:last-child{border-radius:0 0 var(--r) var(--r)}
+.due-list>.due-row:only-child{border-radius:var(--r)}
+.fact-strip>.fact:first-child{border-radius:var(--r) var(--r) 0 0}
+.fact-strip>.fact:last-child{border-radius:0 0 var(--r) var(--r)}
+.fact-strip>.fact:only-child{border-radius:var(--r)}
+@media (max-width:980px){
+  /* Side by side down here, so the rounded ends are the left and right ones. */
+  .fact-strip>.fact:first-child{border-radius:var(--r) 0 0 var(--r)}
+  .fact-strip>.fact:last-child{border-radius:0 var(--r) var(--r) 0}
+}
