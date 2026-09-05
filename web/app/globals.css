@@ -815,9 +815,9 @@ canvas.chart{display:block;width:100%;height:150px}
 .ds-sub{font-size:12.5px;color:var(--muted2)}
 
 .due-list{border:1px solid var(--border2);border-radius:var(--r);overflow:hidden}
-.due-row{display:flex;align-items:center;gap:14px;padding:12px 14px;background:var(--bg2);cursor:pointer;transition:background .15s}
+.due-row{display:flex;align-items:center;gap:14px;padding:12px 14px;background:var(--bg2);cursor:pointer;transition:background .15s,box-shadow .15s}
 .due-row+.due-row{border-top:1px solid var(--border)}
-.due-row:hover{background:var(--bg3)}
+.due-row:hover{background:var(--bg3);box-shadow:inset 0 0 0 1px var(--accent)}
 .due-main{flex:1;min-width:0}
 .due-name{font-size:13.5px;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .due-sub{font-size:11px;color:var(--muted2);margin-top:3px}
@@ -829,8 +829,8 @@ canvas.chart{display:block;width:100%;height:150px}
 
 .dash-rail{display:flex;flex-direction:column;position:sticky;top:calc(var(--nav-h) + 16px)}
 .fact-strip{display:grid;gap:1px;background:var(--border);border:1px solid var(--border2);border-radius:var(--r);overflow:hidden}
-.fact{background:var(--bg2);padding:10px 13px;cursor:pointer;transition:background .15s}
-.fact:hover{background:var(--bg3)}
+.fact{background:var(--bg2);padding:10px 13px;cursor:pointer;transition:background .15s,box-shadow .15s}
+.fact:hover{background:var(--bg3);box-shadow:inset 0 0 0 1px var(--accent)}
 .fact-lbl{font-size:10px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
 .fact-val{font-family:var(--display);font-size:19px;font-weight:700;margin-top:2px}
 .fact-sub{font-size:11px;color:var(--muted2)}

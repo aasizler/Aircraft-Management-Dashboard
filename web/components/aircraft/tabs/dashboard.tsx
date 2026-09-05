@@ -210,7 +210,6 @@ export function DashboardTab({
               <button className="sec-link" onClick={() => go("Inspections")}>
                 Due next<span className="sec-chev">›</span>
               </button>
-              <span className="sec-note">soonest first</span>
             </div>
             <div className="due-list">
               {upcoming.map((x) => (
