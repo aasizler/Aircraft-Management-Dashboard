@@ -50,7 +50,6 @@ export function AddAircraftButton({
     engineType: "",
     maint_basis: "hobbs" as MeterKind,
     cost_basis: "hobbs" as MeterKind,
-    hours: "",
     maintHrs: "",
     costHrs: "",
     engineSMOH: "",
@@ -68,14 +67,6 @@ export function AddAircraftButton({
 
   const set = (k: keyof typeof f, v: string) => setF((p) => ({ ...p, [k]: v }));
 
-  // A clock needs its own reading only if it is not already on the form. The
-  // total-time clock is: it is Total Airframe Hours. Asking for it again under
-  // Meters put the same number in two places, which is all "Current Total
-  // Time" ever was.
-  const readingKinds =
-    f.maint_basis === f.cost_basis
-      ? []
-      : Array.from(new Set([f.maint_basis, f.cost_basis])).filter((k) => k !== "total");
 
   /**
    * A turbine carries neither the piston TBO default nor an hours-based oil
@@ -142,7 +133,13 @@ export function AddAircraftButton({
       return;
     }
 
-    const hrs = f.hours ? Number(f.hours) : 0;
+    // The meters are the readings now. Airframe total time is the total-time
+    // clock where the aeroplane has one, and otherwise the cost clock, which is
+    // the closest thing it keeps to total time.
+    const meterRead = (kind: MeterKind) =>
+      Number(kind === f.maint_basis ? f.maintHrs : f.costHrs) || 0;
+    const meterKinds = Array.from(new Set([f.maint_basis, f.cost_basis]));
+    const hrs = meterKinds.includes("total") ? meterRead("total") : meterRead(f.cost_basis);
 
     // v1's saveAircraft() seeded the regulatory inspection set and the TBO /
     // oil-interval defaults. The first port inserted `data: {}`, leaving a new
@@ -172,7 +169,7 @@ export function AddAircraftButton({
       // oil interval is how oilLife() knows there is no oil clock to show.
       tbo: Number(f.tbo) || (turbine ? 0 : 1700),
       oilInterval: Number(f.oilInterval) || (turbine ? 0 : 50),
-      oilHobbs: hrs,
+      oilHobbs: meterRead(f.maint_basis),
       oilChangeDate: "",
       lastUpdated: "Not yet updated",
     };
@@ -222,25 +219,17 @@ export function AddAircraftButton({
       return;
     }
 
-    // Seed the meters the airframe carries (maint + cost bases; deduped). Each
-    // gets its own reading — seeding both from airframe total put total time on
-    // a Cirrus's flight meter, which then inspected against the wrong number.
-    // Blank still means "same as airframe hours", which is the single-clock case.
-    const reading = (kind: MeterKind) =>
-      kind === "total"
-        ? hrs
-        : Number(kind === f.maint_basis ? f.maintHrs : f.costHrs) || hrs;
-    const kinds = Array.from(new Set([f.maint_basis, f.cost_basis]));
+    // One row per clock the airframe carries, each with its own reading.
     await supabase
       .from("aircraft_meters")
-      .insert(kinds.map((kind) => ({ aircraft_id: id, kind, current: reading(kind) })));
+      .insert(meterKinds.map((kind) => ({ aircraft_id: id, kind, current: meterRead(kind) })));
 
     const reg = f.reg.trim().toUpperCase();
     setBusy(false);
     setOpen(false);
     setF({
       reg: "", type: "", serial: "", airport: "", engineType: "",
-      maint_basis: "hobbs", cost_basis: "hobbs", hours: "", fleet_id: "",
+      maint_basis: "hobbs", cost_basis: "hobbs", fleet_id: "",
       engineSMOH: "", tbo: "1700", oilInterval: "50",
       maintHrs: "", costHrs: "",
     });
@@ -287,25 +276,13 @@ export function AddAircraftButton({
             />
           </div>
 
+          {/* Airframe hours are not asked for here: they are a meter reading,
+              and Meters below is where the readings live. */}
           <div className="form-grid">
-            <div className="form-row">
-              <label>Total Airframe Hours</label>
-              <input type="number" step="0.1" value={f.hours} onChange={(e) => set("hours", e.target.value)} placeholder="1243" />
-              {(f.maint_basis === "total" || f.cost_basis === "total") && (
-                <div style={{ fontSize: 10, color: "var(--muted2)", marginTop: 4 }}>
-                  Also the total-time meter reading
-                </div>
-              )}
-            </div>
             <div className="form-row">
               <label>{turbine ? "Engine Hours Since Overhaul" : "Engine SMOH Hours"}</label>
               <input type="number" step="0.1" value={f.engineSMOH} onChange={(e) => set("engineSMOH", e.target.value)} placeholder="441" />
             </div>
-          </div>
-
-          {/* A turbine has no fixed-hour oil change — oil is serviced on
-              consumption, so the field is dropped rather than shown empty. */}
-          <div className="form-grid">
             <div className="form-row">
               <label>{turbine ? "Engine TBO / Program Interval (hrs)" : "Engine TBO (hrs)"}</label>
               <input type="number" value={f.tbo} onChange={(e) => set("tbo", e.target.value)} placeholder={turbine ? "4000" : "1700"} />
@@ -313,13 +290,18 @@ export function AddAircraftButton({
                 Auto-filled from engine type — adjust as needed
               </div>
             </div>
-            {!turbine && (
+          </div>
+
+          {/* A turbine has no fixed-hour oil change — oil is serviced on
+              consumption, so the field is dropped rather than shown empty. */}
+          {!turbine && (
+            <div className="form-grid">
               <div className="form-row">
                 <label>Oil Change Interval (hrs)</label>
                 <input type="number" value={f.oilInterval} onChange={(e) => set("oilInterval", e.target.value)} />
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
           <div className="form-row">
             <label>Home Airport</label>
@@ -356,6 +338,15 @@ export function AddAircraftButton({
               </div>
             </div>
             <div className="form-row">
+              <label>Current {METER_LABEL[f.maint_basis]}</label>
+              <input
+                type="number" step="0.1" value={f.maintHrs} placeholder="1243"
+                onChange={(e) => set("maintHrs", e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="form-grid">
+            <div className="form-row">
               <label>Cost clock</label>
               <select value={f.cost_basis} onChange={(e) => set("cost_basis", e.target.value)}>
                 {orderKinds(profile, METERS).map((m) => (
@@ -366,28 +357,23 @@ export function AddAircraftButton({
                 Billing and $/hr count against this
               </div>
             </div>
+            <div className="form-row">
+              <label>Current {METER_LABEL[f.cost_basis]}</label>
+              <input
+                type="number" step="0.1"
+                value={f.cost_basis === f.maint_basis ? f.maintHrs : f.costHrs}
+                disabled={f.cost_basis === f.maint_basis}
+                placeholder="1243"
+                onChange={(e) => set("costHrs", e.target.value)}
+              />
+              {f.cost_basis === f.maint_basis && (
+                <div style={{ fontSize: 10, color: "var(--muted2)", marginTop: 4 }}>
+                  Same meter as the maintenance clock — one reading drives both
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Two clocks read two different numbers, so each one that is not
-              already on the form above gets a field. Blank means the same as
-              the airframe total, which is the single-clock case. */}
-          {readingKinds.length > 0 && (
-            <div className="form-grid">
-              {readingKinds.map((k) => {
-                const key = k === f.maint_basis ? "maintHrs" : "costHrs";
-                return (
-                  <div className="form-row" key={k}>
-                    <label>Current {METER_LABEL[k]}</label>
-                    <input
-                      type="number" step="0.1" value={f[key]}
-                      placeholder={f.hours || "0"}
-                      onChange={(e) => set(key, e.target.value)}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-          )}
 
           {err && <div className="auth-err">{err}</div>}
           <div className="form-actions">

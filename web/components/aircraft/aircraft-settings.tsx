@@ -57,7 +57,16 @@ export function AircraftSettings({
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  const meterOf = (k: MeterKind) => meters.find((m) => m.kind === k)?.current ?? 0;
+  /**
+   * A clock reading zero falls back to the recorded airframe total. Aircraft
+   * that predate meters carry their hours only in tt, and their meter rows were
+   * seeded at 0 — so without this the modal shows 0 against every clock on an
+   * aeroplane the header says has thousands of hours, and there is no longer a
+   * Total Airframe Hours field to read the real number from. Typing a reading
+   * and saving settles it: after that the meter is the number.
+   */
+  const meterOf = (k: MeterKind) =>
+    meters.find((m) => m.kind === k)?.current || Number(data.tt ?? 0);
 
   const [f, setF] = useState({
     reg: aircraft.reg,
@@ -65,7 +74,6 @@ export function AircraftSettings({
     type: aircraft.type ?? "",
     airport: aircraft.airport ?? "",
     engineType: (data.engineType as string) ?? "",
-    tt: data.tt != null ? String(data.tt) : "",
     engineSMOH: data.engineSMOH != null ? String(data.engineSMOH) : "",
     tbo: data.tbo ? String(data.tbo) : "",
     oilInterval: data.oilInterval ? String(data.oilInterval) : "",
@@ -186,7 +194,13 @@ export function AircraftSettings({
       ...data,
       engineType: f.engineType.trim() || null,
       acClass: cls,
-      tt: f.tt === "" ? undefined : Number(f.tt),
+      // Airframe total time follows the meters: the total-time clock where the
+      // aeroplane has one, otherwise the cost clock.
+      tt:
+        (wanted.includes("total")
+          ? Number(f.cost_basis === "total" ? f.costHrs : f.maintHrs)
+          : Number(f.cost_basis === f.maint_basis ? f.maintHrs : f.costHrs)) ||
+        (data.tt as number | undefined),
       engineSMOH: f.engineSMOH === "" ? undefined : Number(f.engineSMOH),
       tbo: Number(f.tbo) || (turbine ? 0 : 1700),
       oilInterval: Number(f.oilInterval) || (turbine ? 0 : 50),
@@ -245,29 +259,27 @@ export function AircraftSettings({
             />
           </div>
 
+          {/* Airframe hours are not asked for here: they are a meter reading,
+              and Meters below is where the readings live. */}
           <div className="form-grid">
-            <div className="form-row">
-              <label>Total Airframe Hours</label>
-              <input type="number" step="0.1" value={f.tt} onChange={(e) => set("tt", e.target.value)} />
-            </div>
             <div className="form-row">
               <label>{turbine ? "Engine Hours Since Overhaul" : "Engine SMOH Hours"}</label>
               <input type="number" step="0.1" value={f.engineSMOH} onChange={(e) => set("engineSMOH", e.target.value)} />
             </div>
-          </div>
-
-          <div className="form-grid">
             <div className="form-row">
               <label>{turbine ? "Engine TBO / Program Interval (hrs)" : "Engine TBO (hrs)"}</label>
               <input type="number" value={f.tbo} onChange={(e) => set("tbo", e.target.value)} placeholder={turbine ? "4000" : "1700"} />
             </div>
-            {!turbine && (
+          </div>
+
+          {!turbine && (
+            <div className="form-grid">
               <div className="form-row">
                 <label>Oil Interval (hrs)</label>
                 <input type="number" value={f.oilInterval} onChange={(e) => set("oilInterval", e.target.value)} />
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
           <div className="form-row">
             <label>Home Airport</label>
