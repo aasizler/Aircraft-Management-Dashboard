@@ -35,9 +35,11 @@ const PATHS: Record<IconName, string> = {
   // An arched hangar with an aircraft tail inside — the hangar, not a house.
   hangar:    "M2 21V11l10-6 10 6v10M2 21h20M8 21v-6a4 4 0 018 0v6",
   plane:     "M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z",
-  // The plane above at half size, twice, held apart on its own 45 deg axis:
-  // the same aeroplane, more than one of it.
-  fleet:     "M22 1.8L16.5 7.3M22 1.8L18.5 11.8L16.5 7.3L12 5.3ZM11.8 12L6.3 17.5M11.8 12L8.3 22L6.3 17.5L1.8 15.5Z",
+  // The plane above, twice, in echelon: the wingman walked back along its own
+  // 45 deg axis and stepped out of the lead's wake. Drawn in a 32-wide box —
+  // see WIDE below.
+  fleet:     "M30.46 0.93L23.42 7.97M30.46 0.93L25.98 13.73L23.42 7.97L17.66 5.41Z"
+           + "M14.34 10.27L7.3 17.31M14.34 10.27L9.86 23.07L7.3 17.31L1.54 14.75Z",
   landing:   "M3 21h18M6 16l13-2.6a2 2 0 10-1-3.7l-4 .8-5.5-4.6L7 6.3l3 4.9-3.6.7-2-2-1.2.3 1.6 4z",
   signal:    "M4.9 19.1a10 10 0 010-14.2M7.8 16.2a6 6 0 010-8.4M16.2 7.8a6 6 0 010 8.4M19.1 4.9a10 10 0 010 14.2M12.5 12a.5.5 0 11-1 0 .5.5 0 011 0z",
   alert:     "M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L14.7 3.9a2 2 0 00-3.4 0zM12 9v4M12 17h.01",
@@ -53,12 +55,20 @@ const PATHS: Record<IconName, string> = {
   shield:    "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z",
 };
 
+/**
+ * Glyphs are square on a 24 grid, bar the ones whose composition is not: two
+ * aeroplanes in formation need room across, and squeezing them into a square
+ * costs either the size or the gap between them.
+ */
+const WIDE: Partial<Record<IconName, number>> = { fleet: 32 };
+
 export function Icon({ name, size = 15 }: { name: IconName; size?: number }) {
+  const box = WIDE[name] ?? 24;
   return (
     <svg
       className="icon"
-      viewBox="0 0 24 24"
-      width={size}
+      viewBox={`0 0 ${box} 24`}
+      width={(size * box) / 24}
       height={size}
       fill="none"
       stroke="currentColor"
