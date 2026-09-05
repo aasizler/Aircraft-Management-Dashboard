@@ -22,8 +22,7 @@ export function DashboardTab({
   // Same judgement the hangar tile shows, from the same function — these two
   // used to work it out separately and drifted apart.
   const air = airworthiness(data, maintHrs);
-  const { scored, tracked, untracked, overdue, dueSoon, grounding } = air;
-  const next = tracked[0];
+  const { tracked, untracked, overdue, dueSoon, grounding } = air;
 
   const life = oilLife(data, maintHrs);
   const squawks = (data.squawks ?? []) as Squawk[];
@@ -96,14 +95,21 @@ export function DashboardTab({
   acts.sort((a, b) => (b.when ?? "").localeCompare(a.when ?? ""));
   const recent = acts.slice(0, 6);
 
-  const alerts = [
-    ...overdue.map((x) => ({ type: "danger" as const, name: x.i.name, detail: x.st.nl, idx: x.idx })),
-    ...dueSoon.map((x) => ({ type: "warning" as const, name: x.i.name, detail: x.st.nl, idx: x.idx })),
-  ];
 
   // The three items closest to due, soonest first. A single hero card made the
   // least urgent thing the largest thing on the page.
-  const upcoming = tracked.slice(0, 4);
+  // Everything overdue or due soon, then enough of the rest to fill four rows.
+  // Two sections listing the same inspections under different headings was the
+  // page's largest duplication: overdue items are, by definition, also the
+  // nearest ones.
+  const urgent = tracked.filter((x) => x.st.s !== "ok");
+  const upcoming = [...urgent, ...tracked.filter((x) => x.st.s === "ok")].slice(
+    0, Math.max(4, urgent.length),
+  );
+
+  // Hours since overhaul is only a number if something recorded when the
+  // overhaul was. Otherwise it is zero because nothing has been entered.
+  const engineKnown = data.overhaulAt != null || data.engineSMOH != null;
 
   const statusTint: Record<string, string> = {
     grounded: "rgba(255,64,80,.09)",
@@ -112,7 +118,7 @@ export function DashboardTab({
     current: "rgba(34,226,166,.07)",
   };
 
-  const facts: { lbl: string; val: string; sub: string; tab: TabName; tone?: string }[] = [
+  const facts: { lbl: string; val: string; sub: string; tab: TabName; tone?: string; spark?: boolean }[] = [
     ...(aircraft.cost_basis === aircraft.maint_basis
       ? [{ lbl: aircraft.maint_basis, val: maintHrs.toFixed(1),
            sub: "drives inspections, oil and billing", tab: "Utilization" as TabName }]
@@ -122,15 +128,24 @@ export function DashboardTab({
           { lbl: `${aircraft.cost_basis} (cost)`, val: costHrs.toFixed(1),
             sub: "drives billing & $/hr", tab: "Utilization" as TabName },
         ]),
-    { lbl: "Engine", val: tbo > 0 ? `${Math.round(enginePct)}%` : "—",
-      sub: tbo > 0 ? `${smoh.toFixed(1)} SMOH · ${Math.max(0, tbo - smoh).toFixed(1)} to TBO` : "TBO not set",
+    // "0%" against a TBO reads as an engine fresh off the bench. An engine with
+    // no overhaul recorded has not been measured, which is a different thing.
+    { lbl: "Engine", val: !engineKnown ? "—" : tbo > 0 ? `${Math.round(enginePct)}%` : smoh.toFixed(1),
+      sub: !engineKnown
+        ? "overhaul not recorded"
+        : tbo > 0
+          ? `${smoh.toFixed(1)} SMOH · ${Math.max(0, tbo - smoh).toFixed(1)} to TBO`
+          : "hrs SMOH · TBO not set",
       tab: "Utilization",
-      tone: tbo > 0 ? (enginePct > 85 ? "var(--danger)" : enginePct > 65 ? "var(--warn)" : "var(--ok)") : undefined },
+      tone: engineKnown && tbo > 0
+        ? enginePct > 85 ? "var(--danger)" : enginePct > 65 ? "var(--warn)" : "var(--ok)"
+        : undefined },
     { lbl: "Oil life", val: life.tracked ? `${Math.round(life.pct)}%` : "—",
       sub: life.tracked ? `${life.hrsLeft.toFixed(1)} hrs left` : life.applicable ? "not tracked" : "on condition",
       tab: "Oil and Fluids",
       tone: life.tracked && life.pct < 15 ? "var(--warn)" : undefined },
-    { lbl: "6-month hours", val: sixMoHours.toFixed(1), sub: "flight hours", tab: "Utilization" },
+    { lbl: "6-month hours", val: sixMoHours.toFixed(1), sub: "flight hours",
+      tab: "Utilization", spark: true },
     { lbl: "Squawks", val: String(squawks.length), sub: "open items", tab: "Squawks",
       tone: squawks.length ? "var(--warn)" : "var(--ok)" },
     { lbl: "Documents", val: String(docs.length), sub: "on file", tab: "Documents" },
@@ -162,80 +177,64 @@ export function DashboardTab({
           </div>
         )}
 
-        {(alerts.length > 0 || grounding.length > 0 || untracked.length > 0) && (
-          <>
-            <div className="dash-sec-h">
-              <span>Needs Attention</span>
-              <span className="sec-note">
-                {alerts.length + grounding.length === 0
-                  ? `${untracked.length} inspection${untracked.length > 1 ? "s" : ""} not yet recorded`
-                  : `${alerts.length + grounding.length} item${
-                      alerts.length + grounding.length === 1 ? " needs" : "s need"
-                    } attention`}
-              </span>
-            </div>
-            <div className="alert-feed">
-              {grounding.map((s) => (
-                <div className="alert-item adanger" key={s.id} onClick={() => go("Squawks")}>
-                  <div className="al-icon"><Icon name="grounded" size={17} /></div>
-                  <div className="al-text">
-                    <div className="al-name">{s.desc}</div>
-                    <div className="al-detail">Grounding squawk · noted {s.date}</div>
-                  </div>
-                  <div className="al-badge"><span className="badge overdue">GROUNDING</span></div>
-                  <div style={{ color: "var(--muted2)", fontSize: 14 }}>›</div>
+        {/* Only what the ranked list below cannot carry: a grounding squawk is
+            not an inspection, and an inspection that was never recorded has no
+            due date to be ranked by. The overdue rows themselves used to be
+            listed here and again below, under two headings. */}
+        {(grounding.length > 0 || untracked.length > 0) && (
+          <div className="alert-feed" style={{ marginTop: 12 }}>
+            {grounding.map((sq) => (
+              <div className="alert-item adanger" key={sq.id} onClick={() => go("Squawks")}>
+                <div className="al-icon"><Icon name="grounded" size={17} /></div>
+                <div className="al-text">
+                  <div className="al-name">{sq.desc}</div>
+                  <div className="al-detail">Grounding squawk · noted {sq.date}</div>
                 </div>
-              ))}
-              {alerts.map((al) => (
-                <div
-                  className={`alert-item a${al.type}`}
-                  key={al.name + al.idx}
-                  onClick={() => focusInspection(al.idx)}
-                >
-                  <div className="al-icon"><Icon name="alert" size={17} /></div>
-                  <div className="al-text">
-                    <div className="al-name">{al.name}</div>
-                    <div className="al-detail">{al.detail}</div>
+                <div className="al-badge"><span className="badge overdue">GROUNDING</span></div>
+                <div style={{ color: "var(--muted2)", fontSize: 14 }}>›</div>
+              </div>
+            ))}
+            {untracked.length > 0 && (
+              <div className="alert-item awarning" onClick={() => go("Inspections")}>
+                <div className="al-icon"><Icon name="eye" size={17} /></div>
+                <div className="al-text">
+                  <div className="al-name">
+                    {untracked.length} inspection{untracked.length > 1 ? "s" : ""} never recorded
                   </div>
-                  <div className="al-badge">
-                    <span className={`badge ${al.type === "danger" ? "overdue" : "warn"}`}>
-                      {al.type === "danger" ? "OVERDUE" : "DUE SOON"}
-                    </span>
+                  <div className="al-detail">
+                    {untracked.slice(0, 3).map((x) => x.i.name).join(", ")}
+                    {untracked.length > 3 ? "…" : ""}
                   </div>
-                  <div style={{ color: "var(--muted2)", fontSize: 14 }}>›</div>
                 </div>
-              ))}
-              {alerts.length === 0 && grounding.length === 0 && untracked.length > 0 && (
-                <div className="alert-item awarning" onClick={() => go("Inspections")}>
-                  <div className="al-icon">◌</div>
-                  <div className="al-text">
-                    <div className="al-name">
-                      {untracked.length} inspection{untracked.length > 1 ? "s" : ""} never recorded
-                    </div>
-                    <div className="al-detail">
-                      {untracked.slice(0, 3).map((x) => x.i.name).join(", ")}
-                      {untracked.length > 3 ? "…" : ""}
-                    </div>
-                  </div>
-                  <div className="al-badge"><span className="badge">NOT SET</span></div>
-                  <div style={{ color: "var(--muted2)", fontSize: 14 }}>›</div>
-                </div>
-              )}
-            </div>
-          </>
+                <div className="al-badge"><span className="badge">NOT SET</span></div>
+                <div style={{ color: "var(--muted2)", fontSize: 14 }}>›</div>
+              </div>
+            )}
+          </div>
         )}
 
         {upcoming.length > 0 && (
           <>
             <div className="dash-sec-h">
               <span>Due next</span>
-              <span className="sec-note">soonest first</span>
+              <span className="sec-note">
+                {tracked.length > upcoming.length
+                  ? `${upcoming.length} of ${tracked.length} · soonest first`
+                  : "soonest first"}
+              </span>
             </div>
             <div className="due-list">
               {upcoming.map((x) => (
                 <div className="due-row" key={x.i.name + x.idx} onClick={() => focusInspection(x.idx)}>
                   <div className="due-main">
-                    <div className="due-name">{x.i.name}</div>
+                    <div className="due-name">
+                      {x.i.name}
+                      {x.st.s !== "ok" && (
+                        <span className={`badge ${x.st.s === "overdue" ? "overdue" : "warn"}`}>
+                          {x.st.s === "overdue" ? "OVERDUE" : "DUE SOON"}
+                        </span>
+                      )}
+                    </div>
                     <div className="due-sub">
                       due {x.st.due || x.st.nl}
                       {x.i.intervalHrs ? ` · every ${x.i.intervalHrs} hrs` : ""}
@@ -300,11 +299,10 @@ export function DashboardTab({
               <div className="fact-lbl">{f.lbl}</div>
               <div className="fact-val" style={{ color: f.tone }}>{f.val}</div>
               <div className="fact-sub">{f.sub}</div>
+              {f.spark && <Sparkline vals={months.map((m) => m.hours)} />}
             </div>
           ))}
         </div>
-
-        <Sparkline vals={months.map((m) => m.hours)} />
       </aside>
     </div>
   );
