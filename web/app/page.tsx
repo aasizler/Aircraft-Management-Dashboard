@@ -133,7 +133,7 @@ export default async function Home() {
         // step — the org is plumbing, not a concept the owner of one aeroplane
         // should have to meet.
         right={
-          <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <span className="hangar-actions">
             {/* Staff only — fleets write is is_org_staff(). Someone with one
                 aeroplane never needs a fleet, so this sits beside Add Aircraft
                 rather than competing with it. */}
