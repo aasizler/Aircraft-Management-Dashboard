@@ -104,7 +104,7 @@ export function DashboardTab({
   // nearest ones.
   const urgent = tracked.filter((x) => x.st.s !== "ok");
   const upcoming = [...urgent, ...tracked.filter((x) => x.st.s === "ok")].slice(
-    0, Math.max(4, urgent.length),
+    0, Math.max(2, urgent.length),
   );
 
   // Hours since overhaul is only a number if something recorded when the
@@ -120,40 +120,26 @@ export function DashboardTab({
 
   const facts: { lbl: string; val: string; sub: string; tab: TabName; tone?: string; spark?: boolean }[] = [
     ...(aircraft.cost_basis === aircraft.maint_basis
-      ? [{ lbl: aircraft.maint_basis, val: maintHrs.toFixed(1),
-           sub: "drives inspections, oil and billing", tab: "Utilization" as TabName }]
+      ? [{ lbl: aircraft.maint_basis, val: maintHrs.toFixed(1), sub: "hrs", tab: "Utilization" as TabName }]
       : [
-          { lbl: `${aircraft.maint_basis} (maint)`, val: maintHrs.toFixed(1),
-            sub: "drives inspections & oil", tab: "Utilization" as TabName },
-          { lbl: `${aircraft.cost_basis} (cost)`, val: costHrs.toFixed(1),
-            sub: "drives billing & $/hr", tab: "Utilization" as TabName },
+          { lbl: aircraft.maint_basis, val: maintHrs.toFixed(1), sub: "hrs", tab: "Utilization" as TabName },
+          { lbl: aircraft.cost_basis, val: costHrs.toFixed(1), sub: "hrs", tab: "Utilization" as TabName },
         ]),
-    // "0%" against a TBO reads as an engine fresh off the bench. An engine with
-    // no overhaul recorded has not been measured, which is a different thing.
-    { lbl: "Engine", val: !engineKnown ? "—" : tbo > 0 ? `${Math.round(enginePct)}%` : smoh.toFixed(1),
-      sub: !engineKnown
-        ? "overhaul not recorded"
-        : tbo > 0
-          ? `${smoh.toFixed(1)} SMOH · ${Math.max(0, tbo - smoh).toFixed(1)} to TBO`
-          : "hrs SMOH · TBO not set",
-      tab: "Utilization",
-      tone: engineKnown && tbo > 0
-        ? enginePct > 85 ? "var(--danger)" : enginePct > 65 ? "var(--warn)" : "var(--ok)"
-        : undefined },
     { lbl: "Oil life", val: life.tracked ? `${Math.round(life.pct)}%` : "—",
-      sub: life.tracked ? `${life.hrsLeft.toFixed(1)} hrs left` : life.applicable ? "not tracked" : "on condition",
+      sub: life.tracked
+        ? life.hrsLeft < 0 ? `${(-life.hrsLeft).toFixed(1)} hrs overdue` : `${life.hrsLeft.toFixed(1)} hrs left`
+        : life.applicable ? "not tracked" : "on condition",
       tab: "Oil and Fluids",
       tone: life.tracked && life.pct < 15 ? "var(--warn)" : undefined },
     { lbl: "6-month hours", val: sixMoHours.toFixed(1), sub: "flight hours",
       tab: "Utilization", spark: true },
     { lbl: "Squawks", val: String(squawks.length), sub: "open items", tab: "Squawks",
       tone: squawks.length ? "var(--warn)" : "var(--ok)" },
-    { lbl: "Documents", val: String(docs.length), sub: "on file", tab: "Documents" },
   ];
 
   return (
-    <div className="dash-cols">
-      <div>
+    <div className="dash-page">
+      <div className="dash-top">
         {/* One line, not a status card stacked on a hero card saying the same
             thing. It carries what is next rather than devoting a third of the
             page to it. */}
@@ -213,14 +199,36 @@ export function DashboardTab({
           </div>
         )}
 
+        <div className="dash-quick">
+          <button className="dash-qbtn" onClick={() => go("Utilization", "log-flight")}>
+            <span className="qi"><Icon name="plane" size={16} /></span>Log Flight
+          </button>
+          <button className="dash-qbtn" onClick={() => go("Squawks", "add-squawk")}>
+            <span className="qi"><Icon name="alert" size={16} /></span>Add Squawk
+          </button>
+          <button className="dash-qbtn" onClick={() => go("Oil and Fluids", "log-oil")}>
+            <span className="qi"><Icon name="droplet" size={16} /></span>Log Oil
+          </button>
+          <button className="dash-qbtn" onClick={() => go("Oil and Fluids", "oil-change")}>
+            <span className="qi"><Icon name="wrench" size={16} /></span>Oil Change
+          </button>
+        </div>
+      </div>
+
+      <div className="dash-cols">
+      <div>
         {upcoming.length > 0 && (
           <>
             <div className="dash-sec-h">
               <span>Due next</span>
               <span className="sec-note">
-                {tracked.length > upcoming.length
-                  ? `${upcoming.length} of ${tracked.length} · soonest first`
-                  : "soonest first"}
+                {tracked.length > upcoming.length ? (
+                  <button className="sec-link" onClick={() => go("Inspections")}>
+                    all {tracked.length} inspections ›
+                  </button>
+                ) : (
+                  "soonest first"
+                )}
               </span>
             </div>
             <div className="due-list">
@@ -278,21 +286,6 @@ export function DashboardTab({
       </div>
 
       <aside className="dash-rail">
-        <div className="dash-rail-acts">
-          <button className="btn" onClick={() => go("Utilization", "log-flight")}>
-            <Icon name="plane" size={15} />Log Flight
-          </button>
-          <button className="btn" onClick={() => go("Squawks", "add-squawk")}>
-            <Icon name="alert" size={15} />Add Squawk
-          </button>
-          <button className="btn" onClick={() => go("Oil and Fluids", "log-oil")}>
-            <Icon name="droplet" size={15} />Log Oil
-          </button>
-          <button className="btn" onClick={() => go("Oil and Fluids", "oil-change")}>
-            <Icon name="wrench" size={15} />Oil Change
-          </button>
-        </div>
-
         <div className="fact-strip">
           {facts.map((f) => (
             <div className="fact" key={f.lbl} onClick={() => go(f.tab)}>
@@ -304,6 +297,7 @@ export function DashboardTab({
           ))}
         </div>
       </aside>
+      </div>
     </div>
   );
 }

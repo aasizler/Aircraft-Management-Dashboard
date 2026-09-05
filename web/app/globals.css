@@ -795,7 +795,12 @@ canvas.chart{display:block;width:100%;height:150px}
    Two columns: the account of the aeroplane on the left, the things you do to
    it and the numbers you glance at on the right. Collapses to one below 980,
    where a 268px rail would leave the left column too narrow to read. */
-.dash-cols{display:grid;grid-template-columns:minmax(0,1fr) 268px;gap:16px;align-items:start;padding-top:16px}
+.dash-page{padding-top:16px}
+.dash-cols>div>.dash-sec-h:first-child{margin-top:0}
+/* State and the actions you take about it run the full width; the columns
+   start beneath them, so the top of the page has one edge rather than two. */
+.dash-top{display:flex;flex-direction:column;gap:12px;margin-bottom:16px}
+.dash-cols{display:grid;grid-template-columns:minmax(0,1fr) 268px;gap:16px;align-items:start}
 .dash-cols>*{min-width:0}
 @media (max-width:980px){.dash-cols{grid-template-columns:1fr}}
 
@@ -820,8 +825,6 @@ canvas.chart{display:block;width:100%;height:150px}
 .due-rem-unit{font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
 
 .dash-rail{display:flex;flex-direction:column;gap:12px;position:sticky;top:calc(var(--nav-h) + 16px)}
-.dash-rail-acts{display:grid;gap:6px}
-.dash-rail-acts .btn{justify-content:flex-start}
 .fact-strip{display:grid;gap:1px;background:var(--border);border:1px solid var(--border2);border-radius:var(--r);overflow:hidden}
 .fact{background:var(--bg2);padding:10px 13px;cursor:pointer;transition:background .15s}
 .fact:hover{background:var(--bg3)}
@@ -830,6 +833,7 @@ canvas.chart{display:block;width:100%;height:150px}
 .fact-sub{font-size:11px;color:var(--muted2)}
 @media (max-width:980px){
   .dash-rail{position:static}
-  .dash-rail-acts{grid-template-columns:repeat(2,1fr)}
   .fact-strip{grid-template-columns:repeat(3,1fr)}
 }
+.sec-link{background:none;border:0;padding:0;font:inherit;color:var(--muted2);cursor:pointer}
+.sec-link:hover{color:var(--accent)}
