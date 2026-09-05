@@ -29,7 +29,7 @@
   --r: 10px;
   --mono: var(--font-mono), "IBM Plex Mono", monospace;
   /* Figures line up in every readout: meters, dates, counts, remaining hours. */
-  --display: var(--font-display), "Syne", sans-serif;
+  --display: var(--font-display), "Sora", sans-serif;
   --body: var(--font-body), "Inter", sans-serif;
 }
 

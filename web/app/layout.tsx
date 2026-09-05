@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, IBM_Plex_Mono, Syne } from "next/font/google";
+import { Inter, IBM_Plex_Mono, Sora } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
 import { createClient } from "@/lib/supabase/server";
@@ -20,10 +20,14 @@ const mono = IBM_Plex_Mono({
   weight: ["400", "500", "600"],
 });
 
-const syne = Syne({
+// Headings only — body copy is Inter and every number is Inter with tabular
+// figures. Replaced Syne, whose letter widths and weights vary within a word by
+// design: "My Hangar" set its M and H at visibly different weights, and its
+// figures were uneven enough that "23.0" looked broken.
+const sora = Sora({
   variable: "--font-display",
   subsets: ["latin"],
-  weight: ["700", "800"],
+  weight: ["600", "700", "800"],
 });
 
 export const metadata: Metadata = {
@@ -40,7 +44,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${mono.variable} ${syne.variable} h-full antialiased`}
+      className={`${inter.variable} ${mono.variable} ${sora.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
         {/* Apply saved theme/accent before paint to avoid a flash. */}
