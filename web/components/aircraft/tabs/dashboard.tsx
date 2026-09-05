@@ -2,7 +2,7 @@
 
 import {
   airworthiness, oilLife, readMonthly, SQ_LABELS,
-  type DocEntry, type Insp, type MaintCost, type OilEntry, type Squawk, smohOf } from "@/lib/aircraft";
+  type Insp, type MaintCost, type OilEntry, type Squawk } from "@/lib/aircraft";
 import { Icon, type IconName } from "@/components/ui/icon";
 import type { TabName, TabProps } from "../detail-client";
 import { Sparkline } from "@/components/ui/charts";
@@ -16,7 +16,7 @@ import { useLivePosition } from "@/lib/adsb";
  * with no recorded inspections at all.
  */
 export function DashboardTab({
-  data, maintHrs, costHrs, aircraft, go, focusInspection,
+  data, maintHrs, aircraft, go, focusInspection,
 }: TabProps) {
   const all = (data.inspections ?? []) as Insp[];
   // Same judgement the hangar tile shows, from the same function — these two
@@ -26,14 +26,9 @@ export function DashboardTab({
 
   const life = oilLife(data, maintHrs);
   const squawks = (data.squawks ?? []) as Squawk[];
-  const docs = (data.documents ?? []) as DocEntry[];
   const months = readMonthly(data.monthlyHours, 6);
   const sixMoHours = months.reduce((s, m) => s + m.hours, 0);
   const { status: liveStatus, state: live } = useLivePosition(aircraft.reg);
-
-  const smoh = smohOf(data, maintHrs);
-  const tbo = Number(data.tbo ?? 0);
-  const enginePct = tbo > 0 ? Math.min(100, (smoh / tbo) * 100) : 0;
 
   // Status ribbon — a grounding squawk outranks everything, as in v1.
   const ribbon =
@@ -107,10 +102,6 @@ export function DashboardTab({
     0, Math.max(2, urgent.length),
   );
 
-  // Hours since overhaul is only a number if something recorded when the
-  // overhaul was. Otherwise it is zero because nothing has been entered.
-  const engineKnown = data.overhaulAt != null || data.engineSMOH != null;
-
   const statusTint: Record<string, string> = {
     grounded: "rgba(255,64,80,.09)",
     due: "rgba(255,160,35,.09)",
@@ -118,13 +109,9 @@ export function DashboardTab({
     current: "rgba(34,226,166,.07)",
   };
 
+  // No meter tiles here: the hero above carries both clocks on every tab, and
+  // this rail is for what the hero does not.
   const facts: { lbl: string; val: string; sub: string; tab: TabName; tone?: string; spark?: boolean }[] = [
-    ...(aircraft.cost_basis === aircraft.maint_basis
-      ? [{ lbl: aircraft.maint_basis, val: maintHrs.toFixed(1), sub: "hrs", tab: "Utilization" as TabName }]
-      : [
-          { lbl: aircraft.maint_basis, val: maintHrs.toFixed(1), sub: "hrs", tab: "Utilization" as TabName },
-          { lbl: aircraft.cost_basis, val: costHrs.toFixed(1), sub: "hrs", tab: "Utilization" as TabName },
-        ]),
     { lbl: "Oil life", val: life.tracked ? `${Math.round(life.pct)}%` : "—",
       sub: life.tracked
         ? life.hrsLeft < 0 ? `${(-life.hrsLeft).toFixed(1)} hrs overdue` : `${life.hrsLeft.toFixed(1)} hrs left`
