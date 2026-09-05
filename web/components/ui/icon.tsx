@@ -35,9 +35,9 @@ const PATHS: Record<IconName, string> = {
   // An arched hangar with an aircraft tail inside — the hangar, not a house.
   hangar:    "M2 21V11l10-6 10 6v10M2 21h20M8 21v-6a4 4 0 018 0v6",
   plane:     "M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z",
-  // Two deltas in a tight echelon — more than one aeroplane, which is what a
-  // fleet is. The notch cuts deep: a shallow one on a narrow body reads as an A.
-  fleet:     "M8.8 4L15.3 14L8.8 8.4L2.3 14ZM15.3 10L21.8 20L15.3 14.4L8.8 20Z",
+  // The plane above at half size, twice, held apart on its own 45 deg axis:
+  // the same aeroplane, more than one of it.
+  fleet:     "M22 1.8L16.5 7.3M22 1.8L18.5 11.8L16.5 7.3L12 5.3ZM11.8 12L6.3 17.5M11.8 12L8.3 22L6.3 17.5L1.8 15.5Z",
   landing:   "M3 21h18M6 16l13-2.6a2 2 0 10-1-3.7l-4 .8-5.5-4.6L7 6.3l3 4.9-3.6.7-2-2-1.2.3 1.6 4z",
   signal:    "M4.9 19.1a10 10 0 010-14.2M7.8 16.2a6 6 0 010-8.4M16.2 7.8a6 6 0 010 8.4M19.1 4.9a10 10 0 010 14.2M12.5 12a.5.5 0 11-1 0 .5.5 0 011 0z",
   alert:     "M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L14.7 3.9a2 2 0 00-3.4 0zM12 9v4M12 17h.01",
