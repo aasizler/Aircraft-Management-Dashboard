@@ -790,3 +790,46 @@ canvas.chart{display:block;width:100%;height:150px}
 .news-head:hover .news-title{color:var(--accent)}
 .news-thumb{width:64px;height:44px;object-fit:cover;border-radius:6px;flex:0 0 auto;background:var(--bg4)}
 .news-head-body{min-width:0;flex:1}
+
+/* ── Aircraft dashboard ─────────────────────────────────────────────────────
+   Two columns: the account of the aeroplane on the left, the things you do to
+   it and the numbers you glance at on the right. Collapses to one below 980,
+   where a 268px rail would leave the left column too narrow to read. */
+.dash-cols{display:grid;grid-template-columns:minmax(0,1fr) 268px;gap:16px;align-items:start;padding-top:16px}
+.dash-cols>*{min-width:0}
+@media (max-width:980px){.dash-cols{grid-template-columns:1fr}}
+
+/* One line, tinted by state. It replaced a status card stacked on a hero card
+   that said the same thing, with the least urgent inspection set in 34px. */
+.dash-status{display:flex;align-items:center;gap:11px;flex-wrap:wrap;padding:12px 15px;border:1px solid var(--border2);border-radius:var(--r);background:linear-gradient(100deg,var(--ds-tint),transparent 58%)}
+.ds-icon{display:flex;flex-shrink:0}
+.ds-title{font-family:var(--display);font-size:15px;font-weight:700}
+.ds-sub{font-size:12.5px;color:var(--muted2)}
+
+.due-list{border:1px solid var(--border2);border-radius:var(--r);overflow:hidden}
+.due-row{display:flex;align-items:center;gap:14px;padding:12px 14px;background:var(--bg2);cursor:pointer;transition:background .15s}
+.due-row+.due-row{border-top:1px solid var(--border)}
+.due-row:hover{background:var(--bg3)}
+.due-main{flex:1;min-width:0}
+.due-name{font-size:13.5px;font-weight:600}
+.due-sub{font-size:11px;color:var(--muted2);margin-top:3px}
+.due-bar{display:block;height:3px;border-radius:2px;background:var(--bg4);overflow:hidden;margin-top:7px}
+.due-bar i{display:block;height:100%;border-radius:2px}
+.due-rem{text-align:right;flex-shrink:0}
+.due-rem-num{font-family:var(--display);font-size:17px;font-weight:700;line-height:1.1}
+.due-rem-unit{font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+
+.dash-rail{display:flex;flex-direction:column;gap:12px;position:sticky;top:calc(var(--nav-h) + 16px)}
+.dash-rail-acts{display:grid;gap:6px}
+.dash-rail-acts .btn{justify-content:flex-start}
+.fact-strip{display:grid;gap:1px;background:var(--border);border:1px solid var(--border2);border-radius:var(--r);overflow:hidden}
+.fact{background:var(--bg2);padding:10px 13px;cursor:pointer;transition:background .15s}
+.fact:hover{background:var(--bg3)}
+.fact-lbl{font-size:10px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
+.fact-val{font-family:var(--display);font-size:19px;font-weight:700;margin-top:2px}
+.fact-sub{font-size:11px;color:var(--muted2)}
+@media (max-width:980px){
+  .dash-rail{position:static}
+  .dash-rail-acts{grid-template-columns:repeat(2,1fr)}
+  .fact-strip{grid-template-columns:repeat(3,1fr)}
+}

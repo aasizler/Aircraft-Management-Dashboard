@@ -300,7 +300,10 @@ function calMonthDue(lastDate: string, days: number): Date {
  *    not, which made empty aircraft read as airworthy.
  */
 export function ic(i: Insp, maintHrs: number) {
-  const blank = { p: 0, nl: "—", due: "", remNum: "—" as string | number, remUnit: "", remFoot: "" };
+  const blank = {
+    p: 0, nl: "—", due: "", remNum: "—" as string | number, remUnit: "", remFoot: "",
+    remHrs: undefined as number | undefined, remDays: undefined as number | undefined,
+  };
 
   // Never recorded → not tracked. Never green.
   if (!i.lastDate && !i.populated && i.lastHobbs == null)
@@ -314,6 +317,11 @@ export function ic(i: Insp, maintHrs: number) {
     // When it is next due, without the countdown. `nl` carries both, which
     // reads as one number twice anywhere the countdown is already on screen.
     due = "";
+  // What is actually left, in the units the interval is written in. Callers
+  // rank on these; a percentage cannot be ranked across intervals of different
+  // lengths, and 80% of a two-year cert is five months away.
+  let remHrs: number | undefined;
+  let remDays: number | undefined;
   let hoursBlocked = false;
   // "Overdue" is a claim about the DUE DATE, not about a progress bar reaching
   // 100%. The calendar bar fills the moment the due day starts, so deriving the
@@ -331,6 +339,7 @@ export function ic(i: Insp, maintHrs: number) {
       const u = maintHrs - (i.lastHobbs || 0);
       p = Math.min(100, (u / i.intervalHrs) * 100);
       const rem = Math.max(0, i.intervalHrs - u);
+      remHrs = i.intervalHrs - u;
       pastDue = u >= i.intervalHrs;
       due = `${(i.lastHobbs + i.intervalHrs).toFixed(1)} hrs`;
       nl = `${due} (${rem.toFixed(1)} hrs rem)`;
@@ -391,10 +400,21 @@ export function ic(i: Insp, maintHrs: number) {
   if (!i.intervalHrs && !i.intervalDays)
     return { ...blank, s: "unknown" as InspStatus, nl: "no interval set" };
 
+  // "Due soon" is a claim about how much is left, not about how much of the
+  // interval has been used. At 80% of its interval a 24-month cert has five
+  // months to run and nothing to do about it, while a 50-hour check has ten
+  // hours — the same number meaning two unrelated things. Thresholds are a
+  // share of the interval, capped at what an operator would actually act on:
+  // a month's notice on the calendar, ten hours on the meter.
+  const warnDays = Math.min(30, Math.max(3, (i.intervalDays ?? 0) * 0.1));
+  const warnHrs = Math.min(10, Math.max(2, (i.intervalHrs ?? 0) * 0.2));
+  const soon =
+    (remDays != null && remDays <= warnDays) || (remHrs != null && remHrs <= warnHrs);
+
   let s: InspStatus = "ok";
   if (pastDue) s = "overdue";
-  else if (p >= 80) s = "warn";
-  return { p, s, nl, due, remNum, remUnit, remFoot, hoursBlocked };
+  else if (soon) s = "warn";
+  return { p, s, nl, due, remNum, remUnit, remFoot, remHrs, remDays, hoursBlocked };
 }
 
 // Labels match v1's _inspRow() exactly — a healthy inspection reads "Current",
@@ -652,11 +672,31 @@ const LEVEL_LABEL: Record<AirworthinessLevel, string> = {
 
 export function airworthiness(a: V1Aircraft, maintHrs: number): Airworthiness {
   const all = (a.inspections ?? []) as Insp[];
+  // Soonest first, which needs one axis. Hours become days at the rate this
+  // aeroplane has actually been flown lately; with nothing logged, fall back to
+  // a nominal 0.3 hrs/day (about 110 hours a year) so an hours-based item still
+  // ranks somewhere sensible rather than at infinity.
+  const flown = readMonthly(a.monthlyHours, 6).reduce((t, m) => t + m.hours, 0);
+  const perDay = flown > 0 ? flown / 182 : 0.3;
+  const daysToDue = (st: ReturnType<typeof ic>) => {
+    const byDate = st.remDays;
+    const byHrs = st.remHrs != null ? st.remHrs / perDay : undefined;
+    if (byDate == null) return byHrs ?? Number.POSITIVE_INFINITY;
+    if (byHrs == null) return byDate;
+    return Math.min(byDate, byHrs);
+  };
+
   const scored = all
     .map((i, idx) => ({ i, idx }))
     .filter((x) => !x.i.inactive)
     .map((x) => ({ ...x, st: ic(x.i, maintHrs) }))
-    .sort((x, y) => y.st.p - x.st.p);
+    .sort((x, y) => {
+      // Anything that cannot be dated sits below anything that can, rather
+      // than sorting as if it were due today.
+      const a1 = daysToDue(x.st), b1 = daysToDue(y.st);
+      if (a1 !== b1) return a1 - b1;
+      return y.st.p - x.st.p;
+    });
 
   const tracked = scored.filter((x) => x.st.s !== "none" && x.st.s !== "unknown");
   const overdue = tracked.filter((x) => x.st.s === "overdue");
