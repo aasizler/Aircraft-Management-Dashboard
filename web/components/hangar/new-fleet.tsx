@@ -46,7 +46,7 @@ export function NewFleetButton({ orgId }: { orgId: string }) {
   return (
     <>
       <button className="btn" onClick={() => setOpen(true)}>
-        <Icon name="hangar" size={15} />New Fleet
+        <Icon name="fleet" size={15} />New Fleet
       </button>
 
       {open && (
