@@ -724,6 +724,7 @@ canvas.chart{display:block;width:100%;height:150px}
 .ad-gap-link{color:var(--muted3);font-weight:600;text-decoration:none}
 .ad-gap-link:hover{color:var(--accent)}
 .rail-block{margin-top:18px;padding-top:15px;border-top:1px solid var(--border2)}
+.ad-rail > .aw-block:first-child,
 .ad-rail > .rail-block:first-child{margin-top:0;padding-top:0;border-top:0}
 .news-item{display:block;text-decoration:none;color:inherit;border-top:1px solid var(--border2);padding:9px 2px 10px}
 .news-item:first-of-type{border-top:0}
