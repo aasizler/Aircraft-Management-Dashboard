@@ -57,11 +57,11 @@ html, body { height: 100%; }
 .btn:hover svg{color:var(--text)}
 /* Primary is a tint, not a slab: one saturated block was the loudest thing on
    a page of soft dark cards, and it is not the most important thing on it. */
-/* An accent edge at rest, so it reads as a control rather than a floating
-   patch of colour, and the same edge at full strength on hover. The fill does
-   not move: brightening it as well made the hover a wash rather than an
-   outline, and the outline is the app's signal. */
-.btn.primary{background:var(--accent-dim);border-color:rgba(59,158,255,.38);color:var(--accent)}
+/* A neutral edge at rest so it reads as a control, going accent on hover —
+   blue on the border is the hover, not the resting state. The fill does not
+   move with it: brightening both made the hover a wash rather than an outline,
+   and the outline is the signal every other control here uses. */
+.btn.primary{background:var(--accent-dim);border-color:var(--border3);color:var(--accent)}
 .btn.primary:hover{background:var(--accent-dim);border-color:var(--accent);color:var(--accent)}
 .btn.primary svg,.btn.primary:hover svg{color:var(--accent)}
 .btn.sm{height:var(--ctl-h-sm);padding:0 12px;font-size:12px}
