@@ -278,6 +278,9 @@ export function FlightMap({
       center: [-95, 39],
       zoom: 3,
       scrollZoom: false, // ctrl/⌘ + scroll only, as in v1
+      // Always expanded: the compact ⓘ toggle is a control of its own, and the
+      // credit sits centred along the bottom edge between the two button groups.
+      attributionControl: { compact: false },
     });
     mapRef.current = map;
     map.on("error", (e) => console.error("[flight-map]", e.error?.message ?? e));
