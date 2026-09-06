@@ -92,6 +92,10 @@ type Ctx = {
    * rather than every consumer carrying a callback it has no use for.
    */
   onLanding: (cb: ((l: Landing) => void) | null) => void;
+  /** The floating telemetry panel. Open by default; the map's aircraft marker reopens it. */
+  livePanel: boolean;
+  showLivePanel: () => void;
+  hideLivePanel: () => void;
 };
 
 const AircraftCtx = createContext<Ctx | null>(null);
@@ -313,10 +317,14 @@ export function AircraftDetailClient({
   }, []);
   const handleLanding = useCallback((l: Landing) => landingCb.current?.(l), []);
   const live = useLivePosition(previewSave ? "" : aircraft.reg, handleLanding);
+  const [livePanel, setLivePanel] = useState(true);
+  const showLivePanel = useCallback(() => setLivePanel(true), []);
+  const hideLivePanel = useCallback(() => setLivePanel(false), []);
   const where = useWhere(live.status, live.state, aircraft.airport);
 
   const ctx: Ctx = {
     aircraft, data, meters, maintHrs, costHrs, save, go, consumeAction, live, onLanding,
+    livePanel, showLivePanel, hideLivePanel,
     role,
     allow: (p: Permission) => can(role, p),
     focusInsp,

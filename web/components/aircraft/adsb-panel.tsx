@@ -1,18 +1,19 @@
 "use client";
 
-import { useState } from "react";
 import type { LiveState } from "@/lib/adsb";
 
 /**
  * Floating live-telemetry panel, ported from v1's _getOrCreateAdsbPanel /
  * _fillAdsbPanel / _openAdsbPopup. Shown only while the aircraft is airborne.
  */
-export function AdsbPanel({ reg, state }: { reg: string; state: LiveState }) {
-  const [open, setOpen] = useState(true);
-
+export function AdsbPanel({
+  reg, state, open, onOpen, onClose,
+}: {
+  reg: string; state: LiveState; open: boolean; onOpen: () => void; onClose: () => void;
+}) {
   if (!open) {
     return (
-      <button className="adsb-panel-reopen" onClick={() => setOpen(true)}>
+      <button className="adsb-panel-reopen" onClick={onOpen}>
         <span className="adsb-pulse" /> {reg} live
       </button>
     );
@@ -38,7 +39,7 @@ export function AdsbPanel({ reg, state }: { reg: string; state: LiveState }) {
       <div className="adsb-panel-hd">
         <span className="adsb-pulse" />
         <span className="adsb-panel-reg">{reg}</span>
-        <button className="adsb-panel-x" onClick={() => setOpen(false)} aria-label="Hide panel">
+        <button className="adsb-panel-x" onClick={onClose} aria-label="Hide panel">
           ×
         </button>
       </div>

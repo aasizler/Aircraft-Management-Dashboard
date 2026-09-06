@@ -7,7 +7,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { AP_FULL } from "@/lib/reference-data";
 import { apLookup, loadAirportDb, onAirportDbUpgrade } from "@/lib/airports";
 import { today, type RouteEntry, type V1Aircraft } from "@/lib/aircraft";
-import { altColor, type TrackPoint } from "@/lib/adsb";
+import { altColor, type LiveState, type TrackPoint } from "@/lib/adsb";
 import { useAircraft } from "./detail-client";
 import { getFlightTrack, listFlightHistory, type FlightHistoryRow } from "@/lib/flight-history";
 import { Modal } from "@/components/ui/modal";
@@ -127,7 +127,15 @@ export function FlightMap({
   const [replay, setReplay] = useState<TrackPoint[] | null>(null);
   const [replayBusy, setReplayBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
-  const { state: live, track } = useAircraft().live;
+  const { live: { state: live, track }, showLivePanel } = useAircraft();
+  // The live aircraft marker (v1 _mlAcMarker): a DOM marker, not a layer, so
+  // the glyph can rotate to track and the ring can animate in CSS.
+  const acRef = useRef<maplibregl.Marker | null>(null);
+  // Whether this map instance has been pointed at the live aircraft yet. The
+  // first fix centres the view once; after that the user's pan stands.
+  const centredRef = useRef(false);
+  const liveRef = useRef<LiveState | null>(live);
+  useEffect(() => { liveRef.current = live; }, [live]);
   // Read inside the map's load handler, which runs outside React's render.
   const basemapRef = useRef<"map" | "satellite">("map");
   // airport code → ids of every route touching it, for hover highlighting.
@@ -203,7 +211,8 @@ export function FlightMap({
     });
 
     const coords = Object.values(pts).map((p) => p.coord);
-    if (coords.length) {
+    // A live aircraft owns the view; the airport fit would yank it away.
+    if (coords.length && liveRef.current?.lat == null) {
       const b = new maplibregl.LngLatBounds();
       coords.forEach((c) => b.extend(c));
       map.fitBounds(b, { padding: 60, maxZoom: 8, duration: 0 });
@@ -290,7 +299,6 @@ export function FlightMap({
       loadedRef.current = true;
       setReady(true);
 
-      map.addSource("live", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       // Recorded track of the current flight, one segment per leg so each can
       // carry its own altitude colour (v1 painted a line-gradient).
       map.addSource("track", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
@@ -364,18 +372,6 @@ export function FlightMap({
         layout: { "line-cap": "round", "line-join": "round" },
         paint: { "line-color": ["get", "color"], "line-width": 2.4 },
       });
-      map.addLayer({
-        id: "live-dot",
-        type: "circle",
-        source: "live",
-        paint: {
-          "circle-radius": 7,
-          "circle-color": "#00e164",
-          "circle-stroke-color": "#04231a",
-          "circle-stroke-width": 2,
-        },
-      });
-
       // Hover tooltips, airport-fan highlighting and click-through detail —
       // v1's _mlWireHover(), including the wide invisible hit layer for routes.
       const popup = new maplibregl.Popup({
@@ -443,6 +439,9 @@ export function FlightMap({
     return () => {
       window.clearTimeout(hintTimer);
       host.removeEventListener("wheel", onWheel);
+      acRef.current?.remove();
+      acRef.current = null;
+      centredRef.current = false;
       map.remove();
       mapRef.current = null;
       loadedRef.current = false;
@@ -522,24 +521,52 @@ export function FlightMap({
       map.setPaintProperty("bg", "background-color", isLight() ? "#e8e8e6" : "#080e14");
   }, [basemap, tiles, labelTiles, ready]);
 
-  // Push the live ADS-B position to the map marker as it polls.
+  // Push the live ADS-B position to the aircraft marker as it polls (v1
+  // _mlSyncAircraft): the glyph turns to the track, greys out on the ground,
+  // pulses while airborne, and opens the telemetry panel when clicked.
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !ready) return;
-    const src = map.getSource("live") as maplibregl.GeoJSONSource | undefined;
-    if (!src) return;
-    src.setData({
-      type: "FeatureCollection",
-      features:
-        live && live.lat != null && live.lon != null
-          ? [{
-              type: "Feature",
-              geometry: { type: "Point", coordinates: [live.lon, live.lat] },
-              properties: {},
-            }]
-          : [],
-    });
-  }, [live, ready]);
+    if (!live || live.lat == null || live.lon == null) {
+      acRef.current?.remove();
+      acRef.current = null;
+      return;
+    }
+    const pos: [number, number] = [live.lon, live.lat];
+    if (!acRef.current) {
+      const el = document.createElement("div");
+      el.className = "ml-ac";
+      el.title = "Show flight data";
+      el.innerHTML =
+        '<div class="ml-ac-ring"></div>' +
+        '<svg viewBox="0 0 100 100" width="30" height="30"><path d="M50,2 C46,2 44,5 44,14 L41,36 L4,54 L4,63 L41,55 L42,74 L32,79 L32,86 L50,81 L68,86 L68,79 L58,74 L59,55 L96,63 L96,54 L59,36 L56,14 C56,5 54,2 50,2Z"/></svg>';
+      el.addEventListener("click", (ev) => { ev.stopPropagation(); showLivePanel(); });
+      acRef.current = new maplibregl.Marker({ element: el }).setLngLat(pos).addTo(map);
+    }
+    const mk = acRef.current;
+    mk.setLngLat(pos);
+    const el = mk.getElement();
+    const svg = el.querySelector("svg") as SVGElement | null;
+    const ring = el.querySelector(".ml-ac-ring") as HTMLElement | null;
+    if (svg) {
+      svg.style.transform = `rotate(${live.track ?? 0}deg)`;
+      svg.querySelector("path")?.setAttribute("fill", live.onGround ? "#94a3b8" : accentHex());
+    }
+    if (ring) ring.style.display = live.onGround ? "none" : "block";
+
+    // First fix: bring the aircraft (and what it has flown so far) into view.
+    if (!centredRef.current) {
+      centredRef.current = true;
+      const pts = track.length > 1 ? track.map((p) => [p.lon, p.lat] as [number, number]) : [];
+      if (pts.length) {
+        const b = new maplibregl.LngLatBounds();
+        [...pts, pos].forEach((c) => b.extend(c));
+        map.fitBounds(b, { padding: 60, maxZoom: 9, duration: 0 });
+      } else {
+        map.jumpTo({ center: pos, zoom: Math.max(map.getZoom(), 8) });
+      }
+    }
+  }, [live, track, ready, showLivePanel]);
 
   // Altitude-coloured breadcrumb — the flight in progress, or the replayed one.
   useEffect(() => {

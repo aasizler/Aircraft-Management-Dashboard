@@ -74,7 +74,7 @@ export function LiveBanner({
 
   // The page polls once and shares it; this row only registers what to do when
   // the aeroplane lands, which is the one thing no other consumer wants.
-  const { live, onLanding: registerLanding, go } = useAircraft();
+  const { live, onLanding: registerLanding, go, livePanel, showLivePanel, hideLivePanel } = useAircraft();
   const { state, status } = live;
   useEffect(() => {
     registerLanding(save ? onLanding : null);
@@ -214,7 +214,9 @@ export function LiveBanner({
   return (
     <>
       {banner}
-      {status === "airborne" && state && <AdsbPanel reg={reg} state={state} />}
+      {status === "airborne" && state && (
+        <AdsbPanel reg={reg} state={state} open={livePanel} onOpen={showLivePanel} onClose={hideLivePanel} />
+      )}
 
       {landing && (
         <Modal title={`${reg} has landed`} onClose={() => setLanding(null)}>
