@@ -509,14 +509,6 @@ export function HangarGrid({
                     <span className="band-chip">
                       {a.craftRole ? CRAFT_ROLE_LABELS[a.craftRole] : ROLE_LABELS[a.appRole]}
                     </span>
-                    {a.shared && (
-                      <span
-                        className="tile-shared"
-                        title={a.sharedBy ? `Shared by ${a.sharedBy}` : "Shared with you"}
-                      >
-                        SHARED
-                      </span>
-                    )}
                     {Object.values(menuFor(a)).some(Boolean) && (
                       <Menu>
                         <MenuTrigger asChild>
@@ -594,6 +586,14 @@ export function HangarGrid({
                       >
                         {a.reg}
                       </Link>
+                      {a.shared && (
+                        <span
+                          className="tile-shared"
+                          title={a.sharedBy ? `Shared by ${a.sharedBy}` : "Shared with you"}
+                        >
+                          SHARED
+                        </span>
+                      )}
                     </div>
                     <div className="ac-tile-type">{a.type ?? "—"}</div>
                     <div className="ac-tile-serial">{a.serial ?? ""}</div>

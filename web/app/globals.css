@@ -309,7 +309,7 @@ canvas.chart{display:block;width:100%;height:150px}
 .band-chip{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted3);background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.09);border-radius:999px;padding:3px 9px;backdrop-filter:blur(3px);white-space:nowrap}
 
 .ac-tile-body{flex:1;display:flex;flex-direction:column;padding:12px 14px 9px}
-.ac-tile-reg{font-size:22px;font-weight:800;font-family:var(--body);letter-spacing:.02em;line-height:1.1}
+.ac-tile-reg{font-size:22px;font-weight:800;font-family:var(--body);letter-spacing:.02em;line-height:1.1;display:flex;align-items:center;gap:8px}
 /* Was accent blue and bold, which outshouted the registration above it. */
 .ac-tile-type{font-size:12px;color:var(--muted3);font-family:var(--body);margin-top:2px;line-height:1.35}
 .ac-tile-serial{font-size:10px;color:var(--muted);margin-top:1px;font-family:var(--mono);padding-bottom:10px}
@@ -501,7 +501,7 @@ canvas.chart{display:block;width:100%;height:150px}
 /* Typed delete confirmation — v1's promptDeleteAircraft() field. */
 /* v1 marked shared aircraft on the hero; the hangar needs it more, since two
    orgs may each hold a record for the same registration. */
-.tile-shared{font-family:var(--mono);font-size:9px;letter-spacing:.1em;padding:3px 7px;border-radius:4px;background:rgba(34,226,166,.08);border:1px solid rgba(34,226,166,.22);color:var(--ok);margin-left:6px;white-space:nowrap}
+.tile-shared{font-family:var(--mono);font-size:8px;letter-spacing:.09em;padding:2px 5px;border-radius:4px;background:rgba(34,226,166,.08);border:1px solid rgba(34,226,166,.22);color:var(--ok);margin-left:auto;flex-shrink:0;line-height:1.4}
 .confirm-type-lbl{margin:12px 0 6px;font-size:11px;color:var(--muted);font-family:var(--mono)}
 .confirm-type-lbl b{color:var(--text)}
 .confirm-type-input{width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:7px;padding:9px 12px;color:var(--text);font-family:var(--mono);font-size:13px;outline:none;letter-spacing:.08em;text-transform:uppercase}
