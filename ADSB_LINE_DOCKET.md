@@ -25,24 +25,24 @@ loads, then swaps to the nearest field. On a slow connection the hero visibly
 changes from grey `KPIE` to white `KSRQ` after a pause. Options: hold the slot
 until it resolves, or accept the swap and make it less abrupt.
 
-## 3. "Searching…" flashes on every load
+## 3, 4, 5 — considered and declined, 6 Sep
 
-The first poll has not returned, so every visit shows a searching row for a
-second before settling. It is a state almost nobody needs to see. Consider
-holding the previous state, or rendering nothing until the first result.
+Three items about the row's prominence, mocked up together because they are one
+problem: "Searching…" flashing on load, a full banner for the quiet states, and
+the sync pill riding inside the green live container when airborne.
 
-## 4. The row is a full-width banner for a non-event
+Three alternatives were built and shown across every state — collapse the quiet
+states to a single line, drop the card for a rule and a line, or render no row
+at all when quiet. **The current full banner was preferred.** Not revisiting
+unless something else changes.
 
-"No live signal" is the normal condition for most of the fleet, and it takes the
-same height and prominence as an aircraft actually being airborne. Worth asking
-whether the quiet states should collapse to a single line.
-
-## 5. The sync pill rides inside the live container
-
-When airborne the row turns green and carries altitude, speed, heading and V/S —
-and the Synced pill and Updated stamp sit inside that same coloured box. One row
-doing two unrelated jobs. Flagged when it shipped; may be fine, may want the
-stamp somewhere calmer.
+Worth keeping in mind if it comes up again: the argument for changing it was
+that the hero now carries the location, so a quiet row largely restates it, and
+that the searching state is a full banner announcing a network request on every
+page load. The argument against, which won, is that a constant-height row does
+not shift the page when an aeroplane launches, and the quiet states still say
+*why* there is no position — "not broadcasting" and "feed unreachable" are
+different facts and the hero cannot carry either.
 
 ## Yours
 
