@@ -51,7 +51,7 @@ html, body { height: 100%; }
 .nav-dot{width:10px;height:10px;border-radius:50%;background:var(--accent);flex-shrink:0}
 .nav-right{margin-left:auto;display:flex;gap:8px;align-items:center}
 /* BUTTONS */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:var(--ctl-h);padding:0 14px;white-space:nowrap;line-height:1;border-radius:var(--ctl-r);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--body);transition:background .15s,border-color .15s,color .15s;border:1px solid transparent;background:var(--bg3);color:var(--muted3)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:var(--ctl-h);padding:0 14px;white-space:nowrap;line-height:1;border-radius:var(--ctl-r);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--body);transition:background .15s,border-color .15s,color .15s,box-shadow .15s,transform .15s;border:1px solid transparent;background:var(--bg3);color:var(--muted3)}
 .btn:hover{background:var(--bg4);border-color:var(--accent);color:var(--text)}
 .btn svg{color:var(--muted2);transition:color .15s}
 .btn:hover svg{color:var(--text)}
@@ -62,7 +62,10 @@ html, body { height: 100%; }
    move with it: brightening both made the hover a wash rather than an outline,
    and the outline is the signal every other control here uses. */
 .btn.primary{background:var(--accent-dim);border-color:var(--border3);color:var(--accent)}
-.btn.primary:hover{background:var(--accent-dim);border-color:var(--accent);color:var(--accent)}
+/* Hover thickens the line rather than swapping border-width, which would
+   reflow the button by a pixel and nudge everything beside it. The ring sits
+   outside the border, so the two read as one 2px edge. */
+.btn.primary:hover{background:var(--accent-dim);border-color:var(--accent);color:var(--accent);box-shadow:0 0 0 1px var(--accent);transform:scale(1.03)}
 .btn.primary svg,.btn.primary:hover svg{color:var(--accent)}
 .btn.sm{height:var(--ctl-h-sm);padding:0 12px;font-size:12px}
 .btn.danger-btn{border-color:rgba(255,64,80,.35);color:var(--danger);background:none}
