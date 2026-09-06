@@ -360,6 +360,8 @@ canvas.chart{display:block;width:100%;height:150px}
    its airworthiness colour, so it reinforces the chip rather than adding a hue. */
 .flight-btn{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 6px;border-radius:var(--ctl-r);border:1px solid transparent;background:transparent;color:var(--muted2);cursor:pointer;transition:background .15s,border-color .15s,color .15s}
 .flight-btn:hover,.flight-btn:focus-visible{background:var(--bg4);border-color:var(--border3);color:var(--text)}
+.flight-btn.on-live{color:var(--text);border-color:rgba(0,225,100,.28);flex-shrink:0}
+.flight-btn.on-live:hover,.flight-btn.on-live:focus-visible{background:rgba(0,225,100,.12);border-color:var(--ok)}
 .flight-lbl{flex:0 0 auto;display:none;font-family:var(--mono);font-size:10px;letter-spacing:.03em;white-space:nowrap}
 .flight-btn:hover .flight-lbl,.flight-btn:focus-visible .flight-lbl{display:inline}
 .fdot{width:6px;height:6px;border-radius:50%;flex:0 0 auto}

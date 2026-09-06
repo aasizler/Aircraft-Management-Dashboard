@@ -629,7 +629,12 @@ export function HangarGrid({
                             }}
                           >
                             <span className="flight-lbl">View flight</span>
-                            <span className={`fdot ${st.cls}`} />
+                            {/* The dot follows the airworthiness colour so it
+                                does not clash with an orange or red tile — but
+                                "untracked" is a statement about paperwork, and
+                                an aeroplane in the air is live whatever its
+                                paperwork says. Green there. */}
+                            <span className={`fdot ${st.cls === "untracked" ? "current" : st.cls}`} />
                             <Icon name="signal" size={13} />
                           </button>
                         )}

@@ -74,7 +74,7 @@ export function LiveBanner({
 
   // The page polls once and shares it; this row only registers what to do when
   // the aeroplane lands, which is the one thing no other consumer wants.
-  const { live, onLanding: registerLanding } = useAircraft();
+  const { live, onLanding: registerLanding, go } = useAircraft();
   const { state, status } = live;
   useEffect(() => {
     registerLanding(save ? onLanding : null);
@@ -194,6 +194,19 @@ export function LiveBanner({
           {state?.vspd != null && <Stat label="V/S" value={`${state.vspd > 0 ? "+" : ""}${state.vspd} fpm`} />}
           {state?.squawk && <Stat label="Squawk" value={state.squawk} />}
         </div>
+        {/* The same control the hangar tile carries, doing the same thing: a
+            live dot and the signal glyph, expanding to its words on hover. The
+            row said the aeroplane was flying and gave you no way to look at
+            the flight. */}
+        <button
+          className="flight-btn on-live"
+          title="View the current flight"
+          onClick={() => go("Utilization")}
+        >
+          <span className="flight-lbl">View flight</span>
+          <span className="fdot current" />
+          <Icon name="signal" size={13} />
+        </button>
         {stamp}
       </div>
     );
