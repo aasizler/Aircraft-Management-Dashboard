@@ -320,9 +320,11 @@ export function AircraftDetailClient({
             )}
           </div>
 
-          {typeof data.lastUpdated === "string" && data.lastUpdated && (
-            <span className="last-sync">{data.lastUpdated}</span>
-          )}
+          {/* The record's own state — saved, and last changed — moved to the
+              ADS-B row, which is already about the data rather than the
+              aeroplane. It leaves room here for a fourth and fifth clock when a
+              twin turns up. */}
+          <span className="hero-divider tall" />
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             {/* Aircraft Settings and Manage Access live in the nav ⋮ menu and the
                 hangar tile menu, as they did in v1 — the hero stays uncluttered. */}
@@ -333,15 +335,20 @@ export function AircraftDetailClient({
               <ManageAccess aircraftId={aircraft.id} orgId={aircraft.org_id} reg={aircraft.reg} viaFleet={viaFleet} hidden />
             )}
             {!previewSave && <MeterCapture aircraft={aircraft} />}
-            <span className={`sync-badge ${sync}`}>
-              <span className="sync-dot" />
-              {sync === "syncing" ? "Saving…" : sync === "error" ? "Error" : "Synced"}
-            </span>
           </div>
         </div>
 
         {/* Live ADS-B (skipped in preview harness to avoid network polling) */}
-        {!previewSave && <LiveBanner reg={aircraft.reg} aircraftId={aircraft.id} data={data} save={save} />}
+        {!previewSave && (
+          <LiveBanner
+            reg={aircraft.reg}
+            aircraftId={aircraft.id}
+            data={data}
+            save={save}
+            sync={sync}
+            lastUpdated={typeof data.lastUpdated === "string" ? data.lastUpdated : null}
+          />
+        )}
 
         {/* Tab bar. v1 hid the Insurance button outright for roles without
             financial access and refused to navigate there; the port showed it

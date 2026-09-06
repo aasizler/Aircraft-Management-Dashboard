@@ -30,11 +30,16 @@ export function LiveBanner({
   aircraftId,
   data,
   save,
+  sync,
+  lastUpdated,
 }: {
   reg: string;
   aircraftId?: string;
   data?: V1Aircraft;
   save?: (next: V1Aircraft) => Promise<void>;
+  /** Record state, shown here rather than in the hero — see the stamp below. */
+  sync?: "synced" | "syncing" | "error";
+  lastUpdated?: string | null;
 }) {
   const toast = useToast();
   const [landing, setLanding] = useState<Landing | null>(null);
@@ -91,6 +96,22 @@ export function LiveBanner({
     toast("Flight logged from ADS-B", "ok");
   }
 
+  /**
+   * Whether the record is saved, and when it last changed. Both are facts about
+   * the record rather than the aeroplane, so they sit on this row — which is
+   * already the state-of-the-data row — instead of in the hero, where they were
+   * competing with the aircraft's own identity and clocks for the same space.
+   */
+  const stamp = sync ? (
+    <div className="adsb-sync">
+      <span className={`sync-badge ${sync}`}>
+        <span className="sync-dot" />
+        {sync === "syncing" ? "Saving…" : sync === "error" ? "Error" : "Synced"}
+      </span>
+      {lastUpdated && <span className="last-sync">{lastUpdated}</span>}
+    </div>
+  ) : null;
+
   const banner = (() => {
     if (status === "searching") {
       return (
@@ -100,6 +121,7 @@ export function LiveBanner({
             <div className="adsb-banner-title">Searching for {reg}…</div>
             <div className="adsb-banner-detail">Checking live ADS-B feed</div>
           </div>
+        {stamp}
         </div>
       );
     }
@@ -115,6 +137,7 @@ export function LiveBanner({
               {reg} is flying
             </div>
           </div>
+        {stamp}
         </div>
       );
     }
@@ -127,6 +150,7 @@ export function LiveBanner({
             <div className="adsb-banner-title">{reg} — no live signal</div>
             <div className="adsb-banner-detail">Not currently broadcasting ADS-B</div>
           </div>
+        {stamp}
         </div>
       );
     }
@@ -141,6 +165,7 @@ export function LiveBanner({
               {state?.callsign ? `${state.callsign} · ` : ""}Parked or taxiing
             </div>
           </div>
+        {stamp}
         </div>
       );
     }
@@ -161,6 +186,7 @@ export function LiveBanner({
           {state?.vspd != null && <Stat label="V/S" value={`${state.vspd > 0 ? "+" : ""}${state.vspd} fpm`} />}
           {state?.squawk && <Stat label="Squawk" value={state.squawk} />}
         </div>
+        {stamp}
       </div>
     );
   })();
