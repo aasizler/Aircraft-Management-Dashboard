@@ -770,7 +770,8 @@ export function FlightMap({
           const rows: [string, string, string?][] = [
             ["Altitude", live.onGround ? "Ground" : live.alt != null ? `${live.alt.toLocaleString()} ft` : "—"],
             ["Ground Speed", live.gspd != null ? `${Math.round(live.gspd)} kt` : "—"],
-            ["Track Heading", live.track != null ? `${Math.round(live.track)}°` : "—"],
+            ["Track", live.track != null ? `${Math.round(live.track)}°` : "—"],
+            ["True Heading", live.heading != null ? `${Math.round(live.heading)}°` : "—"],
             ["Vertical Rate",
               vs == null ? "—" : `${vs >= 0 ? "↑ " : "↓ "}${Math.abs(vs).toLocaleString()} fpm`,
               vs == null ? "" : vs > 100 ? "up" : vs < -100 ? "down" : "level"],

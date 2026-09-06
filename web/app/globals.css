@@ -656,18 +656,6 @@ canvas.chart{display:block;width:100%;height:150px}
 .map-lastflight{position:absolute;bottom:10px;left:10px;z-index:4;display:inline-flex;align-items:center;gap:6px;background:rgba(10,16,28,.82);border:1px solid var(--border2);border-radius:6px;padding:5px 12px;backdrop-filter:blur(4px)}
 .map-hint{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:rgba(20,20,20,.86);border:1px solid var(--border3);border-radius:8px;padding:8px 14px;font-size:12px;color:var(--muted3);z-index:6;pointer-events:none;backdrop-filter:blur(4px)}
 .map-foot{display:flex;justify-content:space-between;margin-top:7px;flex-wrap:wrap;gap:5px;font-size:11px;color:var(--muted)}
-/* ADS-B TELEMETRY PANEL */
-.adsb-panel{position:fixed;right:18px;bottom:18px;width:250px;background:var(--bg2);border:1px solid var(--border3);border-radius:12px;padding:15px 17px;z-index:1500;box-shadow:0 14px 40px rgba(0,0,0,.6)}
-.adsb-panel-hd{display:flex;align-items:center;gap:8px;margin-bottom:11px}
-.adsb-panel-reg{font-size:15px;font-weight:800;letter-spacing:.05em;flex:1}
-.adsb-panel-x{background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px;line-height:1;padding:0}
-.adsb-panel-x:hover{color:var(--text)}
-.adsb-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px}
-.adsb-row:last-child{border-bottom:none}
-.adsb-row-k{color:var(--muted)}
-.adsb-row-v{font-family:var(--mono);color:var(--text)}
-.adsb-panel-reopen{position:fixed;right:18px;bottom:18px;z-index:1500;display:inline-flex;align-items:center;gap:7px;background:var(--bg2);border:1px solid var(--border3);border-radius:20px;padding:7px 14px;font-size:12px;font-family:var(--body);font-weight:600;color:var(--muted3);cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.5)}
-.adsb-panel-reopen:hover{border-color:var(--accent);color:var(--accent)}
 /* ACCENT SWATCHES */
 .accent-swatch{width:28px;height:28px;border-radius:50%;background:var(--sw);border:2px solid transparent;cursor:pointer;transition:transform .15s;flex-shrink:0}
 .accent-swatch:hover{transform:scale(1.12)}

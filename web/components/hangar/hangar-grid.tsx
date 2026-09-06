@@ -637,7 +637,7 @@ export function HangarGrid({
                             }}
                           >
                             <span className="flight-lbl">View flight</span>
-                            <Icon name="signal" size={13} live />
+                            <Icon name="signal" size={16} live />
                           </button>
                         )}
                       </div>

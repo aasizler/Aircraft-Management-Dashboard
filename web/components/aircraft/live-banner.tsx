@@ -5,7 +5,6 @@ import { Icon } from "@/components/ui/icon";
 import { nearestAirport, type Landing } from "@/lib/adsb";
 import { pushLiveFlight } from "@/lib/flight-history";
 import { loadAirportDb } from "@/lib/airports";
-import { AdsbPanel } from "./adsb-panel";
 import { Modal } from "@/components/ui/modal";
 import { today, type FlightEntry, type RouteEntry, type V1Aircraft } from "@/lib/aircraft";
 import { useToast } from "@/components/ui/toast";
@@ -74,7 +73,7 @@ export function LiveBanner({
 
   // The page polls once and shares it; this row only registers what to do when
   // the aeroplane lands, which is the one thing no other consumer wants.
-  const { live, onLanding: registerLanding, go, livePanel, showLivePanel, hideLivePanel } = useAircraft();
+  const { live, onLanding: registerLanding, go } = useAircraft();
   const { state, status } = live;
   useEffect(() => {
     registerLanding(save ? onLanding : null);
@@ -129,7 +128,7 @@ export function LiveBanner({
               found anything. The failed-lookup row below stays still: movement
               there would imply something is being received. */}
           <span className="adsb-banner-icon seeking">
-            <Icon name="signal" size={17} live />
+            <Icon name="signal" size={20} live />
           </span>
           <div className="adsb-banner-main">
             <div className="adsb-banner-title">Searching for {reg}…</div>
@@ -143,7 +142,7 @@ export function LiveBanner({
     if (status === "error") {
       return (
         <div className="adsb-banner adsb-dock ground">
-          <span className="adsb-banner-icon"><Icon name="signal" size={17} /></span>
+          <span className="adsb-banner-icon"><Icon name="signal" size={20} /></span>
           <div className="adsb-banner-main">
             <div className="adsb-banner-title">Live tracking unavailable</div>
             <div className="adsb-banner-detail">
@@ -190,7 +189,7 @@ export function LiveBanner({
             carried a separate tiled button at the far end; this is the same
             glyph doing both jobs from the position the dot held. */}
         <button className="adsb-lead" onClick={() => go("Utilization", "view-map")} title="View the current flight">
-          <Icon name="signal" size={17} live />
+          <Icon name="signal" size={20} live />
         </button>
 
         <div className="adsb-banner-main">
@@ -202,7 +201,8 @@ export function LiveBanner({
         <div className="adsb-banner-chips">
           {state?.alt != null && <Stat label="Altitude" value={`${state.alt.toLocaleString()} ft`} />}
           {state?.gspd != null && <Stat label="Ground Spd" value={`${Math.round(state.gspd)} kt`} />}
-          {state?.track != null && <Stat label="Heading" value={`${Math.round(state.track)}°`} />}
+          {state?.track != null && <Stat label="Track" value={`${Math.round(state.track)}°`} />}
+          {state?.heading != null && <Stat label="Heading" value={`${Math.round(state.heading)}°`} />}
           {state?.vspd != null && <Stat label="V/S" value={`${state.vspd > 0 ? "+" : ""}${state.vspd} fpm`} />}
           {state?.squawk && <Stat label="Squawk" value={state.squawk} />}
         </div>
@@ -214,9 +214,6 @@ export function LiveBanner({
   return (
     <>
       {banner}
-      {status === "airborne" && state && (
-        <AdsbPanel reg={reg} state={state} open={livePanel} onOpen={showLivePanel} onClose={hideLivePanel} />
-      )}
 
       {landing && (
         <Modal title={`${reg} has landed`} onClose={() => setLanding(null)}>

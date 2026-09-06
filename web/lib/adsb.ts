@@ -21,7 +21,8 @@ export type LiveState = {
   alt: number | null; // ft, null when on ground
   onGround: boolean;
   gspd: number | null; // kt
-  track: number | null; // deg
+  track: number | null; // deg, true track over the ground
+  heading: number | null; // deg, true heading — where the nose points
   vspd: number | null; // fpm
   squawk: string | null;
   callsign: string | null;
@@ -34,6 +35,7 @@ type RawAc = {
   alt_baro?: number | "ground";
   gs?: number;
   track?: number;
+  true_heading?: number;
   baro_rate?: number;
   squawk?: string;
   flight?: string;
@@ -49,6 +51,7 @@ function normalize(ac: RawAc): LiveState {
     onGround: ground,
     gspd: ac.gs ?? null,
     track: ac.track ?? null,
+    heading: ac.true_heading ?? null,
     vspd: ac.baro_rate ?? null,
     squawk: ac.squawk ?? null,
     callsign: ac.flight?.trim() ?? null,
