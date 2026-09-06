@@ -718,6 +718,7 @@ export function FlightMap({
 
       <div
         ref={wrapRef}
+        className={`map-wrap${liveOpen && live && live.lat != null ? " live-open" : ""}`}
         style={{
           position: "relative",
           borderRadius: "var(--r)",
@@ -750,32 +751,47 @@ export function FlightMap({
             onClick={() => mapRef.current?.zoomTo((mapRef.current?.getZoom() ?? 3) - 0.585)}>−</button>
         </div>
 
-        {liveOpen && live && live.lat != null && (
-          <div className="ml-live">
-            <div className="ml-live-hd">
-              <span className="ml-live-reg">{reg}</span>
-              <span className={`ml-live-st${live.onGround ? " ground" : ""}`}>
-                {live.onGround ? "On ground" : "Airborne"}
-              </span>
-              <button className="ml-live-x" onClick={() => setLiveOpen(false)} aria-label="Hide flight data">×</button>
-            </div>
-            {([
-              ["Altitude", live.onGround ? "Ground" : live.alt != null ? `${live.alt.toLocaleString()} ft` : "—", ""],
-              ["Ground speed", live.gspd != null ? `${Math.round(live.gspd)} kt` : "—", ""],
-              ["Heading", live.track != null ? `${Math.round(live.track)}°` : "—", ""],
-              ["Vertical speed",
-                live.vspd != null ? `${live.vspd > 0 ? "+" : ""}${Math.round(live.vspd).toLocaleString()} fpm` : "—",
-                live.vspd == null ? "" : live.vspd > 100 ? " up" : live.vspd < -100 ? " down" : ""],
-              ["Squawk", live.squawk ?? "—", ""],
-              ["Callsign", live.callsign ?? "—", ""],
-            ] as [string, string, string][]).map(([k, v, c]) => (
-              <div className="ml-live-row" key={k}>
-                <span className="ml-live-k">{k}</span>
-                <span className={`ml-live-v${c}`}>{v}</span>
+        {live && live.lat != null && (() => {
+          const vs = live.vspd == null ? null : Math.round(live.vspd);
+          const span = track.length > 1 ? track[track.length - 1].t - track[0].t : 0;
+          const rows: [string, string, string?][] = [
+            ["Altitude", live.onGround ? "Ground" : live.alt != null ? `${live.alt.toLocaleString()} ft` : "—"],
+            ["Ground Speed", live.gspd != null ? `${Math.round(live.gspd)} kt` : "—"],
+            ["Track Heading", live.track != null ? `${Math.round(live.track)}°` : "—"],
+            ["Vertical Rate",
+              vs == null ? "—" : `${vs >= 0 ? "↑ " : "↓ "}${Math.abs(vs).toLocaleString()} fpm`,
+              vs == null ? "" : vs > 100 ? "up" : vs < -100 ? "down" : "level"],
+            ["Squawk", live.squawk ?? "—"],
+            ...(span > 0 ? [["Track History", `${Math.round(span / 60000)}m`] as [string, string]] : []),
+            ["Latitude", `${live.lat.toFixed(4)}°`],
+            ["Longitude", `${live.lon!.toFixed(4)}°`],
+          ];
+          return (
+            <div className={`ml-live${liveOpen ? " open" : ""}`}>
+              <div className="ml-live-hd">
+                <div>
+                  <div className="ml-live-reg">{live.callsign || reg}</div>
+                  <div className={`ml-live-st${live.onGround ? " ground" : ""}`}>
+                    {live.onGround ? "ON GROUND" : "AIRBORNE"}
+                  </div>
+                </div>
+                <button className="ml-live-x" onClick={() => setLiveOpen(false)} aria-label="Hide flight data">✕</button>
               </div>
-            ))}
-          </div>
-        )}
+              <div className="ml-live-body">
+                {rows.map(([k, v, c]) => (
+                  <div className="ml-live-row" key={k}>
+                    <div className={`ml-live-v${c ? ` ${c}` : ""}`}>{v}</div>
+                    <div className="ml-live-k">{k}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="ml-live-ft">
+                <span className={`adsb-pulse${live.onGround ? " ground" : ""}`} />
+                Live ADS-B · every 10s
+              </div>
+            </div>
+          );
+        })()}
 
         {lastFlight && (
           <button
