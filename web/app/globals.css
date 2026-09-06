@@ -930,8 +930,12 @@ canvas.chart{display:block;width:100%;height:150px}
    shape and the rhythm carry over, so connecting is a colour change rather
    than something springing into life. */
 .adsb-banner-icon.seeking{color:var(--text)}
-/* The tile's flight control is green while the aeroplane transmits. It used to
-   inherit that from the dot beside it, so removing the dot left it grey. */
-.flight-btn:has(.icon-live){color:var(--ok)}
-.flight-btn:has(.icon-live):hover,.flight-btn:has(.icon-live):focus-visible{color:var(--ok);background:var(--bg4);border-color:var(--border3)}
-.adsb-banner-icon.live{color:var(--ok);display:inline-flex;align-items:center}
+/* The tile's flight control carries the aeroplane's airworthiness colour while
+   it transmits, so a grounded aircraft in the air reads red rather than reading
+   as an ordinary live aeroplane. Untracked is the exception: grey would not say
+   "transmitting" at all, and the notable thing about an aeroplane nobody is
+   tracking is that it is flying. */
+.flight-btn.live-current{color:var(--ok)}
+.flight-btn.live-due{color:var(--warn)}
+.flight-btn.live-grounded{color:var(--danger)}
+.flight-btn[class*="live-"]:hover,.flight-btn[class*="live-"]:focus-visible{background:var(--bg4);border-color:var(--border3)}

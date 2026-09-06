@@ -4,7 +4,7 @@ import {
   airworthiness, oilLife, readMonthly, SQ_LABELS,
   type Insp, type MaintCost, type OilEntry, type Squawk } from "@/lib/aircraft";
 import { Icon, type IconName } from "@/components/ui/icon";
-import { useAircraft, type TabName, type TabProps } from "../detail-client";
+import type { TabName, TabProps } from "../detail-client";
 import { Sparkline } from "@/components/ui/charts";
 import { useDirectives } from "@/lib/use-directives";
 
@@ -28,7 +28,6 @@ export function DashboardTab({
   const squawks = (data.squawks ?? []) as Squawk[];
   const months = readMonthly(data.monthlyHours, 6);
   const sixMoHours = months.reduce((s, m) => s + m.hours, 0);
-  const { status: liveStatus, state: live } = useAircraft().live;
 
   /**
    * Directives for THIS aeroplane. The hangar rail checks the whole hangar,
@@ -166,20 +165,6 @@ export function DashboardTab({
           <b className="ds-title">{ribbon.title}</b>
           <span className="ds-sub">{ribbon.sub}</span>
         </div>
-
-        {liveStatus === "airborne" && (
-          <div className="adsb-banner" style={{ margin: "12px 0 0" }}>
-            <span className="adsb-pulse" />
-            <div className="adsb-banner-main">
-              <div className="adsb-banner-title">{aircraft.reg} is airborne now</div>
-              <div className="adsb-banner-detail">
-                {live?.alt != null ? `${live.alt.toLocaleString()} ft` : ""}
-                {live?.gspd != null ? ` · ${Math.round(live.gspd)} kt` : ""}
-              </div>
-            </div>
-            <button className="btn sm" onClick={() => go("Utilization")}>View on map</button>
-          </div>
-        )}
 
         {/* Only what the ranked list below cannot carry: a grounding squawk is
             not an inspection, and an inspection that was never recorded has no

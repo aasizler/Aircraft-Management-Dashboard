@@ -629,7 +629,7 @@ export function HangarGrid({
                         )}
                         {flying && (
                           <button
-                            className="flight-btn"
+                            className={`flight-btn live-${st.cls === "untracked" ? "current" : st.cls}`}
                             title="Airborne — view the current flight"
                             onClick={(e) => {
                               e.stopPropagation();
