@@ -44,8 +44,10 @@ const GLYPHS: Record<IconName, React.ReactNode> = {
   pencil: <path d="M15.5 4.5a2.8 2.8 0 0 1 4 4L8 20l-5 1 1-5L15.5 4.5ZM13.5 6.5l4 4M4 16l4 4" />,
   // Simpler walls and a symmetrical receiving notch.
   inbox: <path d="M3 13l3-8h12l3 8v6a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 19v-6ZM3 13h5l2 3h4l2-3h5" />,
-  // Same geometry as Log out, as in your existing set.
-  exit: <path d="M9 3.5H5a1.5 1.5 0 0 0-1.5 1.5v14A1.5 1.5 0 0 0 5 20.5h4M10 12h10.5m-4-4 4 4-4 4" />,
+  // An access card with a person stepping out through the corner: the card
+  // stays, you leave. Deliberately not the logout doorway — this is "Leave
+  // aircraft", a danger row that hands back a share you cannot restore.
+  exit: <path d="M12 4H4.5A2 2 0 0 0 2.5 6v13a2 2 0 0 0 2 2h13a2 2 0 0 0 2-2v-6M13 10a2 2 0 1 1-4 0 2 2 0 0 1 4 0ZM7.5 17v-.5A3.5 3.5 0 0 1 11 13h0a3.5 3.5 0 0 1 3.5 3.5v.5M15.5 8.5 21 3m-5 0h5v5" />,
   // A clear diagonal seam and a separate baseline.
   eraser: <path d="M4 13.5l9-9a2 2 0 0 1 2.8 0l4.7 4.7a2 2 0 0 1 0 2.8l-8 8H8l-4-3.7a2 2 0 0 1 0-2.8ZM9 8.5l7.5 7.5M12.5 20H21" />,
   // Keep the familiar symbol; slightly reduce its visual footprint.

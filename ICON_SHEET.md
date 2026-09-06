@@ -55,7 +55,7 @@ Sizes below were recorded in the original icon sheet. They are useful verificati
 | `eye` | 24 × 24 | 14, 15, 17 | A softer almond shape with more consistent outer margins. |
 | `sort` | 24 × 24 | 15 | More space between the ordering lines and arrow. |
 | `logout` | 24 × 24 | 15 | Align the arrow with the door opening; keep the familiar meaning. |
-| `exit` | 24 × 24 | 15 | Same geometry as Log out, as in your existing set. |
+| `exit` | 24 × 24 | 15 | An access card with a person stepping out through the corner. Distinct from `logout` — see EXIT_ICON_SPEC.md. |
 | `share` | 24 × 24 | 15 | Retain the familiar share tray; balance arrow and container. |
 | `inbox` | 24 × 24 | 13, 15, 16 | Simpler walls and a symmetrical receiving notch. |
 | `pencil` | 24 × 24 | 15 | Separate the nib and end cap for a clearer pencil silhouette. |
@@ -255,11 +255,11 @@ Recorded call sites from the original sheet (paths relative to `web/`; line numb
 
 ### exit
 
-Same geometry as Log out, as in your existing set.
+An access card with a person stepping out through the upper-right corner: the card stays, you leave. Deliberately not the `logout` doorway — this is the danger row that hands back a share you cannot restore yourself. Approved geometry recorded in EXIT_ICON_SPEC.md.
 
 ```svg
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-  <path d="M9 3.5H5a1.5 1.5 0 0 0-1.5 1.5v14A1.5 1.5 0 0 0 5 20.5h4M10 12h10.5m-4-4 4 4-4 4" />
+  <path d="M12 4H4.5A2 2 0 0 0 2.5 6v13a2 2 0 0 0 2 2h13a2 2 0 0 0 2-2v-6M13 10a2 2 0 1 1-4 0 2 2 0 0 1 4 0ZM7.5 17v-.5A3.5 3.5 0 0 1 11 13h0a3.5 3.5 0 0 1 3.5 3.5v.5M15.5 8.5 21 3m-5 0h5v5" />
 </svg>
 ```
 
@@ -526,7 +526,7 @@ Keep the familiar symbol; slightly reduce its visual footprint.
 
 ## Verification after implementation
 
-1. Confirm every existing `IconName` still renders, including the identical `logout` / `exit` pair and the currently unused `eraser` and `power` names.
+1. Confirm every existing `IconName` still renders, including the currently unused `eraser` and `power` names. `logout` and `exit` are no longer the same drawing.
 2. Inspect icons at their recorded 13–17 px usage sizes, camera at 26 px, and aircraft at 78 px. Check contrast, clipping, optical alignment and button spacing in the app’s actual themes.
 3. Check the 30-unit fleet and 48-unit hangar widths in navigation and buttons. Keep both aircraft in Fleet visible without overlap from layout compression.
 4. Confirm camera retains its original wider proportions. Confirm hangar has the arched roof, small symmetric winglets, five feathered blades per propeller, simple nose gear, no cockpit-window detail and no large filled fuselage.
