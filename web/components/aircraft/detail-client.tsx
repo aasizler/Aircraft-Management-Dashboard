@@ -227,10 +227,45 @@ export function AircraftDetailClient({
   };
   useAircraftRealtime(previewSave ? "" : aircraft.id, (d) => remoteRef.current(d));
 
-  const go = useCallback((t: TabName, a: PendingAction = null) => {
-    actionRef.current = a;
+  /**
+   * Every tab change goes through here, and every one leaves a history entry —
+   * so the browser's back button walks back through the tabs you visited and
+   * only then leaves the aeroplane, which is what a tabbed page does everywhere
+   * else. It used to exit to the hangar from any tab, losing the whole trail.
+   *
+   * history.pushState rather than router.push: the tab is entirely client
+   * state, and a router navigation would re-run the server component and
+   * refetch the aircraft on every click of the tab bar.
+   */
+  const openTab = useCallback((t: TabName) => {
+    // Compared against the URL, not against state, and pushed outside the
+    // updater: React may run a setState updater more than once, and it does in
+    // development, so pushing from inside it left two history entries per click
+    // and made Back need two presses per tab.
+    const cur = new URLSearchParams(window.location.search).get("tab") ?? "Dashboard";
+    if (cur.toLowerCase() !== t.toLowerCase()) {
+      const url = new URL(window.location.href);
+      if (t === "Dashboard") url.searchParams.delete("tab");
+      else url.searchParams.set("tab", t);
+      window.history.pushState(null, "", url);
+    }
     setTab(t);
   }, []);
+
+  // Back and forward put the URL where it was; follow it.
+  useEffect(() => {
+    const onPop = () => {
+      const want = new URLSearchParams(window.location.search).get("tab");
+      setTab(TABS.find((t) => t.toLowerCase() === want?.toLowerCase()) ?? "Dashboard");
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  const go = useCallback((t: TabName, a: PendingAction = null) => {
+    actionRef.current = a;
+    openTab(t);
+  }, [openTab]);
 
   const consumeAction = useCallback((...want: PendingAction[]) => {
     if (actionRef.current && want.includes(actionRef.current)) {
@@ -254,7 +289,7 @@ export function AircraftDetailClient({
     allow: (p: Permission) => can(role, p),
     focusInsp,
     // Deep-link from the dashboard into a specific inspection row (v1 preInsp).
-    focusInspection: (idx: number) => { setTab("Inspections"); setFocusInsp(idx); },
+    focusInspection: (idx: number) => { openTab("Inspections"); setFocusInsp(idx); },
     clearFocusInsp: () => setFocusInsp(null),
   };
 
@@ -379,7 +414,7 @@ export function AircraftDetailClient({
             <button
               key={t}
               className={`tab ${activeTab === t ? "active" : ""}`}
-              onClick={() => setTab(t)}
+              onClick={() => openTab(t)}
             >
               {t}
               {t === "Squawks" && openSquawks > 0 && (

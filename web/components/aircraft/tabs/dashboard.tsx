@@ -65,13 +65,25 @@ export function DashboardTab({
             : { icon: "check" as const, title: "All Clear", tone: "var(--ok)",
                 // Only mentions directives when they were actually checked and
                 // the check came back. Silence beats a claim nobody verified.
-                sub: !adsChecked
-                  ? "No inspections due and no open squawks"
-                  : adsNaming > 0
-                    ? `No inspections due or open squawks · ${adsNaming} directive${
-                        adsNaming > 1 ? "s" : ""
-                      } to review`
-                    : "No inspections due, no open squawks, nothing published for this model" };
+                sub: !adsChecked ? (
+                  "No inspections due and no open squawks"
+                ) : adsNaming > 0 ? (
+                  <>
+                    No inspections due or open squawks · {adsNaming} directive
+                    {adsNaming > 1 ? "s" : ""} to{" "}
+                    <button className="ds-link" onClick={() => go("Documents")}>
+                      review
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    No inspections due, no open squawks, nothing{" "}
+                    <button className="ds-link" onClick={() => go("Documents")}>
+                      published
+                    </button>{" "}
+                    for this model
+                  </>
+                ) };
 
   const pctColor = (st: { s: string }) =>
     st.s === "overdue" ? "var(--danger)" : st.s === "warn" ? "var(--warn)" : "var(--accent)";
