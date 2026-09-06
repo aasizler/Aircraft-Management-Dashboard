@@ -204,7 +204,6 @@ export function LiveBanner({
           onClick={() => go("Utilization")}
         >
           <span className="flight-lbl">View flight</span>
-          <span className="fdot current" />
           <Icon name="signal" size={13} live />
         </button>
         {stamp}
