@@ -633,7 +633,7 @@ export function HangarGrid({
                             title="Airborne — view the current flight"
                             onClick={(e) => {
                               e.stopPropagation();
-                              router.push(`/aircraft/${a.id}?tab=Utilization`);
+                              router.push(`/aircraft/${a.id}?tab=Utilization&at=map`);
                             }}
                           >
                             <span className="flight-lbl">View flight</span>

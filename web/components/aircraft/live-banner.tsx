@@ -189,7 +189,7 @@ export function LiveBanner({
         {/* Indicator and way in, in one place. The row led with a pulse dot and
             carried a separate tiled button at the far end; this is the same
             glyph doing both jobs from the position the dot held. */}
-        <button className="adsb-lead" onClick={() => go("Utilization")} title="View the current flight">
+        <button className="adsb-lead" onClick={() => go("Utilization", "view-map")} title="View the current flight">
           <Icon name="signal" size={17} live />
         </button>
 

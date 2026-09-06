@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/ui/toast";
 import {
@@ -50,7 +51,10 @@ type Sync = "synced" | "syncing" | "error";
 /** A quick action requested from another tab (v1's dash-quick buttons). */
 export type PendingAction =
   | "log-flight" | "add-squawk" | "log-oil" | "oil-change"
-  | "log-inspection" | "log-cost" | null;
+  | "log-inspection" | "log-cost"
+  /** Opened from a signal glyph: go to Utilization and show the map. */
+  | "view-map"
+  | null;
 
 type Ctx = {
   aircraft: AircraftRow;
@@ -124,17 +128,15 @@ export function AircraftDetailClient({
    * effect, so the right tab renders on the first pass instead of flashing the
    * dashboard and cascading a second render.
    */
+  // useSearchParams rather than window.location: on a soft navigation from the
+  // hangar the component mounts before the browser URL has been updated, so
+  // reading location.search in an initializer saw the hangar's URL and opened
+  // the Dashboard with ?tab=Utilization sitting in the address bar.
+  const params = useSearchParams();
   const [tab, setTab] = useState<TabName>(() => {
-    if (typeof window === "undefined") return "Dashboard";
-    const want = new URLSearchParams(window.location.search).get("tab");
+    const want = params.get("tab");
     return TABS.find((t) => t.toLowerCase() === want?.toLowerCase()) ?? "Dashboard";
   });
-
-  // Same tidy-up as ?access=1: the parameter shouldn't survive a reload.
-  useEffect(() => {
-    if (new URLSearchParams(window.location.search).has("tab"))
-      window.history.replaceState({}, "", window.location.pathname);
-  }, []);
 
   // Insurance carries premiums, hull values and named pilots — v1 showed that
   // tab only to roles with financial access. Deriving the active tab rather
@@ -157,6 +159,35 @@ export function AircraftDetailClient({
   }, [role]);
   const [sync, setSync] = useState<Sync>("synced");
   const actionRef = useRef<PendingAction>(null);
+  /**
+   * A signal glyph brought us here to see the flight, not the tab. Held as
+   * state on the page rather than consumed by the tab: a useState initializer
+   * runs twice in development and the second call found the action already
+   * taken, so the scroll never happened. This is idempotent — scrolling to the
+   * same place twice is the same as once.
+   */
+  const [scrollTo, setScrollTo] = useState<"map" | null>(() =>
+    params.get("at") === "map" ? "map" : null,
+  );
+  useEffect(() => {
+    if (scrollTo !== "map" || tab !== "Utilization") return;
+    // Instant rather than smooth: MapLibre and the airport database pin the
+    // main thread for a second or more on first open, and a smooth scroll never
+    // gets a frame to run in — measured 100ms timers firing 1000ms apart.
+    //
+    // And not once. On a tab switch the charts and cost table above the map
+    // are still laying out when the first scroll lands, so the map moves down
+    // afterwards and the viewport is left on the section above it — measured
+    // landing at 996 for a map that settled at 1439. Follow the layout for a
+    // bounded window: re-scroll whenever the page grows, then stop.
+    const jump = () =>
+      document.getElementById("flight-map")?.scrollIntoView({ behavior: "auto", block: "start" });
+    const first = window.setTimeout(jump, 200);
+    const ro = new ResizeObserver(jump);
+    ro.observe(document.body);
+    const done = window.setTimeout(() => { ro.disconnect(); setScrollTo(null); }, 1500);
+    return () => { window.clearTimeout(first); window.clearTimeout(done); ro.disconnect(); };
+  }, [scrollTo, tab]);
   const [focusInsp, setFocusInsp] = useState<number | null>(null);
   const toast = useToast();
 
@@ -263,7 +294,8 @@ export function AircraftDetailClient({
   }, []);
 
   const go = useCallback((t: TabName, a: PendingAction = null) => {
-    actionRef.current = a;
+    if (a === "view-map") setScrollTo("map");
+    else actionRef.current = a;
     openTab(t);
   }, [openTab]);
 

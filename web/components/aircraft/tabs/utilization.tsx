@@ -16,6 +16,7 @@ const FlightMap = dynamic(
 export function UtilizationTab(props: TabProps) {
   const { data, aircraft, maintHrs, costHrs, save, consumeAction, allow } = props;
 
+
   // v1 stores monthlyHours as a plain number array; readMonthly handles both
   // that and the {month,hours} object form. The first port assumed objects and
   // silently reported every month as zero.
@@ -105,7 +106,7 @@ export function UtilizationTab(props: TabProps) {
       />
       )}
 
-      <div className="map-section">
+      <div className="map-section" id="flight-map">
         <FlightMap
           routes={routes}
           airports={airports}
