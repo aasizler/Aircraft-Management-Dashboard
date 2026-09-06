@@ -2,24 +2,16 @@
 
 import { useEffect, useRef, useState } from "react";
 
-// FAA N-number → ICAO Mode-S hex. Ported verbatim from _nToHex() in the HTML.
-export function nToHex(nNum: string): string | null {
-  const raw = (nNum || "").trim().toUpperCase().replace(/^N/, "");
-  if (!raw) return null;
-  const ALPHA = "ABCDEFGHJKLMNPQRSTUVWXYZ"; // 24 chars — no I, O
-  const parts = raw.match(/^([0-9]{1,5})([A-HJ-NP-Z]?)([A-HJ-NP-Z]?)$/);
-  if (!parts) return null;
-  const num = parseInt(parts[1], 10);
-  if (num < 1 || num > 99999) return null;
-  const s1 = parts[2] || "",
-    s2 = parts[3] || "";
-  const i1 = s1 ? ALPHA.indexOf(s1) + 1 : 0,
-    i2 = s2 ? ALPHA.indexOf(s2) + 1 : 0;
-  const BASE = 0xa00001,
-    SLOTS = 601;
-  const sufOff = i1 > 0 ? 1 + (i1 - 1) * 25 + (i2 > 0 ? i2 : 0) : 0;
-  return (BASE + (num - 1) * SLOTS + sufOff).toString(16).toLowerCase();
-}
+/**
+ * The FAA N-number → ICAO Mode-S hex conversion that used to live here has been
+ * removed. It was ported from v1 and was simply wrong: checked against 1,682
+ * registrations the live feed reported for real aircraft, it matched none of
+ * them, and for five-digit numbers like N36120 it returned seven hex digits,
+ * which the proxy then rejected as malformed. Every lookup failed, and a failed
+ * lookup for an unmappable registration was reported as "not transmitting".
+ *
+ * adsb.lol indexes by registration, so nothing needs converting.
+ */
 
 export type LiveState = {
   lat: number | null;
@@ -75,10 +67,12 @@ export type LiveResult =
   | { ok: false; state: null };
 
 export async function fetchLive(reg: string): Promise<LiveResult> {
-  const hex = nToHex(reg);
-  if (!hex) return { ok: true, state: null }; // not an N-number we can map
+  const key = (reg ?? "").trim().toUpperCase();
+  // Not a registration at all — say the lookup failed rather than reporting a
+  // silence nobody listened for.
+  if (!/^[A-Z0-9-]{2,10}$/.test(key)) return { ok: false, state: null };
   try {
-    const res = await fetch(`/api/adsb/${hex}`);
+    const res = await fetch(`/api/adsb/${encodeURIComponent(key)}`);
     if (!res.ok) return { ok: false, state: null };
     const json = (await res.json()) as { ac?: RawAc[]; error?: string };
     if (json.error) return { ok: false, state: null };
