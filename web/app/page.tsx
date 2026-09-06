@@ -134,24 +134,24 @@ export default async function Home() {
         // should have to meet.
         right={
           <span className="hangar-actions">
+            <AddAircraftButton
+              orgId={membership?.org_id}
+              fleets={(fleets ?? []) as { id: string; name: string }[]}
+              hangarName={
+                (() => {
+                  const m = user?.user_metadata as
+                    | { first_name?: string; full_name?: string }
+                    | undefined;
+                  // Accounts predating the first/last split carry only full_name.
+                  return m?.first_name || m?.full_name?.split(/\s+/)[0] || null;
+                })()
+              }
+            />
             {/* Staff only — fleets write is is_org_staff(). Someone with one
-                aeroplane never needs a fleet, so this sits beside Add Aircraft
-                rather than competing with it. */}
+                aeroplane never needs a fleet, so it sits after Add Aircraft
+                rather than in front of it. */}
             {(membership?.role === "admin" || membership?.role === "manager") &&
               membership?.org_id && <NewFleetButton orgId={membership.org_id} />}
-          <AddAircraftButton
-            orgId={membership?.org_id}
-            fleets={(fleets ?? []) as { id: string; name: string }[]}
-            hangarName={
-              (() => {
-                const m = user?.user_metadata as
-                  | { first_name?: string; full_name?: string }
-                  | undefined;
-                // Accounts predating the first/last split carry only full_name.
-                return m?.first_name || m?.full_name?.split(/\s+/)[0] || null;
-              })()
-            }
-          />
           </span>
         }
       />
