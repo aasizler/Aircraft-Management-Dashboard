@@ -75,28 +75,6 @@ function accentHex(): string {
   return v || "#3b9eff";
 }
 
-/** Flight-data banner shown on the map when the aircraft marker is clicked. */
-function liveHtml(reg: string, s: LiveState | null): string {
-  if (!s) return "";
-  const esc = (v: string) => v.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
-  const vs = s.vspd == null ? null : `${s.vspd > 0 ? "+" : ""}${Math.round(s.vspd).toLocaleString()} fpm`;
-  const vsCls = s.vspd == null ? "" : s.vspd > 100 ? " up" : s.vspd < -100 ? " down" : "";
-  const rows: [string, string, string][] = [
-    ["Altitude", s.onGround ? "Ground" : s.alt != null ? `${s.alt.toLocaleString()} ft` : "—", ""],
-    ["Ground speed", s.gspd != null ? `${Math.round(s.gspd)} kt` : "—", ""],
-    ["Heading", s.track != null ? `${Math.round(s.track)}°` : "—", ""],
-    ["Vertical speed", vs ?? "—", vsCls],
-    ["Squawk", s.squawk ?? "—", ""],
-  ];
-  return (
-    `<div class="ml-live-hd"><span class="ml-live-reg">${esc(reg)}</span>` +
-    `<span class="ml-live-st${s.onGround ? " ground" : ""}">${s.onGround ? "On ground" : "Airborne"}</span>` +
-    (s.callsign && s.callsign !== reg ? `<span class="ml-live-cs">${esc(s.callsign)}</span>` : "") +
-    `</div>` +
-    rows.map(([k, v, c]) => `<div class="ml-live-row"><span class="ml-live-k">${k}</span><span class="ml-live-v${c}">${esc(v)}</span></div>`).join("")
-  );
-}
-
 /** Unhighlighted route colour, per basemap and theme (v1's _mlRouteBaseColor). */
 function routeBaseColor(basemap: string, light: boolean): string {
   if (basemap === "satellite") return "#e2e8f0";
@@ -153,8 +131,8 @@ export function FlightMap({
   // The live aircraft marker (v1 _mlAcMarker): a DOM marker, not a layer, so
   // the glyph can rotate to track and the ring can animate in CSS.
   const acRef = useRef<maplibregl.Marker | null>(null);
-  // The flight-data banner anchored to that marker; opened by clicking it.
-  const acPopRef = useRef<maplibregl.Popup | null>(null);
+  // The flight-data banner docked to the map's left edge; the marker toggles it.
+  const [liveOpen, setLiveOpen] = useState(false);
   // Whether this map instance has been pointed at the live aircraft yet. The
   // first fix centres the view once; after that the user's pan stands.
   const centredRef = useRef(false);
@@ -463,8 +441,6 @@ export function FlightMap({
     return () => {
       window.clearTimeout(hintTimer);
       host.removeEventListener("wheel", onWheel);
-      acPopRef.current?.remove();
-      acPopRef.current = null;
       acRef.current?.remove();
       acRef.current = null;
       centredRef.current = false;
@@ -554,14 +530,11 @@ export function FlightMap({
     const map = mapRef.current;
     if (!map || !ready) return;
     if (!live || live.lat == null || live.lon == null) {
-      acPopRef.current?.remove();
-      acPopRef.current = null;
       acRef.current?.remove();
       acRef.current = null;
       return;
     }
     const pos: [number, number] = [live.lon, live.lat];
-    const html = () => liveHtml(reg ?? "", liveRef.current);
     if (!acRef.current) {
       const el = document.createElement("div");
       el.className = "ml-ac";
@@ -569,27 +542,9 @@ export function FlightMap({
       el.innerHTML =
         '<div class="ml-ac-ring"></div>' +
         '<svg viewBox="0 0 100 100" width="30" height="30"><path d="M50,2 C46,2 44,5 44,14 L41,36 L4,54 L4,63 L41,55 L42,74 L32,79 L32,86 L50,81 L68,86 L68,79 L58,74 L59,55 L96,63 L96,54 L59,36 L56,14 C56,5 54,2 50,2Z"/></svg>';
-      el.addEventListener("click", (ev) => {
-        ev.stopPropagation();
-        const m = mapRef.current;
-        if (!m) return;
-        if (acPopRef.current) {
-          acPopRef.current.remove();
-          acPopRef.current = null;
-          return;
-        }
-        const pop = new maplibregl.Popup({
-          closeOnClick: false, className: "ml-tip ml-live", offset: 24, maxWidth: "none",
-        })
-          .setLngLat(acRef.current!.getLngLat())
-          .setHTML(html())
-          .addTo(m);
-        pop.on("close", () => { if (acPopRef.current === pop) acPopRef.current = null; });
-        acPopRef.current = pop;
-      });
+      el.addEventListener("click", (ev) => { ev.stopPropagation(); setLiveOpen((o) => !o); });
       acRef.current = new maplibregl.Marker({ element: el }).setLngLat(pos).addTo(map);
     }
-    acPopRef.current?.setLngLat(pos).setHTML(html());
     const mk = acRef.current;
     mk.setLngLat(pos);
     const el = mk.getElement();
@@ -613,7 +568,7 @@ export function FlightMap({
         map.jumpTo({ center: pos, zoom: Math.max(map.getZoom(), 8) });
       }
     }
-  }, [live, track, ready, reg]);
+  }, [live, track, ready]);
 
   // Altitude-coloured breadcrumb — the flight in progress, or the replayed one.
   useEffect(() => {
@@ -794,6 +749,33 @@ export function FlightMap({
           <button className="map-btn map-zoom" aria-label="Zoom out"
             onClick={() => mapRef.current?.zoomTo((mapRef.current?.getZoom() ?? 3) - 0.585)}>−</button>
         </div>
+
+        {liveOpen && live && live.lat != null && (
+          <div className="ml-live">
+            <div className="ml-live-hd">
+              <span className="ml-live-reg">{reg}</span>
+              <span className={`ml-live-st${live.onGround ? " ground" : ""}`}>
+                {live.onGround ? "On ground" : "Airborne"}
+              </span>
+              <button className="ml-live-x" onClick={() => setLiveOpen(false)} aria-label="Hide flight data">×</button>
+            </div>
+            {([
+              ["Altitude", live.onGround ? "Ground" : live.alt != null ? `${live.alt.toLocaleString()} ft` : "—", ""],
+              ["Ground speed", live.gspd != null ? `${Math.round(live.gspd)} kt` : "—", ""],
+              ["Heading", live.track != null ? `${Math.round(live.track)}°` : "—", ""],
+              ["Vertical speed",
+                live.vspd != null ? `${live.vspd > 0 ? "+" : ""}${Math.round(live.vspd).toLocaleString()} fpm` : "—",
+                live.vspd == null ? "" : live.vspd > 100 ? " up" : live.vspd < -100 ? " down" : ""],
+              ["Squawk", live.squawk ?? "—", ""],
+              ["Callsign", live.callsign ?? "—", ""],
+            ] as [string, string, string][]).map(([k, v, c]) => (
+              <div className="ml-live-row" key={k}>
+                <span className="ml-live-k">{k}</span>
+                <span className={`ml-live-v${c}`}>{v}</span>
+              </div>
+            ))}
+          </div>
+        )}
 
         {lastFlight && (
           <button

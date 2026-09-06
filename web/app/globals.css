@@ -646,7 +646,7 @@ canvas.chart{display:block;width:100%;height:150px}
 .map-ctl{position:absolute;display:flex;z-index:5;background:rgba(10,16,28,.82);border:1px solid var(--border2);border-radius:6px;overflow:hidden;backdrop-filter:blur(4px)}
 .map-ctl.tl{top:10px;left:10px}
 .map-ctl.tr{top:10px;right:10px}
-.map-ctl.br{bottom:10px;right:10px;flex-direction:column;gap:4px;background:none;border:none;backdrop-filter:none}
+.map-ctl.br{bottom:38px;right:10px;flex-direction:column;gap:4px;background:none;border:none;backdrop-filter:none}
 .map-btn{background:transparent;border:none;color:var(--muted2);font-family:var(--body);font-size:11px;font-weight:600;padding:4px 12px;cursor:pointer;transition:all .15s}
 .map-btn:hover{color:var(--accent)}
 .map-btn.on{background:var(--accent);color:#fff}
@@ -952,17 +952,15 @@ canvas.chart{display:block;width:100%;height:150px}
 @keyframes mlpulse{0%{transform:scale(.55);opacity:.5}100%{transform:scale(1.35);opacity:0}}
 @media (prefers-reduced-motion:reduce){.ml-ac-ring{animation:none;opacity:.35}}
 
-/* LIVE FLIGHT BANNER — anchored to the aircraft marker, opened by clicking it */
-.maplibregl-popup.ml-live .maplibregl-popup-content{padding:9px 12px 8px;min-width:188px;border-color:var(--accent)}
-.maplibregl-popup.ml-live .maplibregl-popup-tip{border-top-color:var(--accent);border-bottom-color:var(--accent)}
-.maplibregl-popup.ml-live .maplibregl-popup-close-button{color:rgba(255,255,255,.55);font-size:15px;padding:2px 7px;right:0;top:1px}
-.maplibregl-popup.ml-live .maplibregl-popup-close-button:hover{color:#fff;background:none}
-.ml-live-hd{display:flex;align-items:baseline;gap:8px;margin:0 18px 6px 0;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,.12)}
+/* LIVE FLIGHT BANNER — docked under the basemap switcher; the aircraft marker toggles it */
+.ml-live{position:absolute;top:46px;left:10px;z-index:5;min-width:196px;background:rgba(10,16,28,.9);border:1px solid var(--accent);border-radius:8px;padding:9px 12px 8px;color:#e8edf3;font-size:12px;backdrop-filter:blur(4px);box-shadow:0 8px 24px rgba(0,0,0,.45)}
+.ml-live-hd{display:flex;align-items:baseline;gap:8px;margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,.12)}
 .ml-live-reg{font-weight:800;letter-spacing:.05em;font-size:13px;color:var(--accent)}
 .ml-live-st{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#4ade80}
 .ml-live-st.ground{color:rgba(255,255,255,.55)}
-.ml-live-cs{font-size:11px;color:rgba(255,255,255,.55);margin-left:auto}
-.ml-live-row{display:flex;justify-content:space-between;gap:16px;font-size:12px;line-height:1.7}
+.ml-live-x{margin-left:auto;background:none;border:none;color:rgba(255,255,255,.55);font-size:15px;line-height:1;padding:0 0 0 6px;cursor:pointer;align-self:center}
+.ml-live-x:hover{color:#fff}
+.ml-live-row{display:flex;justify-content:space-between;gap:16px;line-height:1.7}
 .ml-live-k{color:rgba(255,255,255,.55)}
 .ml-live-v{font-variant-numeric:tabular-nums;font-weight:600}
 .ml-live-v.up{color:#4ade80}
