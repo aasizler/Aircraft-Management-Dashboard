@@ -124,7 +124,13 @@ export function LiveBanner({
     if (status === "searching") {
       return (
         <div className="adsb-banner adsb-dock searching">
-          <span className="adsb-banner-icon"><Icon name="signal" size={17} /></span>
+          {/* Moving, because it genuinely is polling — but white, not green.
+              Motion says the app is doing something; colour says whether it has
+              found anything. The failed-lookup row below stays still: movement
+              there would imply something is being received. */}
+          <span className="adsb-banner-icon seeking">
+            <Icon name="signal" size={17} live />
+          </span>
           <div className="adsb-banner-main">
             <div className="adsb-banner-title">Searching for {reg}…</div>
             <div className="adsb-banner-detail">Checking live ADS-B feed</div>
