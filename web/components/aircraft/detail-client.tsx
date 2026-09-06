@@ -16,6 +16,8 @@ import {
 import { can, type AppRole, type Permission } from "@/lib/permissions";
 import { useAircraftRealtime } from "@/lib/realtime";
 import { setAircraftPerms } from "@/lib/aircraft-perms";
+import { useLivePosition } from "@/lib/adsb";
+import { useWhere } from "@/lib/where";
 import { LiveBanner } from "./live-banner";
 import { MeterCapture } from "./meter-capture";
 import { ManageAccess } from "./manage-access";
@@ -236,6 +238,10 @@ export function AircraftDetailClient({
   // Hero facts, ported from renderHero(): type, serial, squawk state, airport,
   // total time, SMOH and the maintenance clock.
   const openSquawks = ((data.squawks ?? []) as Squawk[]).length;
+  // Skipped in the preview harness for the same reason the live banner is:
+  // no network polling.
+  const live = useLivePosition(previewSave ? "" : aircraft.reg);
+  const where = useWhere(live.status, live.state, aircraft.airport);
   const grounding = ((data.squawks ?? []) as Squawk[]).some((s) => s.status === "open");
 
   return (
@@ -249,64 +255,71 @@ export function AircraftDetailClient({
 
         {/* Hero banner */}
         <div className="hero-banner" style={{ marginTop: 12 }}>
-          <span className="hero-reg-sm">{aircraft.reg}</span>
-          {/* v1's renderHero() badged every aircraft SHARED or LOCAL. Only the
-              shared case is worth the space — a registration is unique within
-              an org, not across them, so two aircraft can read the same tail
-              and this is what tells them apart once you've clicked in. */}
-          {shared && (
-            <span
-              className="hero-badge shared"
-              title={sharedBy ? `Shared by ${sharedBy}` : "Shared with you"}
-            >
-              SHARED
-            </span>
-          )}
-          <span className="hero-divider" />
-          <div className="hero-chips">
-            <span className="hero-chip">
-              <b>{aircraft.type ?? "—"}</b>
-            </span>
-            {aircraft.serial && (
-              <span className="hero-chip">
-                S/N <b>{aircraft.serial}</b>
+          <div className="hero-id">
+            <div className="hero-reg-row">
+              <span className="hero-reg-sm">{aircraft.reg}</span>
+              {/* v1's renderHero() badged every aircraft SHARED or LOCAL. Only
+                  the shared case is worth the space — a registration is unique
+                  within an org, not across them, so two aircraft can read the
+                  same tail and this is what tells them apart once you've
+                  clicked in. */}
+              {shared && (
+                <span
+                  className="hero-badge shared"
+                  title={sharedBy ? `Shared by ${sharedBy}` : "Shared with you"}
+                >
+                  SHARED
+                </span>
+              )}
+            </div>
+
+          {/* Identity on one quiet line under the registration, and the clocks
+              as figures rather than footnotes. Everything used to sit at 11px
+              in one wrapping row, so the model, the serial and three live hour
+              readings all carried the same weight. */}
+          <div className="hero-ident">
+            <span className="hero-type">{aircraft.type ?? "—"}</span>
+            {aircraft.serial && <span className="hero-sn">S/N {aircraft.serial}</span>}
+            {where && (
+              <span
+                className={where.live ? "hero-where live" : "hero-where"}
+                title={where.title}
+                onClick={where.live ? () => go("Utilization") : undefined}
+              >
+                {where.label}
               </span>
             )}
             {openSquawks > 0 && (
               <span
-                className="hero-chip"
-                style={{ color: grounding ? "var(--danger)" : "var(--warn)", cursor: "pointer" }}
+                className="hero-sq"
+                style={{ color: grounding ? "var(--danger)" : "var(--warn)" }}
                 onClick={() => go("Squawks")}
               >
-                <span
-                  className="status-dot"
-                  style={{ background: grounding ? "var(--danger)" : "var(--warn)" }}
-                />
-                {grounding ? "Squawk Open" : `${openSquawks} Squawk${openSquawks > 1 ? "s" : ""}`}
-              </span>
-            )}
-            {aircraft.airport && (
-              <span className="hero-chip">
-                <span className="status-dot" /> {aircraft.airport}
-              </span>
-            )}
-            {/* The clocks this aeroplane keeps, named as it names them. A "TT"
-                chip used to sit here too, which was the total-time clock under
-                a different label, two chips from the clock itself. */}
-            <span className="hero-chip">
-              {aircraft.maint_basis} <b>{maintHrs.toFixed(1)}</b> hrs
-            </span>
-            {aircraft.cost_basis !== aircraft.maint_basis && (
-              <span className="hero-chip">
-                {aircraft.cost_basis} <b>{costHrs.toFixed(1)}</b> hrs
-              </span>
-            )}
-            {(data.overhaulAt != null || data.engineSMOH != null) && (
-              <span className="hero-chip">
-                SMOH <b>{smohOf(data, maintHrs).toFixed(1)}</b> hrs
+                {grounding ? "Squawk open" : `${openSquawks} squawk${openSquawks > 1 ? "s" : ""}`}
               </span>
             )}
           </div>
+          </div>
+
+          <div className="hero-nums">
+            <div className="hero-num">
+              <div className="hn-k">{aircraft.maint_basis}</div>
+              <div className="hn-v">{maintHrs.toFixed(1)}</div>
+            </div>
+            {aircraft.cost_basis !== aircraft.maint_basis && (
+              <div className="hero-num">
+                <div className="hn-k">{aircraft.cost_basis}</div>
+                <div className="hn-v">{costHrs.toFixed(1)}</div>
+              </div>
+            )}
+            {(data.overhaulAt != null || data.engineSMOH != null) && (
+              <div className="hero-num">
+                <div className="hn-k">smoh</div>
+                <div className="hn-v">{smohOf(data, maintHrs).toFixed(1)}</div>
+              </div>
+            )}
+          </div>
+
           {typeof data.lastUpdated === "string" && data.lastUpdated && (
             <span className="last-sync">{data.lastUpdated}</span>
           )}

@@ -80,12 +80,32 @@ html, body { height: 100%; }
 .page-hd{padding:14px 28px 20px}
 .page-title{font-family:var(--display);font-size:34px;font-weight:800;letter-spacing:-.022em;line-height:1.05;margin:0}
 .page-sub{font-size:12.5px;color:var(--muted);margin-top:6px}
+.page-date{color:var(--accent)}
 /* HERO */
 .hero-banner{margin:0 28px;background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:14px 22px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
-.hero-reg-sm{font-family:var(--body);font-size:22px;font-weight:800;letter-spacing:.06em;white-space:nowrap}
+.hero-reg-sm{font-family:var(--body);font-size:22px;font-weight:800;letter-spacing:.06em;white-space:nowrap;line-height:1.1}
 .hero-divider{width:1px;height:26px;background:var(--border2);flex-shrink:0}
 .hero-model-sm{font-size:12px;color:var(--muted2)}
 .hero-chips{display:flex;gap:10px;flex-wrap:wrap;align-items:center;flex:1}
+
+/* Identity as one line under the registration, and the clocks as figures.
+   Three brightness levels carry the hierarchy: accent for the model, white for
+   where the aeroplane actually is, grey for the facts on file. */
+.hero-id{display:flex;flex-direction:column;gap:3px;min-width:0}
+.hero-reg-row{display:flex;align-items:center;gap:9px}
+.hero-ident{display:flex;align-items:center;gap:0;flex-wrap:wrap;font-size:11.5px;min-width:0;row-gap:2px}
+.hero-ident>*+*::before{content:"·";color:var(--muted);margin:0 7px}
+.hero-type{color:var(--accent)}
+.hero-sn{color:var(--muted2)}
+.hero-where{color:var(--muted2)}
+/* White only when it is a position, not a home base — and then it is a link. */
+.hero-where.live{color:var(--text);font-weight:600;cursor:pointer}
+.hero-where.live:hover{color:var(--accent)}
+.hero-sq{cursor:pointer}
+.hero-nums{display:flex;gap:24px;margin-left:auto;align-items:flex-end;flex-shrink:0}
+.hero-num{text-align:right}
+.hero-num .hn-k{font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:var(--accent)}
+.hero-num .hn-v{font-family:var(--display);font-size:17px;font-weight:700;line-height:1.2}
 .hero-chip{font-size:11px;color:var(--muted2);white-space:nowrap;display:inline-flex;align-items:center;gap:4px}
 .hero-chip b{color:var(--muted3);font-weight:600}
 .status-dot{width:6px;height:6px;border-radius:50%;background:var(--ok);flex-shrink:0;display:inline-block}

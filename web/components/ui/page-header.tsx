@@ -24,7 +24,11 @@ export function PageHeader({
     >
       <div>
         <h1 className="page-title">{title}</h1>
-        <div className="page-sub">{sub ?? `Today is ${today}`}</div>
+        {/* The date gets the accent; a caller-supplied subtitle is ordinary
+            page furniture and stays muted. */}
+        <div className={sub ? "page-sub" : "page-sub page-date"}>
+          {sub ?? `Today is ${today}`}
+        </div>
       </div>
       {right}
     </div>
