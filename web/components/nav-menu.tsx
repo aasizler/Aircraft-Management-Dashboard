@@ -111,7 +111,7 @@ export function NavMenu({ email, name }: { email?: string | null; name?: string 
           </MenuItem>
 
           <MenuSeparator />
-          <MenuItem icon="logout" onSelect={signOut}>Sign out</MenuItem>
+          <MenuItem icon="logout" danger onSelect={signOut}>Sign out</MenuItem>
         </MenuContent>
       </Menu>
     </div>

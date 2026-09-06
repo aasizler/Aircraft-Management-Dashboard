@@ -36,6 +36,12 @@ export type Tile = {
   grantId: string | null;
   /** That grant's role, shown on the badge. Null for org staff. */
   craftRole: CraftRole | null;
+  /**
+   * Whether the grant is on this aircraft or on the fleet it sits in. Handing
+   * back a fleet grant takes every aircraft under it, so the wording has to
+   * follow the scope rather than always saying "aircraft".
+   */
+  grantScope: "aircraft" | "fleet" | null;
   /** Belongs to another org — someone else's record, shared with you. */
   shared: boolean;
   /** Who shared it, when known. */
@@ -152,7 +158,13 @@ export function HangarGrid({
       settings: can(t.appRole, "edit_settings"),
       access,
       remove: can(t.appRole, "delete"),
-      leave: !access && !!t.grantId,
+      // Holding your own grant is the whole condition. This used to also
+      // require !access, which conflated two different things: managing access
+      // is about other people, leaving is about yourself. A `manager` grant
+      // resolves to the owner permission set, so anyone shared an aircraft as a
+      // manager could never hand it back. Org staff have no grant and so are
+      // not offered it, which is right — they own the record.
+      leave: !!t.grantId,
       // Everyone with any relationship may see WHO else has access; only a
       // manager may change it.
       viewAccess: !access,
@@ -245,8 +257,12 @@ export function HangarGrid({
     setLeaveTile(null);
     if (error) { toast(`Could not leave: ${error.message}`, "danger"); return; }
     if (!data) { toast("You no longer have a grant on this aircraft.", "danger"); router.refresh(); return; }
-    setOrder((o) => o.filter((x) => x.id !== t.id));
-    toast(`Left ${t.reg}`, "ok");
+    setOrder((o) =>
+      t.grantScope === "fleet"
+        ? o.filter((x) => x.grantId !== t.grantId)
+        : o.filter((x) => x.id !== t.id),
+    );
+    toast(t.grantScope === "fleet" ? "Left the fleet" : `Left ${t.reg}`, "ok");
     router.refresh();
   }
 
@@ -551,7 +567,7 @@ export function HangarGrid({
                               longer want in their hangar. */}
                           {menuFor(a).leave && (
                             <MenuItem icon="exit" danger onSelect={() => setLeaveTile(a)}>
-                              Leave aircraft
+                              {a.grantScope === "fleet" ? "Leave fleet" : "Leave aircraft"}
                             </MenuItem>
                           )}
                           {/* v1 omitted this entirely unless can('delete', id).
@@ -751,21 +767,39 @@ export function HangarGrid({
         />
       )}
 
-      {leaveTile && (
-        <Confirm
-          title="Leave aircraft"
-          message={
-            <>
-              Remove <b>{leaveTile.reg}</b> from your hangar? You will lose
-              access to its records. The owner can invite you again later.
-            </>
-          }
-          confirmLabel="Leave Aircraft"
-          busy={busy}
-          onConfirm={() => leave(leaveTile)}
-          onCancel={() => setLeaveTile(null)}
-        />
-      )}
+      {leaveTile && (() => {
+        // A fleet grant is one row covering every aircraft in that fleet. The
+        // RPC drops the row, so leaving takes all of them — say so, and say
+        // how many, rather than naming the one tile the menu was opened from.
+        const fleet = leaveTile.grantScope === "fleet";
+        const also = fleet
+          ? order.filter((t) => t.fleetId === leaveTile.fleetId && t.grantId === leaveTile.grantId)
+          : [];
+        return (
+          <Confirm
+            title={fleet ? "Leave fleet" : "Leave aircraft"}
+            message={
+              fleet ? (
+                <>
+                  You were given this fleet, not <b>{leaveTile.reg}</b> on its own.
+                  Leaving removes all {also.length} of its aircraft from your
+                  hangar and you will lose access to their records. The owner can
+                  invite you again later.
+                </>
+              ) : (
+                <>
+                  Remove <b>{leaveTile.reg}</b> from your hangar? You will lose
+                  access to its records. The owner can invite you again later.
+                </>
+              )
+            }
+            confirmLabel={fleet ? "Leave Fleet" : "Leave Aircraft"}
+            busy={busy}
+            onConfirm={() => leave(leaveTile)}
+            onCancel={() => setLeaveTile(null)}
+          />
+        );
+      })()}
 
       {confirmTile && (
         <Confirm

@@ -74,8 +74,14 @@ export default async function Home() {
       (user?.email &&
         g.invited_email?.toLowerCase() === user.email.toLowerCase()),
   );
-  const grantFor = (id: string): GrantRow | undefined =>
-    mine.find((g) => g.aircraft_id === id);
+  // A grant is written against an aircraft OR a fleet, never both, so an
+  // aircraft shared as part of a fleet has no row of its own. Matching only on
+  // aircraft_id left those tiles with no grant at all: no craft role on the
+  // badge, no granter name, and no way to hand the access back. The specific
+  // grant wins where a user holds both.
+  const grantFor = (id: string, fleetId?: string | null): GrantRow | undefined =>
+    mine.find((g) => g.aircraft_id === id) ??
+    (fleetId ? mine.find((g) => g.fleet_id === fleetId) : undefined);
 
   // Which fleets this viewer may pass on. Org staff administer every fleet in
   // their own hangar; anyone else may share only a fleet they hold a `manager`
@@ -98,31 +104,36 @@ export default async function Home() {
       Tile,
       "meters" | "appRole" | "shared" | "sharedBy" | "fleetId"
     > & { org_id: string; fleet_id: string | null })[]
-  ).map((a) => ({
+  ).map((a) => {
+    const grant = grantFor(a.id, a.fleet_id);
+    return {
     ...a,
     meters: metersFor(a.id),
     // The effective role for THIS aircraft. The tile badge and the delete gate
     // both read it; previously the badge was a flat Owner/Shared guess and
     // nothing gated delete at all.
-    appRole: resolveRole(membership?.role, grantFor(a.id)?.role),
+    appRole: resolveRole(membership?.role, grant?.role),
     // The grant's own role, for the badge. appRole names a permission set, so
     // a Pilot grant renders as "Mechanic" through it — the wrong word to show
     // someone whose granter picked "Pilot".
-    craftRole: grantFor(a.id)?.role ?? null,
+    craftRole: grant?.role ?? null,
     fleetId: a.fleet_id ?? null,
     // Present only when this user reaches the aircraft through a grant of
     // their own — which is the only thing they can hand back.
-    grantId: grantFor(a.id)?.id ?? null,
+    grantId: grant?.id ?? null,
+    // Whether that grant covers this aircraft alone or the whole fleet it sits
+    // in. Handing back a fleet grant surrenders every aircraft under it, so the
+    // menu and the confirmation must say which one they are doing.
+    grantScope: grant ? (grant.aircraft_id === a.id ? "aircraft" : "fleet") : null,
     // Nothing stops two orgs holding a record for the same airframe, and a
     // registration is only unique WITHIN an org — so two tiles can legitimately
     // read N137BF. Mark the ones that aren't yours, as v1's hero did with its
     // SHARED / LOCAL badge, or they're indistinguishable.
     shared: !membership?.org_id || a.org_id !== membership.org_id,
     sharedBy:
-      grantFor(a.id)?.granted_by_name?.trim() ||
-      grantFor(a.id)?.granted_by_email ||
-      null,
-  }));
+      grant?.granted_by_name?.trim() || grant?.granted_by_email || null,
+    };
+  });
 
   return (
     <>
