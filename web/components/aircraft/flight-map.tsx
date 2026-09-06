@@ -7,7 +7,8 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { AP_FULL } from "@/lib/reference-data";
 import { apLookup, loadAirportDb, onAirportDbUpgrade } from "@/lib/airports";
 import { today, type RouteEntry, type V1Aircraft } from "@/lib/aircraft";
-import { altColor, useLivePosition, type TrackPoint } from "@/lib/adsb";
+import { altColor, type TrackPoint } from "@/lib/adsb";
+import { useAircraft } from "./detail-client";
 import { getFlightTrack, listFlightHistory, type FlightHistoryRow } from "@/lib/flight-history";
 import { Modal } from "@/components/ui/modal";
 import { Confirm } from "@/components/ui/confirm";
@@ -126,7 +127,7 @@ export function FlightMap({
   const [replay, setReplay] = useState<TrackPoint[] | null>(null);
   const [replayBusy, setReplayBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
-  const { state: live, track } = useLivePosition(reg ?? "");
+  const { state: live, track } = useAircraft().live;
   // Read inside the map's load handler, which runs outside React's render.
   const basemapRef = useRef<"map" | "satellite">("map");
   // airport code → ids of every route touching it, for hover highlighting.

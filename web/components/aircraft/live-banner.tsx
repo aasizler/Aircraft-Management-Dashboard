@@ -1,14 +1,15 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Icon } from "@/components/ui/icon";
-import { useLivePosition, nearestAirport, type Landing } from "@/lib/adsb";
+import { nearestAirport, type Landing } from "@/lib/adsb";
 import { pushLiveFlight } from "@/lib/flight-history";
 import { loadAirportDb } from "@/lib/airports";
 import { AdsbPanel } from "./adsb-panel";
 import { Modal } from "@/components/ui/modal";
 import { today, type FlightEntry, type RouteEntry, type V1Aircraft } from "@/lib/aircraft";
 import { useToast } from "@/components/ui/toast";
+import { useAircraft } from "./detail-client";
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
@@ -71,7 +72,14 @@ export function LiveBanner({
     [reg, aircraftId],
   );
 
-  const { state, status } = useLivePosition(reg, save ? onLanding : undefined);
+  // The page polls once and shares it; this row only registers what to do when
+  // the aeroplane lands, which is the one thing no other consumer wants.
+  const { live, onLanding: registerLanding } = useAircraft();
+  const { state, status } = live;
+  useEffect(() => {
+    registerLanding(save ? onLanding : null);
+    return () => registerLanding(null);
+  }, [registerLanding, save, onLanding]);
 
   async function logIt() {
     if (!landing || !data || !save) return;

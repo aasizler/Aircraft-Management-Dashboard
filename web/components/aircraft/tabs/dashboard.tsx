@@ -4,9 +4,8 @@ import {
   airworthiness, oilLife, readMonthly, SQ_LABELS,
   type Insp, type MaintCost, type OilEntry, type Squawk } from "@/lib/aircraft";
 import { Icon, type IconName } from "@/components/ui/icon";
-import type { TabName, TabProps } from "../detail-client";
+import { useAircraft, type TabName, type TabProps } from "../detail-client";
 import { Sparkline } from "@/components/ui/charts";
-import { useLivePosition } from "@/lib/adsb";
 
 /**
  * Dashboard, restored to v1's renderDashboard(): status ribbon, quick actions,
@@ -28,7 +27,7 @@ export function DashboardTab({
   const squawks = (data.squawks ?? []) as Squawk[];
   const months = readMonthly(data.monthlyHours, 6);
   const sixMoHours = months.reduce((s, m) => s + m.hours, 0);
-  const { status: liveStatus, state: live } = useLivePosition(aircraft.reg);
+  const { status: liveStatus, state: live } = useAircraft().live;
 
   // Status ribbon — a grounding squawk outranks everything, as in v1.
   const ribbon =

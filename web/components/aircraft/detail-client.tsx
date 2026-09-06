@@ -16,7 +16,7 @@ import {
 import { can, type AppRole, type Permission } from "@/lib/permissions";
 import { useAircraftRealtime } from "@/lib/realtime";
 import { setAircraftPerms } from "@/lib/aircraft-perms";
-import { useLivePosition } from "@/lib/adsb";
+import { useLivePosition, type Landing, type LiveState, type LiveStatus, type TrackPoint } from "@/lib/adsb";
 import { useWhere } from "@/lib/where";
 import { LiveBanner } from "./live-banner";
 import { MeterCapture } from "./meter-capture";
@@ -73,6 +73,21 @@ type Ctx = {
   focusInsp: number | null;
   focusInspection: (idx: number) => void;
   clearFocusInsp: () => void;
+  /**
+   * The page's one ADS-B poller. useLivePosition polls every 10s per mount, and
+   * this page had grown three of them for the same tail — the hero's location,
+   * the live row and the dashboard's airborne chip — with a fourth arriving
+   * whenever the map opened. Four mounts is 24 requests a minute for one
+   * aeroplane, which is how an app gets rate-limited off a free feed. Poll here,
+   * read everywhere.
+   */
+  live: { status: LiveStatus; state: LiveState | null; track: TrackPoint[] };
+  /**
+   * Register the landing handler. Only the live row wants one — it is what
+   * offers to log the flight — so it registers on mount and clears on unmount
+   * rather than every consumer carrying a callback it has no use for.
+   */
+  onLanding: (cb: ((l: Landing) => void) | null) => void;
 };
 
 const AircraftCtx = createContext<Ctx | null>(null);
@@ -225,8 +240,16 @@ export function AircraftDetailClient({
     return false;
   }, []);
 
+  const landingCb = useRef<((l: Landing) => void) | null>(null);
+  const onLanding = useCallback((cb: ((l: Landing) => void) | null) => {
+    landingCb.current = cb;
+  }, []);
+  const handleLanding = useCallback((l: Landing) => landingCb.current?.(l), []);
+  const live = useLivePosition(previewSave ? "" : aircraft.reg, handleLanding);
+  const where = useWhere(live.status, live.state, aircraft.airport);
+
   const ctx: Ctx = {
-    aircraft, data, meters, maintHrs, costHrs, save, go, consumeAction,
+    aircraft, data, meters, maintHrs, costHrs, save, go, consumeAction, live, onLanding,
     role,
     allow: (p: Permission) => can(role, p),
     focusInsp,
@@ -240,8 +263,6 @@ export function AircraftDetailClient({
   const openSquawks = ((data.squawks ?? []) as Squawk[]).length;
   // Skipped in the preview harness for the same reason the live banner is:
   // no network polling.
-  const live = useLivePosition(previewSave ? "" : aircraft.reg);
-  const where = useWhere(live.status, live.state, aircraft.airport);
   const grounding = ((data.squawks ?? []) as Squawk[]).some((s) => s.status === "open");
 
   return (

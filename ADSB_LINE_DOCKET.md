@@ -2,28 +2,21 @@
 
 Observations from the hero/ADS-B work on 5 Sep 2026. Nothing here is done.
 
-## 1. Three pollers for one registration — REGRESSION, not an improvement
+## 1. Three pollers for one registration — FIXED 5 Sep
 
-`useLivePosition` polls every 10s. On an aircraft detail page with the
-Dashboard tab open it is now mounted three times for the same tail:
+`useLivePosition` polls every 10s per mount, and the page had grown three for
+the same tail — the hero's location, the live row, the dashboard's airborne chip
+— with a fourth arriving whenever the map opened. Four mounts is 24 requests a
+minute for one aeroplane.
 
-| Caller | Why |
-|---|---|
-| `components/aircraft/detail-client.tsx:243` | `useWhere`, for the hero's location — **added 5 Sep, mine** |
-| `components/aircraft/live-banner.tsx:74` | the ADS-B row itself |
-| `components/aircraft/tabs/dashboard.tsx:31` | the dashboard's airborne chip |
+`detail-client` now polls once and puts `{status, state, track}` on
+`AircraftCtx`; the row, the chip and the map read it. The landing handler is
+registered by the live row through `onLanding`, since it is the only consumer
+that wants one. One call site remains, at `detail-client.tsx:248`.
 
-That is 18 requests a minute per open tab, for one aeroplane. Two of the three
-predate this session; the hero's is new, so the work made an existing problem
-worse rather than creating it. Opening the Utilization tab adds a fourth
-(`flight-map.tsx:129`).
-
-**Fix:** `detail-client` already provides `AircraftCtx`. Poll once there, put
-`{status, state, track}` on the context, and have the banner, the dashboard chip
-and the map read it. The landing callback stays with the banner — it is the only
-consumer that needs it. Verify with the network panel: one request per 10s.
-
-This one should probably not wait.
+Still to confirm against a signed-in session: one request per 10s in the network
+panel, and that the landing prompt still fires on an airborne-to-ground
+transition. Neither could be exercised here.
 
 ## 2. The airport resolves a beat after the page
 
