@@ -91,7 +91,16 @@ const GLYPHS: Record<IconName, React.ReactNode> = {
   // A clearer side profile descending toward a runway.
   landing: <path d="M3 21h18M3.5 13.5l2.5 2 13.5 2a1.8 1.8 0 0 0 .5-3.6l-4.8-.8-5.2-6.6-2-.3 2.7 6.1-3.7-.6-2.5-3-1.5-.2.5 5Z" />,
   // Preserve the broadcast symbol with more regular spacing.
-  signal: <path d="M5 5a10 10 0 0 0 0 14M8 8a5.7 5.7 0 0 0 0 8M16 8a5.7 5.7 0 0 1 0 8M19 5a10 10 0 0 1 0 14M13 12a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z" />,
+  // One drawing, three paths. The geometry is the reviewed set's, character for
+  // character — split only so the dot and the two arc pairs can be timed
+  // separately when the glyph is live. Static, it renders identically.
+  signal: (
+    <>
+      <path className="s-dot" d="M13 12a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z" />
+      <path className="s-in" d="M8 8a5.7 5.7 0 0 0 0 8M16 8a5.7 5.7 0 0 1 0 8" />
+      <path className="s-out" d="M5 5a10 10 0 0 0 0 14M19 5a10 10 0 0 1 0 14" />
+    </>
+  ),
   // Keep the warning triangle; balance its margins and exclamation.
   alert: <path d="M10.7 4a1.5 1.5 0 0 1 2.6 0l8 14a1.5 1.5 0 0 1-1.3 2.3H4a1.5 1.5 0 0 1-1.3-2.3l8-14ZM12 9v4.5M12 17h.01" />,
   // Keep this familiar prohibition symbol; extra aircraft detail would crowd it.
@@ -124,11 +133,24 @@ const GLYPHS: Record<IconName, React.ReactNode> = {
  */
 const WIDE: Partial<Record<IconName, number>> = { hangar: 48, fleet: 30 };
 
-export function Icon({ name, size = 15 }: { name: IconName; size?: number }) {
+export function Icon({
+  name,
+  size = 15,
+  live,
+}: {
+  name: IconName;
+  size?: number;
+  /**
+   * Animate the glyph. Only `signal` has anything to animate, and only where
+   * the aeroplane is actually transmitting — a searching or failed lookup must
+   * not pulse as though it were receiving something.
+   */
+  live?: boolean;
+}) {
   const box = WIDE[name] ?? 24;
   return (
     <svg
-      className="icon"
+      className={live ? "icon icon-live" : "icon"}
       viewBox={`0 0 ${box} 24`}
       width={(size * box) / 24}
       height={size}

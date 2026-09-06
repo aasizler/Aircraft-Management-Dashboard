@@ -205,7 +205,7 @@ export function LiveBanner({
         >
           <span className="flight-lbl">View flight</span>
           <span className="fdot current" />
-          <Icon name="signal" size={13} />
+          <Icon name="signal" size={13} live />
         </button>
         {stamp}
       </div>

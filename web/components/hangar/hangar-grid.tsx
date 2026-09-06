@@ -635,7 +635,7 @@ export function HangarGrid({
                                 an aeroplane in the air is live whatever its
                                 paperwork says. Green there. */}
                             <span className={`fdot ${st.cls === "untracked" ? "current" : st.cls}`} />
-                            <Icon name="signal" size={13} />
+                            <Icon name="signal" size={13} live />
                           </button>
                         )}
                       </div>

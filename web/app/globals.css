@@ -911,3 +911,18 @@ canvas.chart{display:block;width:100%;height:150px}
    attached to the hero docks — the dashboard renders its own airborne banner
    mid-page, which keeps all four corners. */
 .adsb-dock{margin:-6px 40px 14px;border-radius:0 0 12px 12px;padding-top:17px}
+
+/* The signal glyph, transmitting. The dot brightens, then the inner arcs, then
+   the outer — each arc lifting from 94% as it lights, so the pulse travels out
+   rather than just blinking. Only where the aeroplane is actually sending;
+   searching and failed lookups stay still. */
+@keyframes sig-lit { 0%,100%{opacity:.25} 50%{opacity:1} }
+@keyframes sig-out { 0%,100%{opacity:.25;transform:scale(.94)} 50%{opacity:1;transform:scale(1)} }
+.icon-live .s-dot,.icon-live .s-in,.icon-live .s-out{transform-box:fill-box;transform-origin:center}
+.icon-live .s-dot{animation:sig-lit 1.8s ease-in-out infinite}
+.icon-live .s-in{animation:sig-out 1.8s ease-in-out .25s infinite}
+.icon-live .s-out{animation:sig-out 1.8s ease-in-out .5s infinite}
+/* A permanently moving element is a real problem for some people. */
+@media (prefers-reduced-motion:reduce){
+  .icon-live .s-dot,.icon-live .s-in,.icon-live .s-out{animation:none;opacity:1;transform:none}
+}
