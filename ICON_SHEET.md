@@ -53,6 +53,7 @@ Sizes below were recorded in the original icon sheet. They are useful verificati
 | `settings` | 24 × 24 | 15 | A regular eight-tooth cog with a calmer, balanced outline. |
 | `users` | 24 × 24 | 15 | Inset the second figure so the group has breathing room. |
 | `eye` | 24 × 24 | 14, 15, 17 | A softer almond shape with more consistent outer margins. |
+| `eye-off` | 24 × 24 | 13 | **Locally added, not part of the reviewed set.** The eye above with a stroke through it on the grounded glyph's diagonal — the airworthiness "not tracked" state on a hangar tile. |
 | `sort` | 24 × 24 | 15 | More space between the ordering lines and arrow. |
 | `logout` | 24 × 24 | 15 | Align the arrow with the door opening; keep the familiar meaning. |
 | `exit` | 24 × 24 | 15 | An access card with a person stepping out through the corner. Distinct from `logout` — see EXIT_ICON_SPEC.md. |

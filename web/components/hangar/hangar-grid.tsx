@@ -9,7 +9,7 @@ import { airworthiness, meterValue, type AircraftRow, type Meter, type V1Aircraf
 import { ManageAccess } from "@/components/aircraft/manage-access";
 import { AircraftSettings } from "@/components/aircraft/aircraft-settings";
 import { Confirm } from "@/components/ui/confirm";
-import { Icon } from "@/components/ui/icon";
+import { Icon, type IconName } from "@/components/ui/icon";
 import { Modal } from "@/components/ui/modal";
 import {
   Menu, MenuTrigger, MenuContent, MenuItem, MenuSeparator, MenuLabel,
@@ -170,6 +170,14 @@ export function HangarGrid({
       viewAccess: !access,
     };
   }
+
+  /** One glyph per airworthiness state, in place of the dot each used to carry. */
+  const STAT_ICON: Record<string, IconName> = {
+    current: "check",
+    due: "alert",
+    grounded: "grounded",
+    untracked: "eye-off",
+  };
 
   /**
    * Airworthiness at a glance, as a chip you can read across the hangar rather
@@ -607,7 +615,7 @@ export function HangarGrid({
                         title={`${st.label} — ${st.full}`}
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <span className="fdot" />
+                        <Icon name={STAT_ICON[st.cls] ?? "eye-off"} size={13} />
                         <span className="stat-word">{st.label}</span>
                         <span className="stat-why">{st.why}</span>
                       </button>
@@ -629,9 +637,6 @@ export function HangarGrid({
                             }}
                           >
                             <span className="flight-lbl">View flight</span>
-                            {/* No dot beside it: the glyph pulses while the
-                                aeroplane transmits, so a second live indicator
-                                a few pixels away said the same thing twice. */}
                             <Icon name="signal" size={13} live />
                           </button>
                         )}

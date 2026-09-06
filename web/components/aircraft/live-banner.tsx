@@ -186,7 +186,9 @@ export function LiveBanner({
 
     return (
       <div className="adsb-banner adsb-dock">
-        <span className="adsb-pulse" />
+        {/* The glyph is the indicator. A plain green dot said "live" and
+            nothing else; this says live and says what is live about it. */}
+        <span className="adsb-banner-icon live"><Icon name="signal" size={17} live /></span>
         <div className="adsb-banner-main">
           <div className="adsb-banner-title">{reg} — Airborne</div>
           <div className="adsb-banner-detail">

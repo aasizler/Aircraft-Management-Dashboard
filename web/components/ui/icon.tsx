@@ -22,6 +22,7 @@ export type IconName =
   | "eraser" | "power"
   // actions and status
   | "hangar" | "plane" | "fleet" | "landing" | "signal" | "alert" | "grounded"
+  | "eye-off"
   | "droplet" | "wrench" | "camera" | "paperclip" | "check" | "cash"
   | "calendar" | "file" | "shield";
 
@@ -36,6 +37,15 @@ const GLYPHS: Record<IconName, React.ReactNode> = {
   users: <path d="M13 7a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0ZM3 20v-2a5 5 0 0 1 5-5h3a5 5 0 0 1 5 5v2M17 4a3.5 3.5 0 0 1 0 7M19 14a4 4 0 0 1 2 3.5V20" />,
   // A softer almond shape with more consistent outer margins.
   eye: <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12ZM15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />,
+  // The reviewed set's eye with a stroke through it, on the same diagonal the
+  // grounded glyph uses. Locally added — not part of that set. Recorded in
+  // ICON_SHEET.md.
+  "eye-off": (
+    <>
+      <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12ZM15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+      <path d="M4.4 4.4 19.6 19.6" />
+    </>
+  ),
   // A gently tapered bin and two simple internal ribs.
   trash: <path d="M3.5 6h17M8.5 6V3.5h7V6M5.5 6l.7 13a1.5 1.5 0 0 0 1.5 1.5h8.6a1.5 1.5 0 0 0 1.5-1.5l.7-13M10 10v6.5M14 10v6.5" />,
   // Retain the familiar share tray; balance arrow and container.
