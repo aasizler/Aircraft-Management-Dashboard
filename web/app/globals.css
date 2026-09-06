@@ -48,6 +48,9 @@ html, body { height: 100%; }
    on the hangar. */
 .nav{flex-shrink:0;display:flex;align-items:center;padding:0 28px;height:var(--nav-h);border-bottom:1px solid var(--border2);background:var(--bg);position:sticky;top:0;z-index:100}
 .nav-brand{font-family:var(--display);font-size:23px;font-weight:700;letter-spacing:-.01em;display:flex;align-items:center;gap:10px;color:var(--text);text-decoration:none}
+/* Two glyphs are wider than they are tall — the hangar is 2:1 — and every
+   place they sit is a flex row that would otherwise squeeze them. */
+.icon{flex-shrink:0}
 .nav-dot{width:10px;height:10px;border-radius:50%;background:var(--accent);flex-shrink:0}
 .nav-right{margin-left:auto;display:flex;gap:8px;align-items:center}
 /* BUTTONS */
