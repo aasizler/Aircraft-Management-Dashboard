@@ -123,7 +123,7 @@ export function LiveBanner({
   const banner = (() => {
     if (status === "searching") {
       return (
-        <div className="adsb-banner searching">
+        <div className="adsb-banner adsb-dock searching">
           <span className="adsb-banner-icon"><Icon name="signal" size={17} /></span>
           <div className="adsb-banner-main">
             <div className="adsb-banner-title">Searching for {reg}…</div>
@@ -136,7 +136,7 @@ export function LiveBanner({
 
     if (status === "error") {
       return (
-        <div className="adsb-banner ground">
+        <div className="adsb-banner adsb-dock ground">
           <span className="adsb-banner-icon"><Icon name="signal" size={17} /></span>
           <div className="adsb-banner-main">
             <div className="adsb-banner-title">Live tracking unavailable</div>
@@ -152,7 +152,7 @@ export function LiveBanner({
 
     if (status === "none") {
       return (
-        <div className="adsb-banner ground">
+        <div className="adsb-banner adsb-dock ground">
           <span className="adsb-banner-icon"><Icon name="landing" size={17} /></span>
           <div className="adsb-banner-main">
             <div className="adsb-banner-title">{reg} — no live signal</div>
@@ -165,7 +165,7 @@ export function LiveBanner({
 
     if (status === "ground") {
       return (
-        <div className="adsb-banner ground">
+        <div className="adsb-banner adsb-dock ground">
           <span className="adsb-pulse ground" />
           <div className="adsb-banner-main">
             <div className="adsb-banner-title">{reg} — On Ground</div>
@@ -179,7 +179,7 @@ export function LiveBanner({
     }
 
     return (
-      <div className="adsb-banner">
+      <div className="adsb-banner adsb-dock">
         <span className="adsb-pulse" />
         <div className="adsb-banner-main">
           <div className="adsb-banner-title">{reg} — Airborne</div>

@@ -82,7 +82,7 @@ html, body { height: 100%; }
 .page-sub{font-size:12.5px;color:var(--muted);margin-top:6px}
 .page-date{color:var(--accent)}
 /* HERO */
-.hero-banner{margin:0 28px;background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:14px 22px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.hero-banner{margin:0 28px;background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:14px 22px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;position:relative;z-index:1}
 .hero-reg-sm{font-family:var(--body);font-size:22px;font-weight:800;letter-spacing:.06em;white-space:nowrap;line-height:1.1}
 .hero-divider{width:1px;height:26px;background:var(--border2);flex-shrink:0}
 .hero-divider.tall{width:2px;height:38px;background:var(--border3);border-radius:1px}
@@ -896,3 +896,11 @@ canvas.chart{display:block;width:100%;height:150px}
    23px wordmark and a 30px menu, where the sm default read as an afterthought
    on the one control that takes you back to the hangar. */
 .nav-back{height:34px;padding:0 21px;font-size:13.5px;border-radius:9px}
+
+/* The live row is a drawer under the hero rather than a second card beside it:
+   12px narrower each side, tucked 6px behind the hero's bottom edge, rounded
+   only at the base. The two used to sit 12px apart with a 12px radius above and
+   a 10px below, so the curves did not agree with each other. Only the row
+   attached to the hero docks — the dashboard renders its own airborne banner
+   mid-page, which keeps all four corners. */
+.adsb-dock{margin:-6px 40px 14px;border-radius:0 0 12px 12px;padding-top:17px}
