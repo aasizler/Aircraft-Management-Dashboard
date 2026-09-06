@@ -51,7 +51,7 @@ export function DashboardTab({
             ? { icon: "eye" as const, title: "Not Yet Tracked", tone: "var(--accent)",
                 sub: "No inspection has been recorded — nothing to report on yet" }
             : { icon: "check" as const, title: "All Clear", tone: "var(--ok)",
-                sub: nextLine(tracked) };
+                sub: "No inspections due and no open squawks" };
 
   const pctColor = (st: { s: string }) =>
     st.s === "overdue" ? "var(--danger)" : st.s === "warn" ? "var(--warn)" : "var(--accent)";
@@ -280,17 +280,6 @@ export function DashboardTab({
       </div>
     </div>
   );
-}
-
-/**
- * "No overdue items" says what is not wrong. The useful half of an all-clear is
- * what is closest, which the list below repeats but the line should carry.
- */
-function nextLine(tracked: { i: { name: string }; st: { remNum: string | number; remUnit: string } }[]) {
-  const n = tracked[0];
-  if (!n) return "Aircraft is current";
-  const rem = `${n.st.remNum}${n.st.remUnit ? ` ${n.st.remUnit.toLowerCase()}` : ""}`;
-  return `${tracked.length} inspection${tracked.length > 1 ? "s" : ""} current · next is ${n.i.name}, ${rem} away`;
 }
 
 /** 730 → "24 months", 365 → "12 months", anything else stays in days. */
