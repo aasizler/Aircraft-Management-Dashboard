@@ -646,7 +646,7 @@ canvas.chart{display:block;width:100%;height:150px}
 .map-ctl{position:absolute;display:flex;z-index:5;background:rgba(10,16,28,.82);border:1px solid var(--border2);border-radius:6px;overflow:hidden;backdrop-filter:blur(4px)}
 .map-ctl.tl{top:10px;left:10px}
 .map-ctl.tr{top:10px;right:10px}
-.map-ctl.br{bottom:10px;right:10px;flex-direction:column;gap:4px;background:none;border:none;backdrop-filter:none}
+.map-ctl.br{bottom:38px;right:10px;flex-direction:column;gap:4px;background:none;border:none;backdrop-filter:none}
 .map-btn{background:transparent;border:none;color:var(--muted2);font-family:var(--body);font-size:11px;font-weight:600;padding:4px 12px;cursor:pointer;transition:all .15s}
 .map-btn:hover{color:var(--accent)}
 .map-btn.on{background:var(--accent);color:#fff}
@@ -975,11 +975,11 @@ canvas.chart{display:block;width:100%;height:150px}
 .map-wrap .map-ctl.tl,.map-wrap .map-lastflight{transition:left .22s cubic-bezier(.4,0,.2,1)}
 .map-wrap.live-open .map-ctl.tl,.map-wrap.live-open .map-lastflight{left:200px}
 
-/* MAP ATTRIBUTION — centred along the bottom edge, at the same 10px inset as the
-   buttons, and dimmed so it reads as a credit rather than a control */
-.map-wrap .maplibregl-ctrl-bottom-right{right:50%;transform:translateX(50%)}
-.map-wrap .maplibregl-ctrl-bottom-right .maplibregl-ctrl{margin:0 0 10px}
-.map-wrap .maplibregl-ctrl-attrib{background:rgba(10,16,28,.55);color:rgba(255,255,255,.45);font-size:10px;line-height:1;padding:4px 8px;border-radius:4px;opacity:.7;transition:opacity .15s}
-.map-wrap .maplibregl-ctrl-attrib:hover{opacity:1}
+/* MAP ATTRIBUTION — the compact ⓘ sits under the zoom column, centred on the
+   30px buttons (24px button → 3px extra inset), at the buttons' 10px edge inset,
+   and dimmed until hovered. Expanded, the credit grows leftward from that spot. */
+.map-wrap .maplibregl-ctrl-bottom-right .maplibregl-ctrl{margin:0 13px 10px 0}
+.map-wrap .maplibregl-ctrl-attrib{opacity:.45;transition:opacity .15s;background:var(--bg2);color:var(--muted2);font-size:10px;border-radius:12px}
+.map-wrap .maplibregl-ctrl-attrib:hover,.map-wrap .maplibregl-ctrl-attrib.maplibregl-compact-show{opacity:1}
 .map-wrap .maplibregl-ctrl-attrib a{color:inherit}
-:root.light .map-wrap .maplibregl-ctrl-attrib{background:rgba(255,255,255,.6);color:rgba(0,0,0,.5)}
+.map-wrap .maplibregl-ctrl-attrib-button{opacity:.8}

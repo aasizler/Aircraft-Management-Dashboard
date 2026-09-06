@@ -278,9 +278,8 @@ export function FlightMap({
       center: [-95, 39],
       zoom: 3,
       scrollZoom: false, // ctrl/⌘ + scroll only, as in v1
-      // Always expanded: the compact ⓘ toggle is a control of its own, and the
-      // credit sits centred along the bottom edge between the two button groups.
-      attributionControl: { compact: false },
+      // Compact: the ⓘ sits under the zoom column, centred on it.
+      attributionControl: { compact: true },
     });
     mapRef.current = map;
     map.on("error", (e) => console.error("[flight-map]", e.error?.message ?? e));
@@ -303,6 +302,12 @@ export function FlightMap({
     map.on("load", () => {
       loadedRef.current = true;
       setReady(true);
+
+      // MapLibre opens the compact credit expanded and collapses it on the
+      // first interaction. Start it collapsed: it is the ⓘ under the zoom
+      // buttons, and expands when clicked.
+      host.querySelector(".maplibregl-ctrl-attrib.maplibregl-compact-show")
+        ?.classList.remove("maplibregl-compact-show");
 
       // Recorded track of the current flight, one segment per leg so each can
       // carry its own altitude colour (v1 painted a line-gradient).
