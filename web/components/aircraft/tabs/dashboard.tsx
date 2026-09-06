@@ -6,6 +6,7 @@ import {
 import { Icon, type IconName } from "@/components/ui/icon";
 import { useAircraft, type TabName, type TabProps } from "../detail-client";
 import { Sparkline } from "@/components/ui/charts";
+import { useDirectives } from "@/lib/use-directives";
 
 /**
  * Dashboard, restored to v1's renderDashboard(): status ribbon, quick actions,
@@ -29,6 +30,17 @@ export function DashboardTab({
   const sixMoHours = months.reduce((s, m) => s + m.hours, 0);
   const { status: liveStatus, state: live } = useAircraft().live;
 
+  /**
+   * Directives for THIS aeroplane. The hangar rail checks the whole hangar,
+   * which answers "is anything published for anything I own"; this answers
+   * "for this one". Advisory, as everywhere else — a directive is not proof of
+   * non-compliance, so it never changes the ribbon's severity, only what the
+   * All Clear line is entitled to claim.
+   */
+  const ads = useDirectives(aircraft.reg, aircraft.type, data.engineType as string | null);
+  const adsNaming = ads.rows?.filter((d) => d.affects.includes(aircraft.reg)).length ?? 0;
+  const adsChecked = ads.rows != null && !ads.err && ads.cover.kind === "ok";
+
   // Status ribbon — a grounding squawk outranks everything, as in v1.
   const ribbon =
     grounding.length > 0
@@ -51,7 +63,15 @@ export function DashboardTab({
             ? { icon: "eye" as const, title: "Not Yet Tracked", tone: "var(--accent)",
                 sub: "No inspection has been recorded — nothing to report on yet" }
             : { icon: "check" as const, title: "All Clear", tone: "var(--ok)",
-                sub: "No inspections due and no open squawks" };
+                // Only mentions directives when they were actually checked and
+                // the check came back. Silence beats a claim nobody verified.
+                sub: !adsChecked
+                  ? "No inspections due and no open squawks"
+                  : adsNaming > 0
+                    ? `No inspections due or open squawks · ${adsNaming} directive${
+                        adsNaming > 1 ? "s" : ""
+                      } to review`
+                    : "No inspections due, no open squawks, nothing published for this model" };
 
   const pctColor = (st: { s: string }) =>
     st.s === "overdue" ? "var(--danger)" : st.s === "warn" ? "var(--warn)" : "var(--accent)";

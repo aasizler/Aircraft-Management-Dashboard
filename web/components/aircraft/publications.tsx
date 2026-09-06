@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
 import { Icon } from "@/components/ui/icon";
-import { coverageOf, fetchDirectives, type Directive } from "@/lib/directives";
+import { useDirectives } from "@/lib/use-directives";
 
 /**
  * Airworthiness directives for this airframe and engine, from the Federal
@@ -17,26 +16,7 @@ import { coverageOf, fetchDirectives, type Directive } from "@/lib/directives";
 export function Publications({
   reg, type, engineType,
 }: { reg: string; type: string | null; engineType?: string | null }) {
-  const craft = useMemo(() => [{ reg, type, engineType }], [reg, type, engineType]);
-  const key = `${type ?? ""}|${engineType ?? ""}`;
-  const [data, setData] = useState<{ key: string; rows: Directive[]; err: string | null }>(
-    { key: "", rows: [], err: null },
-  );
-
-  useEffect(() => {
-    const ac = new AbortController();
-    fetchDirectives(craft, ac.signal)
-      .then((rows) => setData({ key, rows, err: null }))
-      .catch((e) => {
-        if (e.name !== "AbortError") setData({ key, rows: [], err: String(e.message ?? e) });
-      });
-    return () => ac.abort();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key]);
-
-  const ready = data.key === key;
-  const rows = ready ? data.rows : null;
-  const cover = coverageOf({ reg, type, engineType });
+  const { rows, err, cover } = useDirectives(reg, type, engineType);
 
   return (
     <div style={{ marginTop: 26 }}>
@@ -50,9 +30,9 @@ export function Publications({
       <div className="pub-card">
         <div className="pub-hd"><Icon name="shield" size={14} />Federal Register</div>
 
-        {!ready && <div className="pub-note">Checking…</div>}
+        {!rows && <div className="pub-note">Checking…</div>}
 
-        {ready && data.err && (
+        {err && (
           <div className="pub-note warn">
             Couldn&rsquo;t reach the Federal Register — this says nothing about
             whether any directives exist.
@@ -60,7 +40,7 @@ export function Publications({
         )}
 
         {/* Why the list is empty matters more than the fact that it is. */}
-        {ready && cover.kind !== "ok" && (
+        {rows && cover.kind !== "ok" && (
           <div className="pub-note warn">
             {cover.kind === "amateur"
               ? `${cover.maker} types are amateur-built — the FAA issues them no directives, so an empty list here is the correct answer.`
@@ -69,7 +49,7 @@ export function Publications({
                 : "This aircraft's type wasn't picked from the list, so no manufacturer could be resolved and no directives are being checked."}
           </div>
         )}
-        {cover.kind === "unrecognised" && ready && (
+        {cover.kind === "unrecognised" && rows && (
           <div className="pub-prompt">
             <Icon name="alert" size={14} />
             <span>Pick {reg}&rsquo;s type from the catalogue to switch this on.</span>
@@ -98,7 +78,7 @@ export function Publications({
 
         {/* Airframe directives list either way; this says what is still missing,
             which a full airframe list does not reveal. */}
-        {ready && !engineType && (
+        {rows && !engineType && (
           <div className="pub-prompt">
             <Icon name="alert" size={14} />
             <span>
