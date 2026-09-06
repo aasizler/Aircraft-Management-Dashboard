@@ -186,6 +186,12 @@ export function LiveBanner({
 
     return (
       <div className="adsb-banner adsb-dock">
+        {/* Indicator and way in, in one place. The row led with a pulse dot and
+            carried a separate tiled button at the far end; this is the same
+            glyph doing both jobs from the position the dot held. */}
+        <button className="adsb-lead" onClick={() => go("Utilization")} title="View the current flight">
+          <Icon name="signal" size={17} live />
+        </button>
 
         <div className="adsb-banner-main">
           <div className="adsb-banner-title">{reg} — Airborne</div>
@@ -200,18 +206,6 @@ export function LiveBanner({
           {state?.vspd != null && <Stat label="V/S" value={`${state.vspd > 0 ? "+" : ""}${state.vspd} fpm`} />}
           {state?.squawk && <Stat label="Squawk" value={state.squawk} />}
         </div>
-        {/* The same control the hangar tile carries, doing the same thing: a
-            live dot and the signal glyph, expanding to its words on hover. The
-            row said the aeroplane was flying and gave you no way to look at
-            the flight. */}
-        <button
-          className="flight-btn on-live"
-          title="View the current flight"
-          onClick={() => go("Utilization")}
-        >
-          <span className="flight-lbl">View flight</span>
-          <Icon name="signal" size={13} live />
-        </button>
         {stamp}
       </div>
     );

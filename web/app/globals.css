@@ -939,3 +939,8 @@ canvas.chart{display:block;width:100%;height:150px}
 .flight-btn.live-due{color:var(--warn)}
 .flight-btn.live-grounded{color:var(--danger)}
 .flight-btn[class*="live-"]:hover,.flight-btn[class*="live-"]:focus-visible{background:var(--bg4);border-color:var(--border3)}
+/* The live row's leading glyph: the state, and the way to the flight. Sits
+   where the pulse dot used to, with no box around it — a tile there read as a
+   second control competing with the row itself. */
+.adsb-lead{background:none;border:0;padding:0;display:inline-flex;align-items:center;color:var(--ok);cursor:pointer;flex-shrink:0;transition:transform .15s}
+.adsb-lead:hover,.adsb-lead:focus-visible{transform:scale(1.12)}
