@@ -136,6 +136,10 @@ export function FlightMap({
   // Whether this map instance has been pointed at the live aircraft yet. The
   // first fix centres the view once; after that the user's pan stands.
   const centredRef = useRef(false);
+  // Start time of the leg last fitted. Own fixes append, so the start holds;
+  // the feed's trace prepends, moving it earlier, and the view widens once
+  // to take the whole leg in.
+  const fittedRef = useRef<number | null>(null);
   const liveRef = useRef<LiveState | null>(live);
   useEffect(() => { liveRef.current = live; }, [live]);
   // Read inside the map's load handler, which runs outside React's render.
@@ -452,6 +456,7 @@ export function FlightMap({
       acRef.current?.remove();
       acRef.current = null;
       centredRef.current = false;
+      fittedRef.current = null;
       map.remove();
       mapRef.current = null;
       loadedRef.current = false;
@@ -564,17 +569,18 @@ export function FlightMap({
     }
     if (ring) ring.style.display = live.onGround ? "none" : "block";
 
-    // First fix: bring the aircraft (and what it has flown so far) into view.
-    if (!centredRef.current) {
+    // First fix: bring the aircraft into view. Once the flown leg is known,
+    // widen once to take it in; after that the user's pan stands.
+    if (track.length > 1 && fittedRef.current !== track[0].t) {
+      fittedRef.current = track[0].t;
       centredRef.current = true;
-      const pts = track.length > 1 ? track.map((p) => [p.lon, p.lat] as [number, number]) : [];
-      if (pts.length) {
-        const b = new maplibregl.LngLatBounds();
-        [...pts, pos].forEach((c) => b.extend(c));
-        map.fitBounds(b, { padding: 60, maxZoom: 9, duration: 0 });
-      } else {
-        map.jumpTo({ center: pos, zoom: Math.max(map.getZoom(), 8) });
-      }
+      const b = new maplibregl.LngLatBounds();
+      track.forEach((p) => b.extend([p.lon, p.lat]));
+      b.extend(pos);
+      map.fitBounds(b, { padding: 60, maxZoom: 9, duration: 0 });
+    } else if (!centredRef.current) {
+      centredRef.current = true;
+      map.jumpTo({ center: pos, zoom: Math.max(map.getZoom(), 8) });
     }
   }, [live, track, ready]);
 
@@ -761,7 +767,6 @@ export function FlightMap({
 
         {live && live.lat != null && (() => {
           const vs = live.vspd == null ? null : Math.round(live.vspd);
-          const span = track.length > 1 ? track[track.length - 1].t - track[0].t : 0;
           const rows: [string, string, string?][] = [
             ["Altitude", live.onGround ? "Ground" : live.alt != null ? `${live.alt.toLocaleString()} ft` : "—"],
             ["Ground Speed", live.gspd != null ? `${Math.round(live.gspd)} kt` : "—"],
@@ -770,9 +775,6 @@ export function FlightMap({
               vs == null ? "—" : `${vs >= 0 ? "↑ " : "↓ "}${Math.abs(vs).toLocaleString()} fpm`,
               vs == null ? "" : vs > 100 ? "up" : vs < -100 ? "down" : "level"],
             ["Squawk", live.squawk ?? "—"],
-            ...(span > 0 ? [["Track History", `${Math.round(span / 60000)}m`] as [string, string]] : []),
-            ["Latitude", `${live.lat.toFixed(4)}°`],
-            ["Longitude", `${live.lon!.toFixed(4)}°`],
           ];
           return (
             <div className={`ml-live${liveOpen ? " open" : ""}`}>

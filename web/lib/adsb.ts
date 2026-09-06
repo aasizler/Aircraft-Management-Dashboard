@@ -14,6 +14,8 @@ import { useEffect, useRef, useState } from "react";
  */
 
 export type LiveState = {
+  /** ICAO Mode-S hex, as the feed reports it; keys the recorded trace. */
+  hex: string | null;
   lat: number | null;
   lon: number | null;
   alt: number | null; // ft, null when on ground
@@ -26,6 +28,7 @@ export type LiveState = {
 };
 
 type RawAc = {
+  hex?: string;
   lat?: number;
   lon?: number;
   alt_baro?: number | "ground";
@@ -39,6 +42,7 @@ type RawAc = {
 function normalize(ac: RawAc): LiveState {
   const ground = ac.alt_baro === "ground";
   return {
+    hex: ac.hex?.toLowerCase() ?? null,
     lat: ac.lat ?? null,
     lon: ac.lon ?? null,
     alt: ground ? null : typeof ac.alt_baro === "number" ? ac.alt_baro : null,
@@ -100,7 +104,41 @@ export type Landing = {
 // Track points are kept per-registration at module scope so they survive tab
 // switches — v1 held them in a module-level `_adsbTrack`.
 const _tracks = new Map<string, TrackPoint[]>();
-const MAX_POINTS = 900; // ~2.5h at a 10s cadence
+const MAX_POINTS = 4000; // a long day at the feed's cadence
+// When the feed's trace was last merged in, per registration.
+const _seeded = new Map<string, number>();
+const SEED_EVERY = 5 * 60_000;
+// A gap this long between trace points separates one flight from the next.
+const LEG_GAP_MS = 15 * 60_000;
+
+/**
+ * Merge the current flight's leg from the feed's recorded trace into the
+ * track (v1 only ever had what it polled itself, so a page opened mid-flight
+ * showed nothing behind the aeroplane). The trace is the whole day; the leg
+ * is everything after the last on-ground point or the last long gap.
+ */
+async function seedTrack(key: string, hex: string): Promise<TrackPoint[] | null> {
+  try {
+    const res = await fetch(`/api/adsb/trace/${hex}`);
+    if (!res.ok) return null;
+    const { pts } = (await res.json()) as { pts?: [number, number, number, number | null, boolean][] };
+    if (!pts?.length) return null;
+    let start = 0;
+    for (let i = pts.length - 1; i > 0; i--) {
+      if (pts[i][4] || pts[i][0] - pts[i - 1][0] > LEG_GAP_MS) { start = pts[i][4] ? i + 1 : i; break; }
+    }
+    const leg: TrackPoint[] = pts.slice(start).map(([t, lat, lon, alt]) => ({ t, lat, lon, alt }));
+    if (leg.length < 2) return null;
+    // Keep any fix of our own that is newer than the trace, then sort and cap.
+    const newest = leg[leg.length - 1].t;
+    const own = (_tracks.get(key) ?? []).filter((p) => p.t > newest + 1000);
+    const merged = [...leg, ...own].sort((a, b) => a.t - b.t).slice(-MAX_POINTS);
+    _tracks.set(key, merged);
+    return merged;
+  } catch {
+    return null;
+  }
+}
 
 export const getTrack = (reg: string): TrackPoint[] => _tracks.get(reg.toUpperCase()) ?? [];
 export const clearTrack = (reg: string) => _tracks.delete(reg.toUpperCase());
@@ -148,6 +186,16 @@ export function useLivePosition(reg: string, onLanding?: (l: Landing) => void) {
       setStatus(airborne ? "airborne" : "ground");
 
       if (airborne) {
+        // Pull the leg flown so far from the feed's trace: once on the first
+        // airborne fix, then every few minutes to fill any gap left while a
+        // background tab's timers were throttled.
+        const seededAt = _seeded.get(key) ?? 0;
+        if (s.hex && Date.now() - seededAt > SEED_EVERY) {
+          _seeded.set(key, Date.now());
+          seedTrack(key, s.hex).then((merged) => {
+            if (alive && merged) setTrack(merged);
+          });
+        }
         const pts = _tracks.get(key) ?? [];
         const last = pts[pts.length - 1];
         // Skip duplicate fixes so a parked-but-transmitting aircraft doesn't
