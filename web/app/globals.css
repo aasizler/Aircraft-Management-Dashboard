@@ -923,6 +923,5 @@ canvas.chart{display:block;width:100%;height:150px}
 .alt-legend-ticks span{flex:1;text-align:center}
 .alt-legend-ticks span:first-child{text-align:left}
 .alt-legend-ticks span:last-child{text-align:right}
-.map-wrap.live-open .alt-legend{left:calc(50% + 95px)}
 :root.light .alt-legend{background:rgba(255,255,255,.85)}
 :root.light .alt-legend-ticks{color:rgba(0,0,0,.6)}
