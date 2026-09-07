@@ -7,7 +7,7 @@ import { createContext, useCallback, useContext, useState } from "react";
 
 type ToastKind = "ok" | "warn" | "danger" | "info";
 
-export type ToastAction = {
+type ToastAction = {
   label: string;
   onClick: () => void;
   /** Renders as the filled action. One per toast. */
@@ -20,7 +20,7 @@ export type ToastAction = {
  * an aircraft, and an alert about an aircraft you aren't looking at had nowhere
  * to take you — v1's invite toast carried a Review link and the port lost it.
  */
-export type RichToast = {
+type RichToast = {
   /** Usually the person. Falls back to an event name when nobody is involved. */
   title: string;
   detail?: string;

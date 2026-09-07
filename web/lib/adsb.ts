@@ -79,7 +79,7 @@ export type LiveResult =
   | { ok: true; state: LiveState | null; source: LiveSource | null }
   | { ok: false; state: null; source: null };
 
-export async function fetchLive(reg: string): Promise<LiveResult> {
+async function fetchLive(reg: string): Promise<LiveResult> {
   const key = (reg ?? "").trim().toUpperCase();
   // Not a registration at all — say the lookup failed rather than reporting a
   // silence nobody listened for.
@@ -150,8 +150,6 @@ async function seedTrack(key: string, hex: string): Promise<TrackPoint[] | null>
   }
 }
 
-export const getTrack = (reg: string): TrackPoint[] => _tracks.get(reg.toUpperCase()) ?? [];
-export const clearTrack = (reg: string) => _tracks.delete(reg.toUpperCase());
 
 /**
  * Polls live position every 10s while mounted, records the flown track, and

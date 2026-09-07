@@ -229,7 +229,7 @@ function verdict(abstract: string, c: Craft): Verdict {
 }
 
 /** Search terms for a hangar, each mapped to the registrations it covers. */
-export function termsFor(fleet: Craft[]): Map<string, string[]> {
+function termsFor(fleet: Craft[]): Map<string, string[]> {
   const out = new Map<string, string[]>();
   const add = (term: string, reg: string) => {
     const list = out.get(term) ?? [];
@@ -430,7 +430,7 @@ export function coverageGaps(fleet: Craft[]): { regs: string[]; why: Coverage }[
  */
 export type EngineCoverage = "ok" | "missing" | "no-source";
 
-export function engineCoverageOf(c: Craft): EngineCoverage {
+function engineCoverageOf(c: Craft): EngineCoverage {
   if (!(c.engineType ?? "").trim()) return "missing";
   const mk = engineMakerOf(c.engineType);
   if (!mk || !ENGINE_TERMS[mk]) return "no-source";
@@ -448,33 +448,3 @@ export function engineGaps(fleet: Craft[]): { craft: Craft; why: EngineCoverage 
 }
 
 
-/**
- * Words that mean "this is about something you own" — manufacturer, model and
- * engine maker, for every aircraft in the hangar. Used to lift the handful of
- * industry headlines that actually concern this fleet above the rest.
- */
-export function fleetKeywords(fleet: Craft[]): string[] {
-  const out = new Set<string>();
-  for (const c of fleet) {
-    const t = (c.type ?? "").toUpperCase();
-    const hit =
-      AIRCRAFT_DB.find((a) => t === `${a.mfr} ${a.model}`.toUpperCase()) ??
-      AIRCRAFT_DB.find((a) => t.startsWith(a.mfr.toUpperCase()));
-    if (hit) {
-      out.add(hit.mfr);
-      // Model words only — "SR22", "Bonanza", "Skylane". Digits alone ("182")
-      // match far too much prose to be worth lifting a headline for.
-      for (const w of hit.model.split(/[^A-Za-z0-9]+/)) {
-        if (w.length >= 4 && /[A-Za-z]/.test(w)) out.add(w);
-      }
-    }
-    const em = engineMakerOf(c.engineType);
-    if (em) out.add(em.split(/\s|&/)[0]);
-  }
-  return [...out].filter((w) => w.length >= 4);
-}
-
-/** Keywords a headline mentions, if any. */
-export function mentions(title: string, keywords: string[]): string[] {
-  return keywords.filter((k) => new RegExp(`\\b${k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(title));
-}

@@ -50,13 +50,6 @@ export const ROLE_LABELS: Record<AppRole, string> = {
   viewer: "Viewer",
 };
 
-export const ROLE_COLORS: Record<AppRole, string> = {
-  owner: "var(--accent)",
-  co_owner: "var(--ok)",
-  mechanic: "var(--warn)",
-  viewer: "var(--muted2)",
-};
-
 /**
  * What a GRANT is called — always the wording the granter chose in Manage
  * Access.

@@ -79,16 +79,6 @@ export function useAircraftRealtime(
   }, [aircraftId]);
 }
 
-/**
- * Watches access grants for the signed-in user. A revocation while the tab is
- * open should take effect immediately — v1's checkOfflineRevocations covered
- * the same case on reconnect.
- */
-export function useAccessRealtime() {
-  const router = useRouter();
-  useAccessChanges(useCallback(() => router.refresh(), [router]));
-}
-
 /** The aircraft_access columns a change event carries. */
 export type AccessRow = {
   id: string;

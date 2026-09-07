@@ -579,9 +579,6 @@ export const today = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
 
-// Clock/id helpers live at module scope so components can call them without
-// tripping the React Compiler's purity rule on inline Date.now() use.
-export const nowMs = () => Date.now();
 
 /** Storage-safe unique id, e.g. newId("sq") → "sq_1723570000000_4f2a". */
 export const newId = (prefix: string) =>
@@ -652,7 +649,7 @@ export const METER_LABEL: Record<MeterKind, string> = {
  *   untracked — nothing has been signed off, so there is nothing to vouch for
  *   current   — everything recorded is in date
  */
-export type AirworthinessLevel = "grounded" | "due" | "untracked" | "current";
+type AirworthinessLevel = "grounded" | "due" | "untracked" | "current";
 
 export type Airworthiness = {
   level: AirworthinessLevel;

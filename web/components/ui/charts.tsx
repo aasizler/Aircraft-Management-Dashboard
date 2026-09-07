@@ -3,55 +3,6 @@
 // SVG chart primitives replacing v1's canvas bChart() and the d3 expense
 // charts. Kept dependency-free and theme-reactive (currentColor / CSS vars).
 
-export function BarChart({
-  labels,
-  data,
-  color = "var(--accent)",
-  height = 150,
-  format = (v: number) => (v % 1 === 0 ? String(v) : v.toFixed(1)),
-}: {
-  labels: string[];
-  data: number[];
-  color?: string;
-  height?: number;
-  format?: (v: number) => string;
-}) {
-  if (!data.length) return <div className="chart-empty">No data yet.</div>;
-  const max = Math.max(...data, 1);
-  const W = 100; // viewBox units — scales to container width
-  const padT = 14, padB = 16, padL = 0;
-  const plotH = height - padT - padB;
-  const bw = (W - padL) / data.length;
-
-  return (
-    <svg
-      viewBox={`0 0 ${W} ${height}`}
-      preserveAspectRatio="none"
-      style={{ display: "block", width: "100%", height }}
-      role="img"
-    >
-      {[1, 2, 3, 4].map((g) => {
-        const y = padT + plotH * (1 - g / 4);
-        return <line key={g} x1={0} x2={W} y1={y} y2={y} stroke="var(--border2)" strokeWidth={0.25} />;
-      })}
-      {data.map((v, i) => {
-        const bh = (v / max) * plotH;
-        const x = padL + i * bw + bw * 0.18;
-        const w = bw * 0.64;
-        const y = padT + plotH - bh;
-        return (
-          <g key={i}>
-            <rect x={x} y={y} width={w} height={Math.max(bh, v > 0 ? 0.8 : 0)} fill={color} opacity={0.8} rx={0.6}>
-              <title>{`${labels[i]}: ${format(v)}`}</title>
-            </rect>
-          </g>
-        );
-      })}
-      {/* Labels are drawn in a non-scaled overlay below, so text stays legible. */}
-    </svg>
-  );
-}
-
 /** Bar chart with readable (non-stretched) value + axis labels. */
 export function LabeledBarChart({
   labels,

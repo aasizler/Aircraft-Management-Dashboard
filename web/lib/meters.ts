@@ -61,8 +61,6 @@ const GLASS_DUAL: MeterProfile = {
   note: "Two clocks in the avionics — maintenance runs on flight time, costs on total time.",
 };
 
-export const METER_PROFILES = { SINGLE_HOBBS, SINGLE_FLIGHT, TACH_AND_HOBBS, GLASS_DUAL };
-
 /**
  * Per-type overrides, for airframes we know the panel of. Everything else
  * falls back to its class, so an untagged type behaves exactly as before.
