@@ -157,7 +157,8 @@ export function applyRules(
   const blank = (i: Insp) => !i.populated && !i.lastDate && i.lastHobbs == null;
   const shaped = (parts: Insp[]) => parts.filter((i) => {
     if (!isLife(i.name) || !blank(i)) return true;
-    const sided = /^(Left|Right) /.test(i.name);
+    const sided = /^(Engine|Propeller) [12]\b|^(Left|Right) /.test(i.name) && !/^(Left|Right) /.test(i.name);
+    if (/^(Left|Right) /.test(i.name)) return false; // the old naming; re-added as Engine 1 / 2
     return engines === 2 ? sided || !/Engine|Propeller|Hot Section|Overhaul/.test(i.name) : !sided;
   });
   current = { inspections: current.inspections, parts: shaped(current.parts) };
@@ -230,12 +231,28 @@ export function engineTbo(engineType: string | null | undefined): number | null 
   return ENGINE_DB.find((x) => e.includes(x.id.toLowerCase()) || e.includes(x.model.toLowerCase()))?.tbo ?? null;
 }
 
+// Twins number their engines 1 and 2, as the logbooks do: "{E} Engine
+// Overhaul" becomes "Engine 1 Overhaul" and "Engine 2 Overhaul"; "{E}
+// Propeller Overhaul" becomes "Propeller 1 Overhaul". A single drops the
+// placeholder.
+const numbered = (name: string, n: number) =>
+  name.replace(/^\{E\} (Engine|Propeller)/, `$1 ${n}`).replace("{E} ", "");
 const expand = (tpl: Insp, engines: 1 | 2): Insp[] =>
   tpl.name.includes("{E}")
     ? engines === 2
-      ? [{ ...tpl, name: tpl.name.replace("{E}", "Left") }, { ...tpl, name: tpl.name.replace("{E}", "Right") }]
+      ? [{ ...tpl, name: numbered(tpl.name, 1) }, { ...tpl, name: numbered(tpl.name, 2) }]
       : [{ ...tpl, name: tpl.name.replace("{E} ", "") }]
     : [tpl];
+
+/** Catalogue engines fitted to this type, for the picker. */
+export function enginesForType(typeName: string | null | undefined) {
+  const t = (typeName ?? "").toLowerCase();
+  const words = t.split(/[^a-z0-9]+/).filter((w) => w.length > 2 && !/^(the|jet|cirrus|cessna|beechcraft|piper|socata|daher|pilatus)$/.test(w));
+  return ENGINE_DB.filter((e) => {
+    const app = e.app.toLowerCase();
+    return words.some((w) => app.includes(w));
+  });
+}
 
 /**
  * Merge a programme into what the aircraft already has: rows it lacks are

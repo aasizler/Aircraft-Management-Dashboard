@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CORE_INSP, CORE_INSP_TURBINE, makeLifeLimitedParts, METER_LABEL, intervalShort, type Insp, type OpsRules } from "@/lib/aircraft";
-import { applyProgram, applyRules, engineTbo, enginesFor, programsFor, PROGRAMS, RULES } from "@/lib/programs";
+import { applyProgram, applyRules, engineTbo, enginesFor, enginesForType, programsFor, PROGRAMS, RULES } from "@/lib/programs";
 import type { TabProps } from "../detail-client";
 import { InspTable } from "../insp-table";
 import { LifeLimitedTab } from "./life-limited";
@@ -54,6 +54,12 @@ export function InspectionsTab(props: TabProps) {
   // on the schedule is mandatory. Their own small dialog.
   const rules = data.opsRules ?? "91";
   const [rulesSel, setRulesSel] = useState<OpsRules>(rules);
+  // The engine fitted, from the catalogue: its overhaul life seeds the
+  // engine rows. Engine *programmes* (TAP, ESP, CorporateCare, JSSI) are
+  // coverage plans and do not change the intervals, which come from the
+  // engine manual — so what is picked here is the engine, not a plan.
+  const engineOptions = enginesForType(typeName);
+  const [engineSel, setEngineSel] = useState<string>((data.engineType as string | null) ?? "");
 
   // When the rules say Part 135 or above and the rows they require are not
   // all present and flagged, apply them once.
@@ -82,8 +88,8 @@ export function InspectionsTab(props: TabProps) {
     setApplying(true);
     try {
       const parts = withSeed(data.lifeLimitedParts as Insp[] | undefined);
-      const next = applyProgram(chosen, engines, { inspections: all, parts }, engineTbo(data.engineType as string | null), rulesSel);
-      await save({ ...data, inspections: next.inspections, lifeLimitedParts: next.parts, maintProgram: chosen.id, engines, opsRules: rulesSel });
+      const next = applyProgram(chosen, engines, { inspections: all, parts }, engineTbo(engineSel), rulesSel);
+      await save({ ...data, inspections: next.inspections, lifeLimitedParts: next.parts, maintProgram: chosen.id, engines, opsRules: rulesSel, engineType: engineSel || null });
       setProgOpen(false);
       toast("Operations updated", "ok");
     } finally {
@@ -92,7 +98,7 @@ export function InspectionsTab(props: TabProps) {
   }
 
   const programButton = allow("inspection") ? (
-    <button className="btn sm" onClick={() => { setRulesSel(rules); setProgOpen(true); }} title="Operating rules and maintenance program">
+    <button className="btn sm" onClick={() => { setRulesSel(rules); setEngineSel((data.engineType as string | null) ?? ""); setProgOpen(true); }} title="Operating rules, maintenance program and engine">
       Part {rules} · {current ? current.name : "Program"}
     </button>
   ) : null;
@@ -140,8 +146,20 @@ export function InspectionsTab(props: TabProps) {
           with Log Inspection and set each interval from the manual.
         </p>
       )}
-      <div className="field-hint" style={{ marginTop: 10 }}>
-        {engines === 2 ? "Twin: engine and propeller lives are tracked left and right." : "Single engine."}
+      <div className="mono modal-kicker" style={{ marginTop: 16 }}>Engine</div>
+      <div className="form-row">
+        <select value={engineSel} onChange={(e) => setEngineSel(e.target.value)}>
+          <option value="">Not set</option>
+          {engineOptions.map((e) => (
+            <option key={e.id} value={e.id}>{e.model} · {e.mfr} · TBO {e.tbo.toLocaleString()} hrs</option>
+          ))}
+          {engineSel && !engineOptions.some((e) => e.id === engineSel) && <option value={engineSel}>{engineSel}</option>}
+        </select>
+        <div className="field-hint">
+          {engines === 2 ? "Twin: engine and propeller lives are tracked as Engine 1 and Engine 2. " : "Single engine. "}
+          The catalogue overhaul life seeds the engine rows when a program is applied; edit it to the engine manual.
+          An engine program such as TAP, ESP or CorporateCare is a coverage plan and does not change the intervals.
+        </div>
       </div>
       <div className="form-actions">
         <button className="btn-cancel" onClick={() => setProgOpen(false)}>Cancel</button>
