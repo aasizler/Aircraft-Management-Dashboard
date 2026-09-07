@@ -204,6 +204,7 @@ export function AircraftSettings({
       ...data,
       ...(ruled ? { inspections: ruled.inspections, lifeLimitedParts: ruled.parts } : {}),
       opsRules: rules,
+      engines: enginesFor(aircraft.type) ?? (data.engines as 1 | 2 | undefined) ?? 1,
       engineType: f.engineType.trim() || null,
       acClass: cls,
       // Airframe total time follows the meters: the total-time clock where the

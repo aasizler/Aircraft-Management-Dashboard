@@ -167,6 +167,7 @@ export function AddAircraftButton({
       engineType: f.engineType.trim() || null,
       acClass: cls,
       opsRules: rules,
+      engines: enginesFor(f.type) ?? 1,
       tt: hrs,
       overhaulAt: Number(f.overhaulAt) || 0,
       // Written too, so anything still reading the old field sees today's

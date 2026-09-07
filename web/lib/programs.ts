@@ -49,24 +49,24 @@ const JET_PARTS: Insp[] = [
 export const PROGRAMS: Program[] = [
   {
     id: "part91-piston",
-    name: "Part 91 standard",
-    note: "FAR 91.409 annual and 100-hour, with the 50-hour oil change and the certificate items. The default for any piston aircraft.",
+    name: "Annual and 100-hour",
+    note: "The 91.409 schedule: annual and 100-hour with the 50-hour oil change, plus the certificate items. What most piston aircraft run.",
     cls: ["piston"],
     checks: [],
     parts: [row("{E} Engine (TBO)", 2000, Y(12), { group: "general" }), row("{E} Propeller", 2400, Y(6), { group: "general" })],
   },
   {
     id: "part91-turbine",
-    name: "Part 91 standard (turbine)",
-    note: "The certificate items only. Use this when the aircraft runs a programme not listed here, and add its checks by hand.",
+    name: "Manufacturer's program",
+    note: "The certificate items, with the engine and propeller lives. Add the airframe checks from the manufacturer's schedule or the program your provider manages.",
     cls: ["turboprop"],
     checks: [],
     parts: PT6_PARTS,
   },
   {
     id: "part91-jet",
-    name: "Part 91 standard (jet)",
-    note: "The certificate items only. Use this when the aircraft runs a programme not listed here, and add its checks by hand.",
+    name: "Manufacturer's program",
+    note: "The certificate items, with the engine lives. Add the airframe checks from the manufacturer's schedule or the program your provider manages.",
     cls: ["jet"],
     checks: [],
     parts: JET_PARTS,
@@ -194,10 +194,11 @@ export function programsFor(cls: AcClass, typeName: string | null | undefined): 
   return [...list.filter((p) => p.match?.test(t)), ...list.filter((p) => !p.match)];
 }
 
-/** 1 or 2, from the type catalogue's description; null when the type is unknown. */
+/** 1 or 2, from the type catalogue's description or the name itself; null when unknown. */
 export function enginesFor(typeName: string | null | undefined): 1 | 2 | null {
   const t = (typeName ?? "").toLowerCase();
   if (!t) return null;
+  if (/twin|baron|seneca|seminole|king air|conquest|navajo|aztec|duchess|340|402|414|421|310/.test(t)) return 2;
   const hit = AIRCRAFT_DB.find((a) =>
     t.includes(a.icao.toLowerCase()) ||
     a.model.toLowerCase().split(/\s*\/\s*/).some((m) => m.length > 2 && t.includes(m)));
