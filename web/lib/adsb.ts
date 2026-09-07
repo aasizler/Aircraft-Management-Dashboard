@@ -278,16 +278,44 @@ export function useFleetAirborne(regs: string[]) {
   return airborne;
 }
 
-/** Altitude → colour ramp, ported from v1's _altColor(). */
+/**
+ * Altitude → colour, on the same scale ADS-B Exchange's globe view uses.
+ *
+ * That view is tar1090 (GPL-2+, github.com/wiedehopf/tar1090), whose default
+ * ColorByAlt is a hue ramp by altitude at 88% saturation, with lightness
+ * tuned per hue so yellows don't wash out and blues don't go dark. The
+ * breakpoints below are that scale; the interpolation is our own.
+ */
+const ALT_HUE: [number, number][] = [
+  [0, 20], [2000, 32.5], [4000, 43], [6000, 54], [8000, 72], [9000, 85],
+  [11000, 140], [40000, 300], [51000, 360],
+];
+const HUE_LIGHT: [number, number][] = [
+  [0, 53], [20, 50], [32, 54], [40, 52], [46, 51], [50, 46], [60, 43], [80, 41],
+  [100, 41], [120, 41], [140, 41], [160, 40], [180, 40], [190, 44], [198, 50],
+  [200, 58], [220, 58], [240, 58], [255, 55], [266, 55], [270, 58], [280, 58],
+  [290, 47], [300, 43], [310, 48], [320, 48], [340, 52], [360, 53],
+];
+
+/** Piecewise-linear lookup; clamps to the end values outside the table. */
+function lerpTable(table: [number, number][], x: number): number {
+  if (x <= table[0][0]) return table[0][1];
+  for (let i = 1; i < table.length; i++) {
+    const [x1, y1] = table[i];
+    if (x <= x1) {
+      const [x0, y0] = table[i - 1];
+      return y0 + ((x - x0) / (x1 - x0)) * (y1 - y0);
+    }
+  }
+  return table[table.length - 1][1];
+}
+
 export function altColor(alt: number | null): string {
-  const a = alt ?? 0;
-  if (a <= 0) return "#8a8a8a";
-  if (a < 1000) return "#00e164";
-  if (a < 3000) return "#7ddc00";
-  if (a < 6000) return "#d4d400";
-  if (a < 10000) return "#f5a623";
-  if (a < 18000) return "#f0644b";
-  return "#c04bf0";
+  if (alt == null) return "hsl(0, 0%, 75%)"; // unknown
+  if (alt <= 0) return "hsl(220, 0%, 30%)"; // on the ground
+  const h = lerpTable(ALT_HUE, alt);
+  const l = lerpTable(HUE_LIGHT, h);
+  return `hsl(${h.toFixed(1)}, 88%, ${l.toFixed(1)}%)`;
 }
 
 /** Nearest airport code to a position, from a code→coords table (v1 _nearestAirport). */
