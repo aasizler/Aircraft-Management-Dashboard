@@ -315,7 +315,15 @@ export function FlightMap({
 
       // Recorded track of the current flight, one segment per leg so each can
       // carry its own altitude colour (v1 painted a line-gradient).
-      map.addSource("track", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      // One LineString with an altitude gradient along it, as v1 painted. The
+      // first port drew a two-point line per fix; MapLibre's tile builder drops
+      // line features shorter than its simplification tolerance, so zooming
+      // out made the ten-second segments vanish one by one. lineMetrics is
+      // what line-progress needs.
+      map.addSource("track", {
+        type: "geojson", lineMetrics: true,
+        data: { type: "FeatureCollection", features: [] },
+      });
       map.addSource("routes", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       map.addSource("airports", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
 
@@ -384,7 +392,7 @@ export function FlightMap({
         type: "line",
         source: "track",
         layout: { "line-cap": "round", "line-join": "round" },
-        paint: { "line-color": ["get", "color"], "line-width": 2.4 },
+        paint: { "line-color": "#c3cad3", "line-width": 2.4 },
       });
       // Hover tooltips, airport-fan highlighting and click-through detail —
       // v1's _mlWireHover(), including the wide invisible hit layer for routes.
@@ -589,23 +597,44 @@ export function FlightMap({
     const map = mapRef.current;
     if (!map || !ready) return;
     const src = map.getSource("track") as maplibregl.GeoJSONSource | undefined;
-    if (!src) return;
+    if (!src || !map.getLayer("track-line")) return;
     const shown = replay ?? track;
-    const segments = shown.slice(1).map((p, i) => {
-      const prev = shown[i];
-      return {
-        type: "Feature" as const,
-        geometry: {
-          type: "LineString" as const,
-          coordinates: [
-            [prev.lon, prev.lat],
-            [p.lon, p.lat],
-          ],
-        },
-        properties: { color: altColor(p.alt) },
-      };
+    if (shown.length < 2) {
+      src.setData({ type: "FeatureCollection", features: [] });
+      return;
+    }
+    src.setData({
+      type: "Feature",
+      geometry: { type: "LineString", coordinates: shown.map((p) => [p.lon, p.lat]) },
+      properties: {},
     });
-    src.setData({ type: "FeatureCollection", features: segments });
+    // Gradient stops at each fix's share of the line's length. line-progress
+    // is by distance, so the stops are placed by distance too; equal-length
+    // stops (a parked aircraft repeating a fix) would fail the strictly
+    // increasing rule, so those are skipped.
+    const d = [0];
+    for (let i = 1; i < shown.length; i++) {
+      const a = shown[i - 1], b = shown[i];
+      const dy = b.lat - a.lat, dx = (b.lon - a.lon) * Math.cos(((a.lat + b.lat) / 2) * Math.PI / 180);
+      d.push(d[i - 1] + Math.hypot(dx, dy));
+    }
+    const total = d[d.length - 1];
+    const stops: (number | string)[] = [];
+    let last = -1;
+    shown.forEach((p, i) => {
+      const t = total > 0 ? Math.min(1, d[i] / total) : i / (shown.length - 1);
+      if (t <= last) return;
+      last = t;
+      stops.push(t, altColor(p.alt));
+    });
+    if (stops.length < 4) {
+      map.setPaintProperty("track-line", "line-gradient", undefined);
+      map.setPaintProperty("track-line", "line-color", altColor(shown[shown.length - 1].alt));
+      return;
+    }
+    map.setPaintProperty("track-line", "line-gradient", [
+      "interpolate", ["linear"], ["line-progress"], ...stops,
+    ]);
   }, [track, replay, ready]);
 
   // ── ForeFlight CSV import (v1 parseFF) ────────────────────────────────────
