@@ -103,24 +103,34 @@ export function InspectionsTab(props: TabProps) {
         ))}
       </div>
       <div className="mono modal-kicker" style={{ marginTop: 16 }}>Maintenance program</div>
-      <p className="modal-sub">
-        The schedule this aircraft is maintained to. Applying one adds its checks and part lives with default intervals;
-        rows you already have keep their records, and every interval can be edited afterwards.
-      </p>
-      <div className="radio-list">
-        {choices.map((p) => (
-          <label key={p.id} className="radio-row prog-row">
-            <span>
-              <span className="prog-name">{p.name}</span>
-              <span className="prog-note">{p.note}</span>
-              <span className="prog-rows mono">
-                {p.checks.map((i) => `${i.name} · ${intervalShort(i)}`).join("   ") || "Certificate items and engine lives"}
-              </span>
-            </span>
-            <input type="radio" name="prog" checked={progId === p.id} onChange={() => setProgId(p.id)} />
-          </label>
-        ))}
-      </div>
+      {choices.length > 1 ? (
+        <>
+          <p className="modal-sub">
+            The schedule this aircraft is maintained to. Applying one adds its checks and part lives with default intervals;
+            rows you already have keep their records, and every interval can be edited afterwards.
+          </p>
+          <div className="radio-list">
+            {choices.map((p) => (
+              <label key={p.id} className="radio-row prog-row">
+                <span>
+                  <span className="prog-name">{p.name}</span>
+                  <span className="prog-note">{p.note}</span>
+                  <span className="prog-rows mono">
+                    {p.checks.map((i) => `${i.name} · ${intervalShort(i)}`).join("   ") || "Certificate items and engine lives"}
+                  </span>
+                </span>
+                <input type="radio" name="prog" checked={progId === p.id} onChange={() => setProgId(p.id)} />
+              </label>
+            ))}
+          </div>
+        </>
+      ) : (
+        // One schedule for this type: nothing to choose, so say what it is.
+        <p className="modal-sub">
+          <b>{chosen?.name}.</b> {chosen?.note} No named program is on file for this type; add its checks
+          with Log Inspection and set each interval from the manual.
+        </p>
+      )}
       <div className="field-hint" style={{ marginTop: 10 }}>
         {engines === 2 ? "Twin: engine and propeller lives are tracked left and right." : "Single engine."}
       </div>
