@@ -28,6 +28,9 @@ export type LiveState = {
   callsign: string | null;
   /** Seconds since the feed last had a position for it. */
   ageS: number | null;
+  /** ICAO type designator (C172, SR22, RV12) and emitter category (A1…A7), as the feed reports them. */
+  type: string | null;
+  category: string | null;
 };
 
 type RawAc = {
@@ -42,6 +45,8 @@ type RawAc = {
   squawk?: string;
   flight?: string;
   seen_pos?: number;
+  t?: string;
+  category?: string;
 };
 
 function normalize(ac: RawAc, now: number): LiveState {
@@ -63,6 +68,8 @@ function normalize(ac: RawAc, now: number): LiveState {
     squawk: ac.squawk ?? null,
     callsign: ac.flight?.trim() ?? null,
     ageS,
+    type: ac.t ?? null,
+    category: ac.category ?? null,
   };
 }
 

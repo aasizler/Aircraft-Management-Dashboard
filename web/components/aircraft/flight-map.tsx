@@ -8,6 +8,7 @@ import { AP_FULL } from "@/lib/reference-data";
 import { apLookup, loadAirportDb, onAirportDbUpgrade } from "@/lib/airports";
 import { today, type RouteEntry, type V1Aircraft } from "@/lib/aircraft";
 import { altColor, smoothTrack, velocityDeg, type LiveState, type TrackPoint } from "@/lib/adsb";
+import { shapeFor, SILHOUETTE, type Shape } from "@/lib/silhouettes";
 import { useAircraft } from "./detail-client";
 import { getFlightTrack, listFlightHistory, type FlightHistoryRow } from "@/lib/flight-history";
 import { Modal } from "@/components/ui/modal";
@@ -68,6 +69,14 @@ const LABELS = {
 
 type Mode = "airports" | "routes";
 
+/** The altitude scale as a CSS gradient, with the ticks ADS-B Exchange prints. */
+const LEGEND_TICKS = [0, 500, 1000, 2000, 4000, 6000, 8000, 10000, 20000, 30000, 40000];
+function legendGradient(): string {
+  // Position ticks as they do: a compressed scale, denser below 10,000 ft.
+  const stops = LEGEND_TICKS.map((ft, i) => `${altColor(ft)} ${(i / (LEGEND_TICKS.length - 1)) * 100}%`);
+  return `linear-gradient(90deg, ${stops.join(", ")})`;
+}
+
 /** Local wall-clock time for a track label, as ADS-B Exchange prints it. */
 function hhmmss(ms: number): string {
   const d = new Date(ms);
@@ -114,6 +123,12 @@ export function FlightMap({
   // Speed, altitude and time along the flown track, as ADS-B Exchange labels
   // its trail. Off by default; it is a lot of ink on a long leg.
   const [trackLabels, setTrackLabels] = useState(false);
+  // Keep the aircraft centred as it moves. Off by default and switched off by
+  // a drag, so the map never fights the user.
+  const [follow, setFollow] = useState(false);
+  const followRef = useRef(false);
+  useEffect(() => { followRef.current = follow; }, [follow]);
+  const shapeRef = useRef<Shape | null>(null);
   const [ready, setReady] = useState(false);
   // v1's sizeMap(): the wrapper gets an explicit pixel height of W * 0.446.
   // An aspect-ratio box can still be 0-high when MapLibre is constructed,
@@ -313,6 +328,8 @@ export function FlightMap({
     });
     mapRef.current = map;
     map.on("error", (e) => console.error("[flight-map]", e.error?.message ?? e));
+    // A drag means the user wants the view; stop following.
+    map.on("dragstart", () => setFollow(false));
 
 
     let hintTimer = 0;
@@ -353,6 +370,10 @@ export function FlightMap({
       map.addSource("routes", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       // Points along the flown track for the optional speed/altitude/time labels.
       map.addSource("track-pts", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      // Stretches where the feed lost the aircraft for over a minute: the line
+      // still bridges them, but dashed, so a straight run across a hole reads
+      // as a hole and not as a leg flown.
+      map.addSource("track-gaps", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       map.addSource("airports", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
 
       // Fill the sources as soon as they exist, before any further addLayer
@@ -445,6 +466,14 @@ export function FlightMap({
         source: "track",
         layout: { "line-cap": "round", "line-join": "round" },
         paint: { "line-color": "#c3cad3", "line-width": 2.4 },
+      });
+      // Drawn over the line: a dark dash pattern that reads as "no data here".
+      map.addLayer({
+        id: "track-gaps",
+        type: "line",
+        source: "track-gaps",
+        layout: { "line-cap": "butt" },
+        paint: { "line-color": "#0b1220", "line-width": 2.6, "line-dasharray": [1.5, 2] },
       });
       // Hover tooltips, airport-fan highlighting and click-through detail —
       // v1's _mlWireHover(), including the wide invisible hit layer for routes.
@@ -614,7 +643,7 @@ export function FlightMap({
       el.title = "Show flight data";
       el.innerHTML =
         '<div class="ml-ac-ring"></div>' +
-        '<svg viewBox="0 0 100 100" width="30" height="30"><path d="M50,2 C46,2 44,5 44,14 L41,36 L4,54 L4,63 L41,55 L42,74 L32,79 L32,86 L50,81 L68,86 L68,79 L58,74 L59,55 L96,63 L96,54 L59,36 L56,14 C56,5 54,2 50,2Z"/></svg>';
+        '<svg viewBox="0 0 100 100" width="30" height="30"><path fill-rule="evenodd" d=""/></svg>';
       el.addEventListener("click", (ev) => { ev.stopPropagation(); setLiveOpen((o) => !o); });
       acRef.current = new maplibregl.Marker({ element: el }).setLngLat(pos).addTo(map);
     }
@@ -642,7 +671,15 @@ export function FlightMap({
     const ring = el.querySelector(".ml-ac-ring") as HTMLElement | null;
     if (svg) {
       svg.style.transform = `rotate(${live.track ?? 0}deg)`;
-      svg.querySelector("path")?.setAttribute("fill", live.onGround ? "#94a3b8" : accentHex());
+      const path = svg.querySelector("path");
+      const shape = shapeFor(live.type, live.category, typeof data.type === "string" ? data.type : reg);
+      if (path && shapeRef.current !== shape) {
+        shapeRef.current = shape;
+        path.setAttribute("d", SILHOUETTE[shape]);
+        svg.setAttribute("width", shape === "airliner" ? "34" : "30");
+        svg.setAttribute("height", shape === "airliner" ? "34" : "30");
+      }
+      path?.setAttribute("fill", live.onGround ? "#94a3b8" : accentHex());
     }
     if (ring) ring.style.display = live.onGround ? "none" : "block";
 
@@ -685,6 +722,7 @@ export function FlightMap({
       }
       shownRef.current = { lat, lon };
       mk.setLngLat([lon, lat]);
+      if (followRef.current) mapRef.current?.jumpTo({ center: [lon, lat] });
     };
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
@@ -761,6 +799,21 @@ export function FlightMap({
       });
     });
     src.setData({ type: "FeatureCollection", features: feats });
+
+    const gaps = map.getSource("track-gaps") as maplibregl.GeoJSONSource | undefined;
+    if (gaps) {
+      const segs: GeoJSON.Feature[] = [];
+      for (let i = 1; i < raw.length; i++) {
+        if (raw[i].t - raw[i - 1].t > 60_000) {
+          segs.push({
+            type: "Feature",
+            geometry: { type: "LineString", coordinates: [[raw[i - 1].lon, raw[i - 1].lat], [raw[i].lon, raw[i].lat]] },
+            properties: {},
+          });
+        }
+      }
+      gaps.setData({ type: "FeatureCollection", features: segs });
+    }
   }, [track, replay, ready]);
 
   useEffect(() => {
@@ -928,7 +981,30 @@ export function FlightMap({
               Labels
             </button>
           )}
+          {live && live.lat != null && !live.onGround && (
+            <button
+              className={`map-btn ${follow ? "on" : ""}`}
+              onClick={() => {
+                setFollow((v) => !v);
+                if (!follow && live.lon != null) mapRef.current?.easeTo({ center: [live.lon, live.lat!], duration: 400 });
+              }}
+              title="Keep the aircraft centred"
+            >
+              Follow
+            </button>
+          )}
         </div>
+
+        {(track.length > 1 || replay) && (
+          <div className="alt-legend" aria-label="Track colour by altitude">
+            <div className="alt-legend-bar" style={{ background: legendGradient() }} />
+            <div className="alt-legend-ticks">
+              {LEGEND_TICKS.map((ft) => (
+                <span key={ft}>{ft >= 10000 ? `${ft / 1000}k` : ft === 0 ? "0" : ft.toLocaleString()}</span>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="map-ctl br">
           <button className="map-btn map-zoom" aria-label="Zoom in"
