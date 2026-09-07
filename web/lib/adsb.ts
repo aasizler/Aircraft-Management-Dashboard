@@ -44,8 +44,12 @@ type RawAc = {
   seen_pos?: number;
 };
 
-function normalize(ac: RawAc): LiveState {
+function normalize(ac: RawAc, now: number): LiveState {
   const ground = ac.alt_baro === "ground";
+  // seen_pos is relative to the feed's snapshot; the answer may have sat in
+  // the edge cache for a couple of seconds since. Count that too, so the
+  // fix's true age drives the marker rather than a too-recent one.
+  const ageS = ac.seen_pos != null ? Math.max(0, ac.seen_pos + (Date.now() - now) / 1000) : null;
   return {
     hex: ac.hex?.toLowerCase() ?? null,
     lat: ac.lat ?? null,
@@ -58,7 +62,7 @@ function normalize(ac: RawAc): LiveState {
     vspd: ac.baro_rate ?? null,
     squawk: ac.squawk ?? null,
     callsign: ac.flight?.trim() ?? null,
-    ageS: ac.seen_pos ?? null,
+    ageS,
   };
 }
 
@@ -96,11 +100,11 @@ async function fetchLive(reg: string, paid = false): Promise<LiveResult> {
   try {
     const res = await fetch(`/api/adsb/${encodeURIComponent(key)}${paid ? "?paid=1" : ""}`);
     if (!res.ok) return { ok: false, state: null, source: null };
-    const json = (await res.json()) as { ac?: RawAc[]; error?: string; source?: LiveSource };
+    const json = (await res.json()) as { ac?: RawAc[]; now?: number; error?: string; source?: LiveSource };
     if (json.error) return { ok: false, state: null, source: null };
     const source = json.source ?? null;
     if (!json.ac || !json.ac.length) return { ok: true, state: null, source };
-    return { ok: true, state: normalize(json.ac[0]), source };
+    return { ok: true, state: normalize(json.ac[0], json.now ?? Date.now()), source };
   } catch {
     return { ok: false, state: null, source: null };
   }

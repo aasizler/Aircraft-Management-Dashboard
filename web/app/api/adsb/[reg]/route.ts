@@ -23,13 +23,15 @@ import { NextResponse } from "next/server";
  */
 
 type Ac = Record<string, unknown> & { lat?: number; seen_pos?: number };
+/** A feed answer: the aircraft list and the feed's own snapshot time (ms). */
+type Feed = { ac: Ac[]; now: number };
 
 const UA = "AeroTrack/1.0 (+https://aerotrack-next.vercel.app)";
 /** A free-feed position older than this is treated as silence. */
 const FRESH_S = 20;
 
 /** adsb.lol. Null only when unreachable; an empty list is a real answer. */
-async function fromFree(reg: string): Promise<Ac[] | null> {
+async function fromFree(reg: string): Promise<Feed | null> {
   try {
     const res = await fetch(`https://api.adsb.lol/v2/reg/${encodeURIComponent(reg)}`, {
       // adsb.lol 403s the default Node fetch User-Agent ("node") and an empty
@@ -41,15 +43,15 @@ async function fromFree(reg: string): Promise<Ac[] | null> {
       next: { revalidate: 2 },
     });
     if (!res.ok) return null;
-    const json = (await res.json()) as { ac?: Ac[] };
-    return json.ac ?? [];
+    const json = (await res.json()) as { ac?: Ac[]; now?: number };
+    return { ac: json.ac ?? [], now: json.now ?? Date.now() };
   } catch {
     return null;
   }
 }
 
 /** ADS-B Exchange via RapidAPI. Null when there is no key or the call failed. */
-async function fromAdsbx(reg: string): Promise<Ac[] | null> {
+async function fromAdsbx(reg: string): Promise<Feed | null> {
   const key = process.env.ADSBX_RAPIDAPI_KEY;
   if (!key) return null;
   try {
@@ -68,15 +70,18 @@ async function fromAdsbx(reg: string): Promise<Ac[] | null> {
       },
     );
     if (!res.ok) return null;
-    const json = (await res.json()) as { ac?: Ac[] };
-    return json.ac ?? [];
+    const json = (await res.json()) as { ac?: Ac[]; now?: number };
+    return { ac: json.ac ?? [], now: json.now ?? Date.now() };
   } catch {
     return null;
   }
 }
 
-const fresh = (ac: Ac[]) =>
-  ac.some((a) => typeof a.lat === "number" && (a.seen_pos ?? Infinity) <= FRESH_S);
+// Age is measured from the feed's snapshot, not from now: a cached answer
+// is a few seconds older than it says, and the client corrects for that.
+const fresh = (f: Feed) =>
+  f.ac.some((a) => typeof a.lat === "number" &&
+    (a.seen_pos ?? Infinity) + (Date.now() - f.now) / 1000 <= FRESH_S);
 
 export async function GET(req: Request, ctx: { params: Promise<{ reg: string }> }) {
   const { reg: raw } = await ctx.params;
@@ -89,13 +94,13 @@ export async function GET(req: Request, ctx: { params: Promise<{ reg: string }> 
   const paid = new URL(req.url).searchParams.get("paid") === "1";
 
   const free = await fromFree(reg);
-  if (free && fresh(free)) return NextResponse.json({ ac: free, source: "adsblol" });
+  if (free && fresh(free)) return NextResponse.json({ ...free, source: "adsblol" });
 
   if (paid) {
     const x = await fromAdsbx(reg);
-    if (x) return NextResponse.json({ ac: x, source: "adsbx" });
+    if (x) return NextResponse.json({ ...x, source: "adsbx" });
   }
 
-  if (free) return NextResponse.json({ ac: free, source: "adsblol" });
+  if (free) return NextResponse.json({ ...free, source: "adsblol" });
   return NextResponse.json({ error: "upstream unreachable" }, { status: 502 });
 }

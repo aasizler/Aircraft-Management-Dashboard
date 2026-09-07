@@ -68,6 +68,12 @@ const LABELS = {
 
 type Mode = "airports" | "routes";
 
+/** Local wall-clock time for a track label, as ADS-B Exchange prints it. */
+function hhmmss(ms: number): string {
+  const d = new Date(ms);
+  return [d.getHours(), d.getMinutes(), d.getSeconds()].map((n) => String(n).padStart(2, "0")).join(":");
+}
+
 /** Current --accent as a hex string (v1's _getAccentHex). */
 function accentHex(): string {
   if (typeof document === "undefined") return "#3b9eff";
@@ -105,6 +111,9 @@ export function FlightMap({
   const loadedRef = useRef(false);
   const [basemap, setBasemap] = useState<"map" | "satellite">("map");
   const [mode, setMode] = useState<Mode>("airports");
+  // Speed, altitude and time along the flown track, as ADS-B Exchange labels
+  // its trail. Off by default; it is a lot of ink on a long leg.
+  const [trackLabels, setTrackLabels] = useState(false);
   const [ready, setReady] = useState(false);
   // v1's sizeMap(): the wrapper gets an explicit pixel height of W * 0.446.
   // An aspect-ratio box can still be 0-high when MapLibre is constructed,
@@ -134,6 +143,10 @@ export function FlightMap({
   // The last fix and its velocity; a frame loop slides the marker along it
   // between polls, as ADS-B Exchange's icon glides between messages.
   const fixRef = useRef<{ lat: number; lon: number; t: number; v: [number, number] | null } | null>(null);
+  // Where the marker is drawn right now, and where it was when the latest
+  // fix arrived, so a correction slides in rather than snapping.
+  const shownRef = useRef<{ lat: number; lon: number } | null>(null);
+  const blendRef = useRef<{ from: { lat: number; lon: number }; at: number } | null>(null);
   // The flight-data banner docked to the map's left edge; the marker toggles it.
   const [liveOpen, setLiveOpen] = useState(false);
   // Whether this map instance has been pointed at the live aircraft yet. The
@@ -338,6 +351,8 @@ export function FlightMap({
         data: { type: "FeatureCollection", features: [] },
       });
       map.addSource("routes", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+      // Points along the flown track for the optional speed/altitude/time labels.
+      map.addSource("track-pts", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
       map.addSource("airports", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
 
       // Fill the sources as soon as they exist, before any further addLayer
@@ -399,6 +414,30 @@ export function FlightMap({
           "text-font": ["Noto Sans Regular"],
         },
         paint: { "text-color": "#fff", "text-halo-color": "rgba(0,0,0,0.75)", "text-halo-width": 1 },
+      });
+      map.addLayer({
+        id: "track-labels",
+        type: "symbol",
+        source: "track-pts",
+        layout: {
+          visibility: "none",
+          "text-field": ["get", "label"],
+          "text-size": 10,
+          "text-font": ["Noto Sans Regular"],
+          "text-anchor": "left",
+          "text-offset": [0.6, 0],
+          "text-justify": "left",
+          "text-max-width": 30,
+          "text-allow-overlap": false,
+        },
+        paint: { "text-color": "#fff", "text-halo-color": "rgba(0,0,0,0.8)", "text-halo-width": 1.2 },
+      });
+      map.addLayer({
+        id: "track-pt-dots",
+        type: "circle",
+        source: "track-pts",
+        layout: { visibility: "none" },
+        paint: { "circle-radius": 2.5, "circle-color": "#fff", "circle-stroke-color": "rgba(0,0,0,0.7)", "circle-stroke-width": 1 },
       });
       map.addLayer({
         id: "track-line",
@@ -580,13 +619,24 @@ export function FlightMap({
       acRef.current = new maplibregl.Marker({ element: el }).setLngLat(pos).addTo(map);
     }
     const mk = acRef.current;
-    mk.setLngLat(pos);
-    fixRef.current = {
-      lat: live.lat, lon: live.lon,
-      t: Date.now() - (live.ageS ?? 0) * 1000,
-      v: !live.onGround && live.gspd != null && live.track != null && live.gspd > 15
-        ? velocityDeg(live.gspd, live.track, live.lat) : null,
-    };
+    // A poll can hand back the fix the marker is already gliding from — the
+    // edge cache, or an aircraft that has not reported since. Re-anchoring
+    // on it would drag the aeroplane back to where it was seconds ago and
+    // start the glide over: the "jump back" the user saw. Only a fix that is
+    // newer or elsewhere moves the anchor, and even then the marker slides
+    // from where it is drawn to the corrected place rather than snapping.
+    const t = Date.now() - (live.ageS ?? 0) * 1000;
+    const prev = fixRef.current;
+    const isNew = !prev || t > prev.t + 500 || prev.lat !== live.lat || prev.lon !== live.lon;
+    if (isNew) {
+      if (shownRef.current) blendRef.current = { from: { ...shownRef.current }, at: performance.now() };
+      fixRef.current = {
+        lat: live.lat, lon: live.lon, t,
+        v: !live.onGround && live.gspd != null && live.track != null && live.gspd > 15
+          ? velocityDeg(live.gspd, live.track, live.lat) : null,
+      };
+      if (!fixRef.current.v) { mk.setLngLat(pos); shownRef.current = { lat: live.lat, lon: live.lon }; }
+    }
     const el = mk.getElement();
     const svg = el.querySelector("svg") as SVGElement | null;
     const ring = el.querySelector(".ml-ac-ring") as HTMLElement | null;
@@ -612,17 +662,29 @@ export function FlightMap({
   }, [live, track, ready]);
 
   // Dead-reckon the marker between fixes: from the last position, along its
-  // track at its groundspeed, for at most twenty seconds past the fix. The
-  // next fix snaps it back to what was reported.
+  // track at its groundspeed, for at most twenty seconds past the fix. When a
+  // new fix lands, the drawn position slides to the corrected one over a
+  // second instead of jumping — the same continuity ADS-B Exchange's icon has.
   useEffect(() => {
     if (!ready) return;
     let raf = 0;
+    const BLEND_MS = 900;
     const step = () => {
       raf = requestAnimationFrame(step);
       const f = fixRef.current, mk = acRef.current;
       if (!f || !mk || !f.v) return;
       const dt = Math.min(20, Math.max(0, (Date.now() - f.t) / 1000));
-      mk.setLngLat([f.lon + f.v[1] * dt, f.lat + f.v[0] * dt]);
+      let lat = f.lat + f.v[0] * dt, lon = f.lon + f.v[1] * dt;
+      const b = blendRef.current;
+      if (b) {
+        const k = Math.min(1, (performance.now() - b.at) / BLEND_MS);
+        const e = 1 - (1 - k) * (1 - k); // ease-out
+        lat = b.from.lat + (lat - b.from.lat) * e;
+        lon = b.from.lon + (lon - b.from.lon) * e;
+        if (k >= 1) blendRef.current = null;
+      }
+      shownRef.current = { lat, lon };
+      mk.setLngLat([lon, lat]);
     };
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
@@ -672,6 +734,42 @@ export function FlightMap({
       "interpolate", ["linear"], ["line-progress"], ...stops,
     ]);
   }, [track, replay, ready]);
+
+  // Label points: one per minute of flight plus the last fix, each with the
+  // speed, altitude and time the feed reported there. Built from the raw
+  // fixes, never the curve's interpolated ones.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready) return;
+    const src = map.getSource("track-pts") as maplibregl.GeoJSONSource | undefined;
+    if (!src) return;
+    const raw = replay ?? track;
+    const feats: GeoJSON.Feature[] = [];
+    let lastT = -Infinity;
+    raw.forEach((p, i) => {
+      const last = i === raw.length - 1;
+      if (!last && p.t - lastT < 60_000) return;
+      lastT = p.t;
+      const parts = [
+        p.gs != null ? `${Math.round(p.gs)} kt` : null,
+        p.alt != null ? `${Math.round(p.alt).toLocaleString()} ft` : null,
+      ].filter(Boolean).join(" ");
+      feats.push({
+        type: "Feature",
+        geometry: { type: "Point", coordinates: [p.lon, p.lat] },
+        properties: { label: `${parts}\n${hhmmss(p.t)}` },
+      });
+    });
+    src.setData({ type: "FeatureCollection", features: feats });
+  }, [track, replay, ready]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready) return;
+    for (const id of ["track-labels", "track-pt-dots"]) {
+      if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", trackLabels ? "visible" : "none");
+    }
+  }, [trackLabels, ready]);
 
   // ── ForeFlight CSV import (v1 parseFF) ────────────────────────────────────
   async function importCsv(file: File) {
@@ -821,6 +919,15 @@ export function FlightMap({
               {m === "airports" ? "Airports" : "Routes"}
             </button>
           ))}
+          {(track.length > 1 || replay) && (
+            <button
+              className={`map-btn ${trackLabels ? "on" : ""}`}
+              onClick={() => setTrackLabels((v) => !v)}
+              title="Speed, altitude and time along the track"
+            >
+              Labels
+            </button>
+          )}
         </div>
 
         <div className="map-ctl br">
