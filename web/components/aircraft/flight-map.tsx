@@ -7,7 +7,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { AP_FULL } from "@/lib/reference-data";
 import { apLookup, loadAirportDb, onAirportDbUpgrade } from "@/lib/airports";
 import { today, type RouteEntry, type V1Aircraft } from "@/lib/aircraft";
-import { altColor, type LiveState, type TrackPoint } from "@/lib/adsb";
+import { altColor, smoothTrack, velocityDeg, type LiveState, type TrackPoint } from "@/lib/adsb";
 import { useAircraft } from "./detail-client";
 import { getFlightTrack, listFlightHistory, type FlightHistoryRow } from "@/lib/flight-history";
 import { Modal } from "@/components/ui/modal";
@@ -131,6 +131,9 @@ export function FlightMap({
   // The live aircraft marker (v1 _mlAcMarker): a DOM marker, not a layer, so
   // the glyph can rotate to track and the ring can animate in CSS.
   const acRef = useRef<maplibregl.Marker | null>(null);
+  // The last fix and its velocity; a frame loop slides the marker along it
+  // between polls, as ADS-B Exchange's icon glides between messages.
+  const fixRef = useRef<{ lat: number; lon: number; t: number; v: [number, number] | null } | null>(null);
   // The flight-data banner docked to the map's left edge; the marker toggles it.
   const [liveOpen, setLiveOpen] = useState(false);
   // Whether this map instance has been pointed at the live aircraft yet. The
@@ -578,6 +581,12 @@ export function FlightMap({
     }
     const mk = acRef.current;
     mk.setLngLat(pos);
+    fixRef.current = {
+      lat: live.lat, lon: live.lon,
+      t: Date.now() - (live.ageS ?? 0) * 1000,
+      v: !live.onGround && live.gspd != null && live.track != null && live.gspd > 15
+        ? velocityDeg(live.gspd, live.track, live.lat) : null,
+    };
     const el = mk.getElement();
     const svg = el.querySelector("svg") as SVGElement | null;
     const ring = el.querySelector(".ml-ac-ring") as HTMLElement | null;
@@ -602,13 +611,30 @@ export function FlightMap({
     }
   }, [live, track, ready]);
 
+  // Dead-reckon the marker between fixes: from the last position, along its
+  // track at its groundspeed, for at most twenty seconds past the fix. The
+  // next fix snaps it back to what was reported.
+  useEffect(() => {
+    if (!ready) return;
+    let raf = 0;
+    const step = () => {
+      raf = requestAnimationFrame(step);
+      const f = fixRef.current, mk = acRef.current;
+      if (!f || !mk || !f.v) return;
+      const dt = Math.min(20, Math.max(0, (Date.now() - f.t) / 1000));
+      mk.setLngLat([f.lon + f.v[1] * dt, f.lat + f.v[0] * dt]);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [ready]);
+
   // Altitude-coloured breadcrumb — the flight in progress, or the replayed one.
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !ready) return;
     const src = map.getSource("track") as maplibregl.GeoJSONSource | undefined;
     if (!src || !map.getLayer("track-line")) return;
-    const shown = replay ?? track;
+    const shown = smoothTrack(replay ?? track);
     if (shown.length < 2) {
       src.setData({ type: "FeatureCollection", features: [] });
       return;

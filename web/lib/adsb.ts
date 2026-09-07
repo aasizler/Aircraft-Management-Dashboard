@@ -342,6 +342,60 @@ export function useLivePosition(reg: string, onLanding?: (l: Landing) => void) {
   return { state, status, track, source, setMapVisible };
 }
 
+/** Degrees of latitude per second at `gs` knots. */
+const degPerSec = (gs: number) => gs / 3600 / 60;
+/** Velocity in degrees per second: [dLat, dLon] for a track and speed at a latitude. */
+export function velocityDeg(gs: number, trackDeg: number, lat: number): [number, number] {
+  const v = degPerSec(gs), th = (trackDeg * Math.PI) / 180;
+  return [v * Math.cos(th), (v * Math.sin(th)) / Math.max(0.05, Math.cos((lat * Math.PI) / 180))];
+}
+
+/**
+ * The line ADS-B Exchange draws is straight segments between points a half
+ * second apart in turns. Where our fixes are seconds apart, this bends each
+ * segment to agree with the velocity the feed reported at both ends — a
+ * cubic Hermite curve with the track-and-groundspeed vectors as tangents.
+ * Nothing recorded moves; only the path between fixes is filled in, and only
+ * where both fixes carry a velocity and the geometry is consistent with it.
+ */
+export function smoothTrack(pts: TrackPoint[]): TrackPoint[] {
+  if (pts.length < 2) return pts;
+  const out: TrackPoint[] = [pts[0]];
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1], b = pts[i];
+    const T = (b.t - a.t) / 1000;
+    const ok =
+      T >= 1.5 && T <= 60 &&
+      a.gs != null && a.track != null && b.gs != null && b.track != null &&
+      a.gs > 15 && b.gs > 15;
+    if (ok) {
+      const [vLat0, vLon0] = velocityDeg(a.gs!, a.track!, a.lat);
+      const [vLat1, vLon1] = velocityDeg(b.gs!, b.track!, b.lat);
+      // Chord vs. what the speeds say was flown: if they disagree by more
+      // than 2.5×, a tangent is stale and a curve would invent a detour.
+      const chord = Math.hypot(b.lat - a.lat, (b.lon - a.lon) * Math.cos((a.lat * Math.PI) / 180));
+      const flown = ((degPerSec(a.gs!) + degPerSec(b.gs!)) / 2) * T;
+      if (chord > 1e-6 && flown / chord < 2.5 && chord / flown < 2.5) {
+        const m0: [number, number] = [vLat0 * T, vLon0 * T];
+        const m1: [number, number] = [vLat1 * T, vLon1 * T];
+        const n = Math.min(12, Math.max(2, Math.round(T / 1.5)));
+        for (let k = 1; k < n; k++) {
+          const u = k / n, u2 = u * u, u3 = u2 * u;
+          const h00 = 2 * u3 - 3 * u2 + 1, h10 = u3 - 2 * u2 + u, h01 = -2 * u3 + 3 * u2, h11 = u3 - u2;
+          out.push({
+            lat: h00 * a.lat + h10 * m0[0] + h01 * b.lat + h11 * m1[0],
+            lon: h00 * a.lon + h10 * m0[1] + h01 * b.lon + h11 * m1[1],
+            alt: a.alt != null && b.alt != null ? a.alt + (b.alt - a.alt) * u : (b.alt ?? a.alt),
+            t: a.t + (b.t - a.t) * u,
+          });
+        }
+      }
+    }
+    out.push(b);
+  }
+  return out;
+}
+
 export type FleetItem = { reg: string; base: { lat: number; lon: number } | null };
 
 const FLEET_FREE_MS = 60_000;
