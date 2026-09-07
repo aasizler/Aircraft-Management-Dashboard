@@ -630,16 +630,17 @@ export function dueInShort(i: Insp, st: ReturnType<typeof ic>): string {
 }
 
 // ── Life-limited parts ──────────────────────────────────────────────────────
-// Two tables, as Cirrus IQ lays them out: airworthiness items (the things that
-// expire and ground the aeroplane) and general items (overhaul and replacement
-// lives). Intervals are "hours or years, whichever first", which Insp already
-// expresses as intervalHrs + intervalDays. Seeds are starting points, not
-// authority: the owner activates what applies and edits the intervals to the
-// maintenance manual.
+// Deliberately small. No one sells a life-limits database at the piston-owner
+// tier, and the only way to fake one is a sea of manual uploads. The seed is
+// what is universal and public — the calendar items every aircraft carries,
+// and the engine and propeller overhaul lives that come from public
+// manufacturer bulletins — plus the CAPS and IRS items for a Cirrus, the one
+// airframe whose manual we have verified against. Everything else is a row
+// the owner adds from their own manual. Intervals are "hours or years,
+// whichever first", which Insp already expresses as intervalHrs + intervalDays.
 const Y = (n: number) => n * 365;
 const LLP_COMMON_AIRWORTHINESS: Insp[] = [
   { name: "ELT Battery Pack", intervalDays: Y(5), intervalHrs: null, core: true, group: "airworthiness" },
-  { name: "Carbon Monoxide Detector", intervalDays: Y(7), intervalHrs: null, core: true, group: "airworthiness" },
   { name: "Fire Extinguisher", intervalDays: Y(6), intervalHrs: null, core: true, group: "airworthiness" },
   { name: "Oxygen Supply Cylinder", intervalDays: Y(5), intervalHrs: null, core: true, group: "airworthiness" },
 ];
@@ -653,30 +654,15 @@ const LLP_CIRRUS_AIRWORTHINESS: Insp[] = [
 const LLP_PISTON_GENERAL: Insp[] = [
   { name: "Engine (TBO)", intervalHrs: 2000, intervalDays: Y(12), core: true, group: "general" },
   { name: "Propeller", intervalHrs: 2400, intervalDays: Y(6), core: true, group: "general" },
-  { name: "Propeller Governor", intervalHrs: 2400, intervalDays: null, core: true, group: "general" },
-  { name: "Magnetos", intervalHrs: 500, intervalDays: null, core: true, group: "general" },
-  { name: "Alternator", intervalHrs: 2000, intervalDays: Y(12), core: true, group: "general" },
-  { name: "Starter", intervalHrs: 2700, intervalDays: null, core: true, group: "general" },
-  { name: "Main Battery", intervalHrs: 500, intervalDays: Y(2), core: true, group: "general" },
-  { name: "Fuel Boost Pump", intervalHrs: null, intervalDays: Y(10), core: true, group: "general" },
-  { name: "Induction Air Filter", intervalHrs: 500, intervalDays: Y(3), core: true, group: "general" },
-  { name: "Brake Assembly O-Rings", intervalHrs: null, intervalDays: Y(5), core: true, group: "general" },
-  { name: "Oleo Strut Rubber Elements", intervalHrs: 2000, intervalDays: null, core: true, group: "general" },
 ];
 const LLP_TURBINE_GENERAL: Insp[] = [
   { name: "Engine Hot Section Inspection", intervalHrs: null, intervalDays: null, intervalLabel: "Per maintenance program", core: true, group: "general" },
   { name: "Engine Overhaul", intervalHrs: null, intervalDays: null, intervalLabel: "Per maintenance program", core: true, group: "general" },
   { name: "Propeller Overhaul", intervalHrs: null, intervalDays: null, intervalLabel: "Per maintenance program", core: true, group: "general" },
-  { name: "Main Battery Capacity Check", intervalHrs: null, intervalDays: 365, core: true, group: "general" },
-  { name: "Engine Fire Bottle Cartridges", intervalHrs: null, intervalDays: Y(5), core: true, group: "general" },
-  { name: "Starter-Generator", intervalHrs: 1000, intervalDays: null, core: true, group: "general" },
 ];
 const LLP_JET_GENERAL: Insp[] = [
   { name: "Engine Hot Section Inspection", intervalHrs: null, intervalDays: null, intervalLabel: "Per maintenance program", core: true, group: "general" },
   { name: "Engine Overhaul", intervalHrs: null, intervalDays: null, intervalLabel: "Per maintenance program", core: true, group: "general" },
-  { name: "Main Battery Capacity Check", intervalHrs: null, intervalDays: 365, core: true, group: "general" },
-  { name: "Engine Fire Bottle Cartridges", intervalHrs: null, intervalDays: Y(5), core: true, group: "general" },
-  { name: "Starter-Generator", intervalHrs: 1000, intervalDays: null, core: true, group: "general" },
 ];
 
 const isCirrus = (t: string | null | undefined) => /cirrus|\bSR2[02]|\bSF50|vision/i.test(t ?? "");
