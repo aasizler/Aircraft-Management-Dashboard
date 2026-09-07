@@ -151,6 +151,16 @@ export function applyRules(
   current: { inspections: Insp[]; parts: Insp[] },
 ): { inspections: Insp[]; parts: Insp[] } {
   const clear = (i: Insp): Insp => ({ ...i, required: null });
+  // Engine and propeller rows must match the engine count: a single sheds
+  // unrecorded Left/Right rows, a twin sheds unrecorded single ones, so a
+  // change of count — or an earlier guess — never leaves both shapes behind.
+  const blank = (i: Insp) => !i.populated && !i.lastDate && i.lastHobbs == null;
+  const shaped = (parts: Insp[]) => parts.filter((i) => {
+    if (!isLife(i.name) || !blank(i)) return true;
+    const sided = /^(Left|Right) /.test(i.name);
+    return engines === 2 ? sided || !/Engine|Propeller|Hot Section|Overhaul/.test(i.name) : !sided;
+  });
+  current = { inspections: current.inspections, parts: shaped(current.parts) };
   if (rules === "91") return { inspections: current.inspections.map(clear), parts: current.parts.map(clear) };
 
   if (rules === "135") {
