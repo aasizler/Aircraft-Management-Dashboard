@@ -1025,4 +1025,9 @@ tr.overdue .due-text{color:var(--danger);font-weight:700}
 .radio-row{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--border)}
 .radio-row:last-child{border-bottom:none}
 .radio-row input{accent-color:var(--accent)}
+.prog-row{align-items:flex-start;gap:14px}
+.prog-row > span:first-child{display:flex;flex-direction:column;gap:3px;min-width:0}
+.prog-name{font-weight:600;color:var(--text)}
+.prog-note{font-size:12px;color:var(--muted3);line-height:1.5}
+.prog-rows{font-size:10.5px;color:var(--muted2);white-space:pre-wrap;margin-top:2px}
 :root.light .pill{background:#1f2937;color:#fff}

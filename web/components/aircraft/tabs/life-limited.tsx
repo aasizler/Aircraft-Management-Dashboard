@@ -12,7 +12,7 @@ import { InspTable } from "../insp-table";
  * opened and saved with the first edit; the seed is a starting point the
  * owner activates and corrects to the maintenance manual.
  */
-export function LifeLimitedTab({ data, maintHrs, aircraft, save, allow, center }: TabProps & { center?: React.ReactNode }) {
+export function LifeLimitedTab({ data, maintHrs, aircraft, save, allow, center, tools }: TabProps & { center?: React.ReactNode; tools?: React.ReactNode }) {
   const stored = data.lifeLimitedParts as Insp[] | undefined;
   const items = useMemo(
     () => stored ?? makeLifeLimitedParts(data.acClass, aircraft.type ?? (data.type as string | null)),
@@ -35,6 +35,7 @@ export function LifeLimitedTab({ data, maintHrs, aircraft, save, allow, center }
         addLabel="Add Part"
         noun="part"
         center={center}
+        tools={tools}
       />
     </>
   );

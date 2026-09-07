@@ -40,7 +40,7 @@ const STATUS_CLS: Record<InspStatus, string> = {
 };
 
 export function InspTable({
-  items, presets, save, maintHrs, canEdit, focus, clearFocus, openAddOnMount, groups, addLabel = "Log Inspection", noun = "inspection", center,
+  items, presets, save, maintHrs, canEdit, focus, clearFocus, openAddOnMount, groups, addLabel = "Log Inspection", noun = "inspection", center, tools,
 }: {
   items: Insp[];
   /** The class's core set: the type dropdown for a custom row, and the interval a preset carries. */
@@ -58,6 +58,8 @@ export function InspTable({
   noun?: string;
   /** Rendered in the middle of the toolbar — the Inspections / Life Limited Parts switch. */
   center?: React.ReactNode;
+  /** Rendered before Filters — the programme picker. */
+  tools?: React.ReactNode;
 }) {
   const toast = useToast();
   const [view, setView] = useState<View>("all");
@@ -379,6 +381,7 @@ export function InspTable({
         )}
         {center && <div className="insp-center">{center}</div>}
         <div className="insp-tools">
+          {tools}
           <button className={`btn sm${view !== "all" || sort !== "default" ? " on" : ""}`} onClick={() => setFilterOpen(true)}>
             <Icon name="filter" size={13} /> Filters
           </button>
