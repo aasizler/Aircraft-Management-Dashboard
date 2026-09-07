@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CORE_INSP, CORE_INSP_TURBINE, makeLifeLimitedParts, METER_LABEL, intervalShort, type Insp, type OpsRules } from "@/lib/aircraft";
 import { applyProgram, applyRules, engineTbo, enginesFor, programsFor, PROGRAMS, RULES } from "@/lib/programs";
 import type { TabProps } from "../detail-client";
@@ -59,12 +59,12 @@ export function InspectionsTab(props: TabProps) {
   // all present and flagged, apply them once.
   // Stored parts plus any seed row the aircraft lacks — a list saved before a
   // seed row existed is not left without it.
-  const withSeed = (stored: Insp[] | undefined): Insp[] => {
+  const withSeed = useCallback((stored: Insp[] | undefined): Insp[] => {
     const seed = makeLifeLimitedParts(cls, typeName);
     if (!stored) return seed;
     const have = new Set(stored.map((i) => i.name));
     return [...stored, ...seed.filter((i) => !have.has(i.name))];
-  };
+  }, [cls, typeName]);
 
   const applied = useRef(false);
   useEffect(() => {
@@ -75,7 +75,7 @@ export function InspectionsTab(props: TabProps) {
     if (!changed) return;
     applied.current = true;
     void save({ ...data, inspections: next.inspections, lifeLimitedParts: next.parts });
-  }, [rules, engines, cls, typeName, all, data, save, allow]);
+  }, [rules, engines, cls, all, data, save, allow, withSeed]);
 
   async function applyOperations() {
     if (!chosen) return;
