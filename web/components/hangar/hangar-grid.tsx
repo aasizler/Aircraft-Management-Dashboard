@@ -630,8 +630,8 @@ export function HangarGrid({
                           read like a stray sentence in the middle of the card. */}
                       <button
                         className={`stat-btn ${st.cls}`}
-                        title={`${st.label} — ${st.full}`}
-                        onClick={(e) => e.stopPropagation()}
+                        title={`${st.label} — ${st.full} · open Inspections`}
+                        onClick={(e) => { e.stopPropagation(); router.push(`/aircraft/${a.id}?tab=Inspections`); }}
                       >
                         <Icon name={STAT_ICON[st.cls] ?? "eye-off"} size={13} />
                         <span className="stat-word">{st.label}</span>

@@ -944,14 +944,18 @@ canvas.chart{display:block;width:100%;height:150px}
 :root.light .alt-legend{background:rgba(255,255,255,.85)}
 :root.light .alt-legend-ticks{color:rgba(0,0,0,.6)}
 
-/* Sub-tabs inside a tab: a quiet segmented row under the main tab strip */
-.sub-tabs{display:flex;gap:4px;margin:14px 0 2px;border-bottom:1px solid var(--border)}
-.sub-tab{background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-1px;padding:8px 12px;font-family:var(--body);font-size:12.5px;font-weight:600;color:var(--muted2);cursor:pointer}
+/* Sub-tabs inside a tab: a segmented switch sitting in the middle of the
+   table toolbar, between the bulk actions and the filters */
+.sub-tabs{display:inline-flex;gap:2px;padding:2px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--ctl-r)}
+.sub-tab{background:none;border:none;border-radius:6px;padding:4px 12px;font-family:var(--body);font-size:12px;font-weight:600;color:var(--muted2);cursor:pointer;line-height:1.4}
 .sub-tab:hover{color:var(--text)}
-.sub-tab.on{color:var(--text);border-bottom-color:var(--accent)}
+.sub-tab.on{background:var(--bg4);color:var(--text)}
 
 /* INSPECTIONS TABLE — Cirrus IQ layout: due-in bar leads, rows as cards, pills */
 .insp-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 0 12px;flex-wrap:wrap}
+.insp-toolbar .bulk{flex:1 1 0;min-width:0}
+.insp-center{flex:0 0 auto}
+.insp-toolbar .insp-tools{flex:1 1 0;justify-content:flex-end}
 .insp-toolbar .bulk.on{gap:10px}
 .insp-toolbar .bulk.on .bulk-lbl{color:var(--accent-text)}
 .insp-toolbar .bulk{display:flex;align-items:center;gap:4px;font-size:12px}

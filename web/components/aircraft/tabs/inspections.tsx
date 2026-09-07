@@ -30,18 +30,10 @@ export function InspectionsTab(props: TabProps) {
     </div>
   );
 
-  if (sub === "parts") {
-    return (
-      <>
-        {switcher}
-        <LifeLimitedTab {...props} />
-      </>
-    );
-  }
+  if (sub === "parts") return <LifeLimitedTab {...props} center={switcher} />;
 
   return (
     <>
-      {switcher}
       {/* An hour-based inspection pinned to a meter reading zero can never be
           computed — it just shows NO HOURS forever with nothing saying why. */}
       {!(maintHrs > 0) && all.some((i) => i.intervalHrs && !i.inactive) && (
@@ -61,6 +53,7 @@ export function InspectionsTab(props: TabProps) {
         focus={focusInsp}
         clearFocus={clearFocusInsp}
         openAddOnMount={consumeAction("log-inspection")}
+        center={switcher}
       />
     </>
   );
