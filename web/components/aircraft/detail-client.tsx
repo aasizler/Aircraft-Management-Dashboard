@@ -125,7 +125,13 @@ export function AircraftDetailClient({
   viaFleet?: { id: string; name: string } | null;
   previewSave?: (next: V1Aircraft) => Promise<void>;
 }) {
-  const [data, setData] = useState<V1Aircraft>(aircraft.data ?? {});
+  // `_by` is the saving user's stamp, carried in the row for the realtime
+  // echo; it is not part of the aircraft's data and is dropped on load.
+  const [data, setData] = useState<V1Aircraft>(() => {
+    const { _by: _stamp, ...rest } = (aircraft.data ?? {}) as V1Aircraft & { _by?: string };
+    void _stamp;
+    return rest as V1Aircraft;
+  });
   /**
    * Deep link into a tab — the hangar's signal control sends an airborne
    * aircraft straight to its map. Read at initialisation rather than in an
@@ -212,13 +218,16 @@ export function AircraftDetailClient({
       }
       setSync("syncing");
       const supabase = createClient();
+      // Stamp who saved. The realtime echo carries it back, so a change of
+      // our own is applied silently and only someone else's announces itself.
+      if (!meRef.current) meRef.current = (await supabase.auth.getUser()).data.user?.id ?? null;
       // .select() to see the rowcount. RLS filters rows rather than raising, so
       // an update the policy refuses returns no error at all — which is how a
       // grant without write access could log a squawk, be told it synced, and
       // find it gone on reload.
       const { data: rows, error } = await supabase
         .from("aircraft")
-        .update({ data: next })
+        .update({ data: { ...next, _by: meRef.current } })
         .eq("id", aircraft.id)
         .select("id");
       if (error) {
@@ -254,10 +263,14 @@ export function AircraftDetailClient({
   // Compare canonically — keys sorted at every level — instead.
   const dataRef = useRef(data);
   dataRef.current = data;
+  const meRef = useRef<string | null>(null);
   const remoteRef = useRef<(next: Record<string, unknown>) => void>(() => {});
-  remoteRef.current = (next: Record<string, unknown>) => {
+  remoteRef.current = (incoming: Record<string, unknown>) => {
+    const { _by, ...next } = incoming as Record<string, unknown> & { _by?: string | null };
     if (canonical(next) === canonical(dataRef.current)) return;
     setData(next as V1Aircraft);
+    // Our own save echoed back from another tab or window: apply, say nothing.
+    if (_by && _by === meRef.current) return;
     toast("Updated by another user", "info");
   };
   useAircraftRealtime(previewSave ? "" : aircraft.id, (d) => remoteRef.current(d));
