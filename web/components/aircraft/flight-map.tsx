@@ -123,11 +123,6 @@ export function FlightMap({
   // Speed, altitude and time along the flown track, as ADS-B Exchange labels
   // its trail. Off by default; it is a lot of ink on a long leg.
   const [trackLabels, setTrackLabels] = useState(false);
-  // Keep the aircraft centred as it moves. Off by default and switched off by
-  // a drag, so the map never fights the user.
-  const [follow, setFollow] = useState(false);
-  const followRef = useRef(false);
-  useEffect(() => { followRef.current = follow; }, [follow]);
   const shapeRef = useRef<Shape | null>(null);
   const [ready, setReady] = useState(false);
   // v1's sizeMap(): the wrapper gets an explicit pixel height of W * 0.446.
@@ -328,8 +323,6 @@ export function FlightMap({
     });
     mapRef.current = map;
     map.on("error", (e) => console.error("[flight-map]", e.error?.message ?? e));
-    // A drag means the user wants the view; stop following.
-    map.on("dragstart", () => setFollow(false));
 
 
     let hintTimer = 0;
@@ -722,7 +715,6 @@ export function FlightMap({
       }
       shownRef.current = { lat, lon };
       mk.setLngLat([lon, lat]);
-      if (followRef.current) mapRef.current?.jumpTo({ center: [lon, lat] });
     };
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
@@ -981,18 +973,6 @@ export function FlightMap({
               Labels
             </button>
           )}
-          {live && live.lat != null && !live.onGround && (
-            <button
-              className={`map-btn ${follow ? "on" : ""}`}
-              onClick={() => {
-                setFollow((v) => !v);
-                if (!follow && live.lon != null) mapRef.current?.easeTo({ center: [live.lon, live.lat!], duration: 400 });
-              }}
-              title="Keep the aircraft centred"
-            >
-              Follow
-            </button>
-          )}
         </div>
 
         {(track.length > 1 || replay) && (
@@ -1007,6 +987,19 @@ export function FlightMap({
         )}
 
         <div className="map-ctl br">
+          {live && live.lat != null && (
+            <button
+              className="map-btn map-zoom map-locate"
+              aria-label="Centre on the aircraft"
+              title="Centre on the aircraft"
+              onClick={() => {
+                const p = shownRef.current ?? { lat: live.lat!, lon: live.lon! };
+                mapRef.current?.easeTo({ center: [p.lon, p.lat], zoom: Math.max(mapRef.current.getZoom(), 10), duration: 500 });
+              }}
+            >
+              <Icon name="locate" size={17} />
+            </button>
+          )}
           <button className="map-btn map-zoom" aria-label="Zoom in"
             onClick={() => mapRef.current?.zoomTo((mapRef.current?.getZoom() ?? 3) + 0.585)}>+</button>
           <button className="map-btn map-zoom" aria-label="Zoom out"

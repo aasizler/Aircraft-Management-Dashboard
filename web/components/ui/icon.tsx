@@ -16,6 +16,7 @@
  * timeline — not as decoration on every label.
  */
 export type IconName =
+  | "locate"
   // menus
   | "sort" | "settings" | "logout" | "users" | "eye"
   | "trash" | "share" | "pencil" | "inbox" | "exit"
@@ -86,6 +87,14 @@ const GLYPHS: Record<IconName, React.ReactNode> = {
     </>
   ),
   // Replace the paper plane with an actual aircraft seen from above.
+  // Centre on the aircraft: a crosshair ring with the plane inside it.
+  locate: (
+    <>
+      <circle cx="12" cy="12" r="7" />
+      <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+      <path fill="currentColor" stroke="none" d="M12 7.2c-.5 0-.8.6-.8 1.3v2.6L7.5 13v1.1l3.7-1v2.7l-1.4 1v.7l2.2-.5 2.2.5v-.7l-1.4-1v-2.7l3.7 1V13l-3.7-1.9V8.5c0-.7-.3-1.3-.8-1.3Z" />
+    </>
+  ),
   plane: <path d="M12 2.5c-.8 0-1.4 1-1.4 2.2v4.5L3 13v2l7.6-2v5l-2.8 2v1l4.2-1 4.2 1v-1l-2.8-2v-5l7.6 2v-2l-7.6-3.8V4.7c0-1.2-.6-2.2-1.4-2.2Z" />,
   // Two matching aircraft, separated enough to remain distinct.
   fleet: (
