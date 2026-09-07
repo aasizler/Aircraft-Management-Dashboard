@@ -51,7 +51,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "try{var A={blue:'#3b9eff',cyan:'#22d3ee',violet:'#8b5cf6',magenta:'#ec4899',silver:'#e2e8f0',green:'#22d3ee',mint:'#22d3ee',purple:'#8b5cf6',red:'#ec4899',amber:'#ec4899',slate:'#e2e8f0'};" +
+              "try{var A={blue:'#3b9eff',cyan:'#22d3ee',violet:'#8b5cf6',magenta:'#ec4899',gold:'#facc15',silver:'#e2e8f0',green:'#22d3ee',mint:'#22d3ee',purple:'#8b5cf6',red:'#ec4899',amber:'#ec4899',slate:'#e2e8f0'};" +
               "var t=localStorage.getItem('at_theme')||'dark';" +
               "var light=t==='light'||(t==='system'&&window.matchMedia('(prefers-color-scheme: light)').matches);" +
               "if(light)document.documentElement.classList.add('light');" +

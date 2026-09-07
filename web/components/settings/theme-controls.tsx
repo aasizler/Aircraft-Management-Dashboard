@@ -19,6 +19,9 @@ const ACCENTS: [string, string][] = [
   ["cyan", "#22d3ee"],
   ["violet", "#8b5cf6"],
   ["magenta", "#ec4899"],
+  // Gold, not amber: DUE SOON owns the orange band, and a yellow-orange
+  // beside it read as a warning. This sits far enough round the wheel.
+  ["gold", "#facc15"],
   ["silver", "#e2e8f0"],
 ];
 
