@@ -571,7 +571,13 @@ export function airportCounts(a: V1Aircraft): [string, number][] {
 export const fmtMoney = (n: number) =>
   "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-export const today = () => new Date().toISOString().slice(0, 10);
+// Local calendar date. toISOString() is UTC, so from 8pm Eastern every record
+// logged "today" carried tomorrow's date — the page header, which formats the
+// local date, disagreed with the form beneath it.
+export const today = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
 
 // Clock/id helpers live at module scope so components can call them without
 // tripping the React Compiler's purity rule on inline Date.now() use.

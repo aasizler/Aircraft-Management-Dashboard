@@ -200,15 +200,18 @@ export function InspectionsTab({
     const interval = intervalText(i);
 
     if (isInactive) {
+      // The record dims; the Reactivate button does not — dimmed with the row
+      // it read as disabled.
+      const off = { opacity: 0.45 };
       return (
-        <tr key={idx} style={{ opacity: 0.45 }}>
-          <td style={{ fontWeight: 600 }}>{i.name}</td>
-          <td><span className="badge" style={dimBadge}>INACTIVE</span></td>
-          <td className="mono" style={{ color: "var(--muted)" }}>{i.lastDate || "—"}</td>
-          <td className="mono" style={{ color: "var(--muted)" }}>{unpop ? "—" : st.nl}</td>
-          <td className="mono">{interval}</td>
-          <td style={{ fontSize: 12, color: "var(--muted)" }}>{i.by || "—"}</td>
-          <td className="mono" style={{ color: "var(--muted)" }}>{i.updatedOn || "—"}</td>
+        <tr key={idx}>
+          <td style={{ fontWeight: 600, ...off }}>{i.name}</td>
+          <td style={off}><span className="badge" style={dimBadge}>INACTIVE</span></td>
+          <td className="mono" style={{ color: "var(--muted)", ...off }}>{i.lastDate || "—"}</td>
+          <td className="mono" style={{ color: "var(--muted)", ...off }}>{unpop ? "—" : st.nl}</td>
+          <td className="mono" style={off}>{interval}</td>
+          <td style={{ fontSize: 12, color: "var(--muted)", ...off }}>{i.by || "—"}</td>
+          <td className="mono" style={{ color: "var(--muted)", ...off }}>{i.updatedOn || "—"}</td>
           <td>
             <div className="action-cell even">
               <button className="action-btn" onClick={() => toggleActive(idx)}>Reactivate</button>
@@ -267,7 +270,7 @@ export function InspectionsTab({
     <thead>
       <tr>
         <th>Inspection Type</th><th>Status</th><th>Last Serviced</th>
-        <th>Next Service</th><th>Interval</th><th>Updated By</th>
+        <th>Next Service</th><th>Interval</th><th>Performed By</th>
         <th>Updated On</th><th>Actions</th>
       </tr>
     </thead>
@@ -438,6 +441,7 @@ export function InspectionsTab({
             </>
           }
           confirmLabel="Mark complied"
+          danger={false}
           onConfirm={() => { const i = confirmComply; setConfirmComply(null); markComplied(i); }}
           onCancel={() => setConfirmComply(null)}
         />
