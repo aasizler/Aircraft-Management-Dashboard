@@ -55,6 +55,11 @@ export type Insp = {
   updatedOn?: string | null;
   populated?: boolean;
   inactive?: boolean;
+  /** A reminder the owner set, in the interval's own units. Reaching it makes the row "due soon". */
+  reminderHrs?: number | null;
+  reminderDate?: string | null;
+  /** Life-limited parts: which table the row belongs to. */
+  group?: "airworthiness" | "general";
 };
 
 export type OilEntry = {
@@ -373,6 +378,10 @@ export function ic(i: Insp, maintHrs: number) {
       const dateStr = `${nx.getFullYear()}-${String(nx.getMonth() + 1).padStart(2, "0")}-${String(nx.getDate()).padStart(2, "0")}`;
       pastDue = dl < 0;
       due = dateStr;
+      // Declared above and never assigned until now: every caller that ranked
+      // or warned on days remaining — the dashboard's soonest-first sort, the
+      // "due soon" threshold on a calendar item — was reading undefined.
+      remDays = dl;
       if (dl < 0) {
         nl = `${dateStr} (${Math.abs(dl)}d overdue)`;
         remNum = Math.abs(dl);
@@ -409,7 +418,10 @@ export function ic(i: Insp, maintHrs: number) {
   const warnDays = Math.min(30, Math.max(3, (i.intervalDays ?? 0) * 0.1));
   const warnHrs = Math.min(10, Math.max(2, (i.intervalHrs ?? 0) * 0.2));
   const soon =
-    (remDays != null && remDays <= warnDays) || (remHrs != null && remHrs <= warnHrs);
+    (remDays != null && remDays <= warnDays) || (remHrs != null && remHrs <= warnHrs) ||
+    // A reminder the owner set, once reached, is "due soon" by their definition.
+    (i.reminderHrs != null && maintHrs > 0 && maintHrs >= i.reminderHrs) ||
+    (!!i.reminderDate && today() >= i.reminderDate);
 
   let s: InspStatus = "ok";
   if (pastDue) s = "overdue";
@@ -571,6 +583,110 @@ export function airportCounts(a: V1Aircraft): [string, number][] {
 
 export const fmtMoney = (n: number) =>
   "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+/** "2026-06-15" → "Jun 15, 2026", as Cirrus IQ prints dates. */
+export function fmtDate(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const d = new Date(iso + "T12:00:00");
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+/** "50 HRS", "1 YR", "24 MOS", "30 DAYS", "500 HRS or 2 YRS" — the interval as Cirrus IQ prints it. */
+export function intervalShort(i: Insp): string {
+  const parts: string[] = [];
+  if (i.intervalHrs) parts.push(`${i.intervalHrs} HRS`);
+  if (i.intervalDays) {
+    const d = i.intervalDays;
+    if (d === 365) parts.push("1 YR");
+    else if (d % 365 === 0) parts.push(`${d / 365} YRS`);
+    else if (d % 30 === 0 && d >= 60) parts.push(`${d / 30} MOS`);
+    else parts.push(`${d} DAYS`);
+  }
+  if (!parts.length) return i.intervalLabel ?? "—";
+  return parts.join(" or ");
+}
+
+/**
+ * The Due In cell: the binding countdown in its own units — "30.1 HRS",
+ * "9 MOS", "25 DAYS", or "3 DAYS OVERDUE". Whichever clock has used more of
+ * its interval is the one that binds.
+ */
+export function dueInShort(i: Insp, st: ReturnType<typeof ic>): string {
+  if (st.s === "none" || st.s === "unknown") return "—";
+  const hrs = st.remHrs, days = st.remDays;
+  const hrsShare = hrs != null && i.intervalHrs ? hrs / i.intervalHrs : Infinity;
+  const daysShare = days != null && i.intervalDays ? days / i.intervalDays : Infinity;
+  const useHrs = hrs != null && hrsShare <= daysShare;
+  if (useHrs) {
+    if (hrs! <= 0) return `${Math.abs(hrs!).toFixed(1)} HRS OVERDUE`;
+    return `${hrs!.toFixed(1)} HRS`;
+  }
+  if (days == null) return "—";
+  if (days < 0) return `${Math.abs(days)} ${Math.abs(days) === 1 ? "DAY" : "DAYS"} OVERDUE`;
+  if (days === 0) return "TODAY";
+  if (days >= 60) return `${Math.round(days / 30)} MOS`;
+  return `${days} ${days === 1 ? "DAY" : "DAYS"}`;
+}
+
+// ── Life-limited parts ──────────────────────────────────────────────────────
+// Two tables, as Cirrus IQ lays them out: airworthiness items (the things that
+// expire and ground the aeroplane) and general items (overhaul and replacement
+// lives). Intervals are "hours or years, whichever first", which Insp already
+// expresses as intervalHrs + intervalDays. Seeds are starting points, not
+// authority: the owner activates what applies and edits the intervals to the
+// maintenance manual.
+const Y = (n: number) => n * 365;
+const LLP_COMMON_AIRWORTHINESS: Insp[] = [
+  { name: "ELT Battery Pack", intervalDays: Y(5), intervalHrs: null, core: true, group: "airworthiness" },
+  { name: "Carbon Monoxide Detector", intervalDays: Y(7), intervalHrs: null, core: true, group: "airworthiness" },
+  { name: "Fire Extinguisher", intervalDays: Y(6), intervalHrs: null, core: true, group: "airworthiness" },
+  { name: "Oxygen Supply Cylinder", intervalDays: Y(5), intervalHrs: null, core: true, group: "airworthiness" },
+];
+const LLP_CIRRUS_AIRWORTHINESS: Insp[] = [
+  { name: "CAPS Rocket Motor Assembly", intervalDays: Y(10), intervalHrs: null, core: true, group: "airworthiness" },
+  { name: "CAPS Parachute", intervalDays: Y(10), intervalHrs: null, core: true, group: "airworthiness" },
+  { name: "CAPS Reefing Line Cutters", intervalDays: Y(6), intervalHrs: null, core: true, group: "airworthiness" },
+  { name: "IRS Pilot Seat Inflator Assembly", intervalDays: Y(10), intervalHrs: null, core: true, group: "airworthiness" },
+  { name: "IRS Co-Pilot Seat Inflator Assembly", intervalDays: Y(10), intervalHrs: null, core: true, group: "airworthiness" },
+];
+const LLP_PISTON_GENERAL: Insp[] = [
+  { name: "Engine (TBO)", intervalHrs: 2000, intervalDays: Y(12), core: true, group: "general" },
+  { name: "Propeller", intervalHrs: 2400, intervalDays: Y(6), core: true, group: "general" },
+  { name: "Propeller Governor", intervalHrs: 2400, intervalDays: null, core: true, group: "general" },
+  { name: "Magnetos", intervalHrs: 500, intervalDays: null, core: true, group: "general" },
+  { name: "Alternator", intervalHrs: 2000, intervalDays: Y(12), core: true, group: "general" },
+  { name: "Starter", intervalHrs: 2700, intervalDays: null, core: true, group: "general" },
+  { name: "Main Battery", intervalHrs: 500, intervalDays: Y(2), core: true, group: "general" },
+  { name: "Fuel Boost Pump", intervalHrs: null, intervalDays: Y(10), core: true, group: "general" },
+  { name: "Induction Air Filter", intervalHrs: 500, intervalDays: Y(3), core: true, group: "general" },
+  { name: "Brake Assembly O-Rings", intervalHrs: null, intervalDays: Y(5), core: true, group: "general" },
+  { name: "Oleo Strut Rubber Elements", intervalHrs: 2000, intervalDays: null, core: true, group: "general" },
+];
+const LLP_TURBINE_GENERAL: Insp[] = [
+  { name: "Engine Hot Section Inspection", intervalHrs: null, intervalDays: null, intervalLabel: "Per maintenance program", core: true, group: "general" },
+  { name: "Engine Overhaul", intervalHrs: null, intervalDays: null, intervalLabel: "Per maintenance program", core: true, group: "general" },
+  { name: "Propeller Overhaul", intervalHrs: null, intervalDays: null, intervalLabel: "Per maintenance program", core: true, group: "general" },
+  { name: "Main Battery Capacity Check", intervalHrs: null, intervalDays: 365, core: true, group: "general" },
+  { name: "Engine Fire Bottle Cartridges", intervalHrs: null, intervalDays: Y(5), core: true, group: "general" },
+  { name: "Starter-Generator", intervalHrs: 1000, intervalDays: null, core: true, group: "general" },
+];
+const LLP_JET_GENERAL: Insp[] = [
+  { name: "Engine Hot Section Inspection", intervalHrs: null, intervalDays: null, intervalLabel: "Per maintenance program", core: true, group: "general" },
+  { name: "Engine Overhaul", intervalHrs: null, intervalDays: null, intervalLabel: "Per maintenance program", core: true, group: "general" },
+  { name: "Main Battery Capacity Check", intervalHrs: null, intervalDays: 365, core: true, group: "general" },
+  { name: "Engine Fire Bottle Cartridges", intervalHrs: null, intervalDays: Y(5), core: true, group: "general" },
+  { name: "Starter-Generator", intervalHrs: 1000, intervalDays: null, core: true, group: "general" },
+];
+
+const isCirrus = (t: string | null | undefined) => /cirrus|\bSR2[02]|\bSF50|vision/i.test(t ?? "");
+
+/** The life-limited-parts seed for an aircraft, by class and (for CAPS) by type. */
+export function makeLifeLimitedParts(cls: AcClass = "piston", typeName?: string | null): Insp[] {
+  const air = [...(isCirrus(typeName) ? LLP_CIRRUS_AIRWORTHINESS : []), ...LLP_COMMON_AIRWORTHINESS];
+  const gen = cls === "jet" ? LLP_JET_GENERAL : cls === "turboprop" ? LLP_TURBINE_GENERAL : LLP_PISTON_GENERAL;
+  return [...air, ...gen].map((c) => ({ ...c, lastDate: null, lastHobbs: null, by: null, updatedOn: null, populated: false }));
+}
 
 // Local calendar date. toISOString() is UTC, so from 8pm Eastern every record
 // logged "today" carried tomorrow's date — the page header, which formats the

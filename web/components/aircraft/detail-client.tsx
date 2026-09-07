@@ -25,6 +25,7 @@ import { ManageAccess } from "./manage-access";
 import { AircraftSettings } from "./aircraft-settings";
 import { DashboardTab } from "./tabs/dashboard";
 import { InspectionsTab } from "./tabs/inspections";
+import { LifeLimitedTab } from "./tabs/life-limited";
 import { OilTab } from "./tabs/oil";
 import { SquawksTab } from "./tabs/squawks";
 import { UtilizationTab } from "./tabs/utilization";
@@ -37,6 +38,7 @@ import { InsuranceTab } from "./tabs/insurance";
 const TABS = [
   "Dashboard",
   "Inspections",
+  "Life Limited Parts",
   "Oil and Fluids",
   "Squawks",
   "Utilization",
@@ -470,6 +472,7 @@ export function AircraftDetailClient({
         <div className="tab-content">
           {activeTab === "Dashboard" && <DashboardTab {...ctx} />}
           {activeTab === "Inspections" && <InspectionsTab {...ctx} />}
+          {activeTab === "Life Limited Parts" && <LifeLimitedTab {...ctx} />}
           {activeTab === "Oil and Fluids" && <OilTab {...ctx} />}
           {activeTab === "Squawks" && <SquawksTab {...ctx} />}
           {activeTab === "Utilization" && <UtilizationTab {...ctx} />}
