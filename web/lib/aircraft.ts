@@ -417,13 +417,14 @@ export function ic(i: Insp, maintHrs: number) {
   return { p, s, nl, due, remNum, remUnit, remFoot, remHrs, remDays, hoursBlocked };
 }
 
-// Labels match v1's _inspRow() exactly — a healthy inspection reads "Current",
-// not "OK". "NO HOURS" is the one addition: v1 had no way to express an
+// Labels follow v1's _inspRow() — a healthy inspection reads CURRENT, not OK —
+// set in caps like the rest of the row so the badges read as one set.
+// "NO HOURS" is the one addition: v1 had no way to express an
 // hour-based interval with an unusable meter, and printed nonsense instead.
 export const INSP_BADGE: Record<InspStatus, { cls: string; label: string }> = {
   none:    { cls: "",        label: "NOT SET" },
   unknown: { cls: "info",    label: "NO HOURS" },
-  ok:      { cls: "ok",      label: "Current" },
+  ok:      { cls: "ok",      label: "CURRENT" },
   warn:    { cls: "warn",    label: "DUE SOON" },
   overdue: { cls: "overdue", label: "OVERDUE" },
 };

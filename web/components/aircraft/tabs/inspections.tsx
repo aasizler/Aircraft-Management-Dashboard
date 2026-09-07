@@ -227,14 +227,15 @@ export function InspectionsTab({
     const menu = [
       ...(unpop ? [] : [{ label: "Edit entry", onClick: () => openEdit(idx) }]),
       ...(unpop ? [] : [{ label: "Clear entry", onClick: () => setConfirmClear(idx), danger: true }]),
-      { label: "Deactivate", onClick: () => setConfirmDeactivate(idx), danger: true },
+      // Reversible, so not red: only Clear and Delete lose anything.
+      { label: "Deactivate", onClick: () => setConfirmDeactivate(idx) },
       ...(i.core ? [] : [{ label: "Delete row", onClick: () => setConfirmDelete(idx), danger: true }]),
     ];
 
     const dim = unpop ? { opacity: 0.5 } : undefined;
 
     return (
-      <tr key={idx} style={highlight === idx ? { outline: "1px solid var(--accent)" } : undefined}>
+      <tr key={idx} className={highlight === idx ? "row-focus" : undefined}>
         <td style={{ fontWeight: 600, ...dim }}>{i.name}</td>
         <td style={dim}>
           {unpop
@@ -356,7 +357,7 @@ export function InspectionsTab({
 
           {corePreset ? (
             <div className="how-box" style={{ marginBottom: 12 }}>
-              <span className="mono" style={{ display: "block", marginBottom: 3 }}>REGULATORY INTERVAL</span>
+              <span className="mono" style={{ display: "block", marginBottom: 3 }}>INTERVAL</span>
               <b>{corePreset.intervalLabel}</b>
             </div>
           ) : (
