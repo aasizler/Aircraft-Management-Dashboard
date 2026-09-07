@@ -312,7 +312,6 @@ export function InspTable({
         )}
         <td className="insp-name">
           {i.name}
-          {i.inactive && <span className="insp-tag">INACTIVE</span>}
           {hasReminder && !unset && <span className="insp-bell" title="Reminder set"><Icon name="bell" size={11} /></span>}
         </td>
         <td className="insp-due">

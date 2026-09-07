@@ -137,9 +137,12 @@ const isCheck = (name: string) => /Phase|Check|Hour/i.test(name) && !/ELT|VOR|Tr
 
 /**
  * Apply the operating rules: under Part 135 the 100-hour, emergency-equipment
- * checks and manufacturer lives become required; under 121 and 125 everything
- * on a continuous airworthiness program is. Under Part 91 the flags come off.
- * Rows are added only when missing, and records are never touched.
+ * checks and manufacturer lives are flagged as what the rules require; under
+ * 121 and 125 everything on a continuous airworthiness program is. Under
+ * Part 91 the flags come off. The flag only decides what counts toward
+ * airworthiness; it never activates or locks a row — the operator knows
+ * what their rules demand, and a deactivated row stays deactivated. Rows are
+ * added only when missing, and records are never touched.
  */
 export function applyRules(
   rules: OpsRules,
@@ -170,24 +173,24 @@ export function applyRules(
     const inspections = [
       ...base.map((i) => {
         if (i.name === "Annual Inspection" || i.name === "100-Hour")
-          return onProgram ? { ...i, required: null } : { ...i, required: REQ_135, inactive: false };
+          return onProgram ? { ...i, required: null } : { ...i, required: REQ_135 };
         // The 50-hour oil change is the engine maker's programme, which 135.421 makes mandatory.
-        if (i.name === "50-Hour") return { ...i, required: REQ_135_LIVES, inactive: false };
-        if (isCheck(i.name)) return { ...i, required: REQ_135_PROGRAM, inactive: false };
-        if (/Fire Extinguisher|First Aid|Weight & Balance/.test(i.name)) return { ...i, required: REQ_135, inactive: false };
+        if (i.name === "50-Hour") return { ...i, required: REQ_135_LIVES };
+        if (isCheck(i.name)) return { ...i, required: REQ_135_PROGRAM };
+        if (/Fire Extinguisher|First Aid|Weight & Balance/.test(i.name)) return { ...i, required: REQ_135 };
         return { ...i, required: null };
       }),
       ...need.filter((i) => !have.has(i.name)),
     ];
-    const parts = current.parts.map((i) => (isLife(i.name) ? { ...i, required: REQ_135_LIVES, inactive: false } : { ...i, required: null }));
+    const parts = current.parts.map((i) => (isLife(i.name) ? { ...i, required: REQ_135_LIVES } : { ...i, required: null }));
     return { inspections, parts };
   }
 
   // 121 / 125: a continuous airworthiness program — everything tracked is required.
   const reg = REQ_CAMP[rules];
   return {
-    inspections: current.inspections.map((i) => ({ ...i, required: reg, inactive: false })),
-    parts: current.parts.map((i) => (isLife(i.name) ? { ...i, required: reg, inactive: false } : { ...i, required: null })),
+    inspections: current.inspections.map((i) => ({ ...i, required: reg })),
+    parts: current.parts.map((i) => (isLife(i.name) ? { ...i, required: reg } : { ...i, required: null })),
   };
 }
 
