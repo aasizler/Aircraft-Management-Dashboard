@@ -121,17 +121,31 @@ export function InspTable({
   const stamp = (i: Insp, patch: Partial<Insp>): Insp => ({ ...i, ...patch, updatedOn: today() });
 
   // ── Row actions ───────────────────────────────────────────────────────
+  const noInterval = (i: Insp) => !i.intervalHrs && !i.intervalDays;
   function openUpdate(idx: number) {
     setHours(maintHrs > 0 ? maintHrs.toFixed(1) : "");
     setDate(today());
     setBy(items[idx].by ?? "");
+    // A row with no interval yet — a programme placeholder — gets one here,
+    // and cannot be saved without it.
+    setForm((f) => ({ ...f, intType: "hours", intHrs: "", intDays: "" }));
     setUpdate(idx);
   }
+  const intervalFromForm = () => ({
+    intervalHrs: form.intType !== "days" ? Number(form.intHrs) || null : null,
+    intervalDays: form.intType !== "hours" ? Number(form.intDays) || null : null,
+  });
+  const intervalMissing = (i: Insp) => {
+    if (!noInterval(i)) return false;
+    const v = intervalFromForm();
+    return !v.intervalHrs && !v.intervalDays;
+  };
   async function doUpdate() {
     if (update == null) return;
     const i = items[update];
+    const iv = noInterval(i) ? { ...intervalFromForm(), intervalLabel: undefined } : {};
     const next = items.map((x, k) => k === update
-      ? stamp(x, { lastDate: date || null, lastHobbs: hours === "" ? null : Number(hours), by: by.trim() || null, populated: true, inactive: false })
+      ? stamp(x, { ...iv, lastDate: date || null, lastHobbs: hours === "" ? null : Number(hours), by: by.trim() || null, populated: true, inactive: false })
       : x);
     setUpdate(null);
     await commit(next, `${i.name} updated`);
@@ -155,11 +169,14 @@ export function InspTable({
     if (edit == null) return;
     const i = items[edit];
     const custom = !i.core;
+    // The interval is the owner's to set on any row: a programme's default is
+    // a starting point, and an approved programme's numbers are their own.
     const next = items.map((x, k) => k === edit
       ? stamp(x, {
           name: custom ? form.custom.trim() || x.name : x.name,
-          intervalHrs: custom && form.intType !== "days" ? Number(form.intHrs) || null : x.intervalHrs,
-          intervalDays: custom && form.intType !== "hours" ? Number(form.intDays) || null : x.intervalDays,
+          intervalHrs: form.intType !== "days" ? Number(form.intHrs) || null : null,
+          intervalDays: form.intType !== "hours" ? Number(form.intDays) || null : null,
+          intervalLabel: undefined,
           lastDate: date || null,
           lastHobbs: hours === "" ? null : Number(hours),
           by: by.trim() || null,
@@ -196,6 +213,12 @@ export function InspTable({
   // last-serviced figures; No starts the clock from today at the current hours.
   async function activateNow(idx: number) {
     const i = items[idx];
+    if (noInterval(i)) {
+      // Nothing to count down from until the interval is set: take the form.
+      setActivate(null);
+      openUpdate(idx);
+      return;
+    }
     const next = items.map((x, k) => k === idx
       ? stamp(x, { lastDate: today(), lastHobbs: maintHrs > 0 ? Number(maintHrs.toFixed(1)) : null, populated: true, inactive: false, by: null })
       : x);
@@ -218,8 +241,7 @@ export function InspTable({
   const isUnset = (k: number) => items[k].inactive || ic(items[k], maintHrs).s === "none";
   const selUnset = sel.filter(isUnset);
   const selLive = sel.filter((k) => !isUnset(k));
-  const eligible = (k: number) =>
-    mode === "activate" ? isUnset(k) : mode === "deactivate" ? !isUnset(k) && !items[k].required : mode ? !isUnset(k) : false;
+  const eligible = (k: number) => mode === "activate" ? isUnset(k) : mode ? !isUnset(k) : false;
   const enterMode = (m: NonNullable<typeof mode>) => { setMode(m); setSelected(new Set()); };
   const leaveMode = () => { setMode(null); setSelected(new Set()); };
   async function doBulk() {
@@ -276,8 +298,7 @@ export function InspTable({
       : [
           { label: "Edit", onClick: () => openEdit(idx) },
           { label: hasReminder ? "Change reminder" : "Set reminder", onClick: () => openReminder(idx) },
-          // A row the operating rules make mandatory cannot be switched off.
-          ...(i.required ? [] : [{ label: "Deactivate", onClick: () => setDeactivate(idx) }]),
+          { label: "Deactivate", onClick: () => setDeactivate(idx) },
           ...(i.core ? [] : [{ label: "Delete row", onClick: () => setRemove(idx), danger: true }]),
         ];
     return (
@@ -292,7 +313,6 @@ export function InspTable({
         <td className="insp-name">
           {i.name}
           {i.inactive && <span className="insp-tag">INACTIVE</span>}
-          {i.required && <span className="insp-tag req" title={`Required under ${i.required}`}>REQ</span>}
           {hasReminder && !unset && <span className="insp-bell" title="Reminder set"><Icon name="bell" size={11} /></span>}
         </td>
         <td className="insp-due">
@@ -312,7 +332,7 @@ export function InspTable({
           )}
         </td>
         <td className="insp-next">{unset ? <span className="dash">—</span> : nextService(i, st)}</td>
-        <td className="insp-int">{intervalShort(i)}</td>
+        <td className="insp-int">{i.intervalHrs || i.intervalDays ? intervalShort(i) : <span className="dash">—</span>}</td>
         <td className="insp-by">{unset ? <span className="dash">—</span> : (i.by || <span className="dash">—</span>)}</td>
         <td className="insp-on">{unset ? <span className="dash">—</span> : fmtDate(i.updatedOn)}</td>
         <td className="insp-actions">
@@ -432,6 +452,12 @@ export function InspTable({
       {update != null && (
         <Modal title="Last Serviced" onClose={() => setUpdate(null)}>
           <p className="modal-sub">Enter the hours and date the <b>{items[update].name}</b> was completed.</p>
+          {noInterval(items[update]) && (
+            <>
+              <div className="mono modal-kicker">Interval — required to start tracking</div>
+              <IntervalFields form={form} setForm={setForm} />
+            </>
+          )}
           <div className="form-grid">
             <div className="form-row">
               <label>Hours at Completion</label>
@@ -448,7 +474,7 @@ export function InspTable({
           </div>
           <div className="form-actions">
             <button className="btn-cancel" onClick={() => setUpdate(null)}>Cancel</button>
-            <button className="btn-save" onClick={doUpdate} disabled={busy}>{busy ? "Saving…" : "Finish update"}</button>
+            <button className="btn-save" onClick={doUpdate} disabled={busy || intervalMissing(items[update])}>{busy ? "Saving…" : "Finish update"}</button>
           </div>
         </Modal>
       )}
@@ -457,14 +483,12 @@ export function InspTable({
         <Modal title={`Edit ${noun}`} onClose={() => setEdit(null)}>
           <p className="modal-sub">Editing <b>{items[edit].name}</b>.</p>
           {!items[edit].core && (
-            <>
-              <div className="form-row">
-                <label>Name</label>
-                <input value={form.custom} onChange={(e) => setForm((f) => ({ ...f, custom: e.target.value }))} />
-              </div>
-              <IntervalFields form={form} setForm={setForm} />
-            </>
+            <div className="form-row">
+              <label>Name</label>
+              <input value={form.custom} onChange={(e) => setForm((f) => ({ ...f, custom: e.target.value }))} />
+            </div>
           )}
+          <IntervalFields form={form} setForm={setForm} />
           <div className="mono modal-kicker">Last serviced</div>
           <div className="form-grid">
             <div className="form-row">

@@ -51,9 +51,7 @@ export function InspectionsTab(props: TabProps) {
   // Operating rules are a separate fact from the programme: they decide what
   // on the schedule is mandatory. Their own small dialog.
   const rules = data.opsRules ?? "91";
-  const [rulesOpen, setRulesOpen] = useState(false);
   const [rulesSel, setRulesSel] = useState<OpsRules>(rules);
-  const rulesSelInfo = RULES.find((r) => r.id === rulesSel);
 
   // When the rules say Part 135 or above and the rows they require are not
   // all present and flagged, apply them once.
@@ -68,97 +66,67 @@ export function InspectionsTab(props: TabProps) {
     void save({ ...data, inspections: next.inspections, lifeLimitedParts: next.parts });
   }, [rules, engines, cls, typeName, all, data, save, allow]);
 
-  async function applyChosen() {
+  async function applyOperations() {
     if (!chosen) return;
     setApplying(true);
     try {
       const parts = (data.lifeLimitedParts as Insp[] | undefined) ?? makeLifeLimitedParts(cls, typeName);
-      const next = applyProgram(chosen, engines, { inspections: all, parts }, engineTbo(data.engineType as string | null), rules);
-      await save({ ...data, inspections: next.inspections, lifeLimitedParts: next.parts, maintProgram: chosen.id, engines });
+      const next = applyProgram(chosen, engines, { inspections: all, parts }, engineTbo(data.engineType as string | null), rulesSel);
+      await save({ ...data, inspections: next.inspections, lifeLimitedParts: next.parts, maintProgram: chosen.id, engines, opsRules: rulesSel });
       setProgOpen(false);
-      toast(`${chosen.name} applied`, "ok");
-    } finally {
-      setApplying(false);
-    }
-  }
-
-  async function applyRulesSel() {
-    setApplying(true);
-    try {
-      const parts = (data.lifeLimitedParts as Insp[] | undefined) ?? makeLifeLimitedParts(cls, typeName);
-      const next = applyRules(rulesSel, engines, cls, { inspections: all, parts });
-      await save({ ...data, inspections: next.inspections, lifeLimitedParts: next.parts, opsRules: rulesSel, engines });
-      setRulesOpen(false);
-      toast(`Operating rules set to Part ${rulesSel}`, "ok");
+      toast("Operations updated", "ok");
     } finally {
       setApplying(false);
     }
   }
 
   const programButton = allow("inspection") ? (
-    <>
-      <button className="btn sm" onClick={() => { setRulesSel(rules); setRulesOpen(true); }} title="Operating rules">
-        Part {rules}
-      </button>
-      <button className="btn sm" onClick={() => setProgOpen(true)} title="Maintenance program">
-        {current ? current.name : "Program"}
-      </button>
-    </>
+    <button className="btn sm" onClick={() => { setRulesSel(rules); setProgOpen(true); }} title="Operating rules and maintenance program">
+      Part {rules} · {current ? current.name : "Program"}
+    </button>
   ) : null;
 
-  const programModal = (
-    <>
-      {progOpen && (
-        <Modal title="Maintenance program" onClose={() => setProgOpen(false)}>
-          <p className="modal-sub">
-            The schedule this aircraft is maintained to. Applying one adds its checks and part lives with default intervals;
-            rows you already have keep their records, and every interval can be edited afterwards. The manual for this
-            serial number, or the program your provider manages, is the authority.
-          </p>
-          <div className="radio-list">
-            {choices.map((p) => (
-              <label key={p.id} className="radio-row prog-row">
-                <span>
-                  <span className="prog-name">{p.name}</span>
-                  <span className="prog-note">{p.note}</span>
-                  <span className="prog-rows mono">
-                    {p.checks.map((i) => `${i.name} · ${intervalShort(i)}`).join("   ") || "Certificate items and engine lives"}
-                  </span>
-                </span>
-                <input type="radio" name="prog" checked={progId === p.id} onChange={() => setProgId(p.id)} />
-              </label>
-            ))}
-          </div>
-          <div className="field-hint" style={{ marginTop: 10 }}>
-            {engines === 2 ? "Twin: engine and propeller lives are tracked left and right." : "Single engine."}
-          </div>
-          <div className="form-actions">
-            <button className="btn-cancel" onClick={() => setProgOpen(false)}>Cancel</button>
-            <button className="btn-save" onClick={applyChosen} disabled={applying || !chosen}>{applying ? "Applying…" : "Apply program"}</button>
-          </div>
-        </Modal>
-      )}
-      {rulesOpen && (
-        <Modal title="Operating rules" onClose={() => setRulesOpen(false)}>
-          <p className="modal-sub">The rules this aircraft is operated under decide what on its schedule is mandatory.</p>
-          <div className="radio-list">
-            {RULES.map((r) => (
-              <label key={r.id} className="radio-row prog-row">
-                <span>
-                  <span className="prog-name">{r.name}</span>
-                  <span className="prog-note">{r.hint}</span>
-                </span>
-                <input type="radio" name="rules" checked={rulesSel === r.id} onChange={() => setRulesSel(r.id)} />
-              </label>
-            ))}
-          </div>
-          <div className="form-actions">
-            <button className="btn-cancel" onClick={() => setRulesOpen(false)}>Cancel</button>
-            <button className="btn-save" onClick={applyRulesSel} disabled={applying || !rulesSelInfo}>{applying ? "Applying…" : "Apply"}</button>
-          </div>
-        </Modal>
-      )}
-    </>
+  const programModal = progOpen && (
+    <Modal title="Operations" onClose={() => setProgOpen(false)}>
+      <div className="mono modal-kicker">Operated under</div>
+      <div className="radio-list">
+        {RULES.map((r) => (
+          <label key={r.id} className="radio-row prog-row">
+            <span>
+              <span className="prog-name">{r.name}</span>
+              <span className="prog-note">{r.hint}</span>
+            </span>
+            <input type="radio" name="rules" checked={rulesSel === r.id} onChange={() => setRulesSel(r.id)} />
+          </label>
+        ))}
+      </div>
+      <div className="mono modal-kicker" style={{ marginTop: 16 }}>Maintenance program</div>
+      <p className="modal-sub">
+        The schedule this aircraft is maintained to. Applying one adds its checks and part lives with default intervals;
+        rows you already have keep their records, and every interval can be edited afterwards.
+      </p>
+      <div className="radio-list">
+        {choices.map((p) => (
+          <label key={p.id} className="radio-row prog-row">
+            <span>
+              <span className="prog-name">{p.name}</span>
+              <span className="prog-note">{p.note}</span>
+              <span className="prog-rows mono">
+                {p.checks.map((i) => `${i.name} · ${intervalShort(i)}`).join("   ") || "Certificate items and engine lives"}
+              </span>
+            </span>
+            <input type="radio" name="prog" checked={progId === p.id} onChange={() => setProgId(p.id)} />
+          </label>
+        ))}
+      </div>
+      <div className="field-hint" style={{ marginTop: 10 }}>
+        {engines === 2 ? "Twin: engine and propeller lives are tracked left and right." : "Single engine."}
+      </div>
+      <div className="form-actions">
+        <button className="btn-cancel" onClick={() => setProgOpen(false)}>Cancel</button>
+        <button className="btn-save" onClick={applyOperations} disabled={applying || !chosen}>{applying ? "Applying…" : "Apply"}</button>
+      </div>
+    </Modal>
   );
 
   if (sub === "parts") return <>{programModal}<LifeLimitedTab {...props} center={switcher} tools={programButton} /></>;
