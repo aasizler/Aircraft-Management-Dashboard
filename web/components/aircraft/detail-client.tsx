@@ -17,7 +17,7 @@ import {
 import { can, type AppRole, type Permission } from "@/lib/permissions";
 import { useAircraftRealtime } from "@/lib/realtime";
 import { setAircraftPerms } from "@/lib/aircraft-perms";
-import { useLivePosition, type Landing, type LiveState, type LiveStatus, type TrackPoint } from "@/lib/adsb";
+import { useLivePosition, type Landing, type LiveSource, type LiveState, type LiveStatus, type TrackPoint } from "@/lib/adsb";
 import { useWhere } from "@/lib/where";
 import { LiveBanner } from "./live-banner";
 import { MeterCapture } from "./meter-capture";
@@ -85,7 +85,7 @@ type Ctx = {
    * aeroplane, which is how an app gets rate-limited off a free feed. Poll here,
    * read everywhere.
    */
-  live: { status: LiveStatus; state: LiveState | null; track: TrackPoint[] };
+  live: { status: LiveStatus; state: LiveState | null; track: TrackPoint[]; source: LiveSource | null };
   /**
    * Register the landing handler. Only the live row wants one — it is what
    * offers to log the flight — so it registers on mount and clears on unmount

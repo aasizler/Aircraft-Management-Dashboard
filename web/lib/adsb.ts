@@ -69,24 +69,31 @@ function normalize(ac: RawAc): LiveState {
  * The result distinguishes the two so callers can stop asserting a negative
  * they never actually observed.
  */
+export type LiveSource = "adsbx" | "adsblol";
+export const SOURCE_NAME: Record<LiveSource, string> = {
+  adsbx: "ADS-B Exchange",
+  adsblol: "adsb.lol",
+};
+
 export type LiveResult =
-  | { ok: true; state: LiveState | null }
-  | { ok: false; state: null };
+  | { ok: true; state: LiveState | null; source: LiveSource | null }
+  | { ok: false; state: null; source: null };
 
 export async function fetchLive(reg: string): Promise<LiveResult> {
   const key = (reg ?? "").trim().toUpperCase();
   // Not a registration at all — say the lookup failed rather than reporting a
   // silence nobody listened for.
-  if (!/^[A-Z0-9-]{2,10}$/.test(key)) return { ok: false, state: null };
+  if (!/^[A-Z0-9-]{2,10}$/.test(key)) return { ok: false, state: null, source: null };
   try {
     const res = await fetch(`/api/adsb/${encodeURIComponent(key)}`);
-    if (!res.ok) return { ok: false, state: null };
-    const json = (await res.json()) as { ac?: RawAc[]; error?: string };
-    if (json.error) return { ok: false, state: null };
-    if (!json.ac || !json.ac.length) return { ok: true, state: null };
-    return { ok: true, state: normalize(json.ac[0]) };
+    if (!res.ok) return { ok: false, state: null, source: null };
+    const json = (await res.json()) as { ac?: RawAc[]; error?: string; source?: LiveSource };
+    if (json.error) return { ok: false, state: null, source: null };
+    const source = json.source ?? null;
+    if (!json.ac || !json.ac.length) return { ok: true, state: null, source };
+    return { ok: true, state: normalize(json.ac[0]), source };
   } catch {
-    return { ok: false, state: null };
+    return { ok: false, state: null, source: null };
   }
 }
 
@@ -155,6 +162,7 @@ export function useLivePosition(reg: string, onLanding?: (l: Landing) => void) {
   const [state, setState] = useState<LiveState | null>(null);
   const [status, setStatus] = useState<LiveStatus>("searching");
   const [track, setTrack] = useState<TrackPoint[]>([]);
+  const [source, setSource] = useState<LiveSource | null>(null);
 
   // Keep the callback in a ref so changing it doesn't restart polling.
   const landingRef = useRef(onLanding);
@@ -170,6 +178,7 @@ export function useLivePosition(reg: string, onLanding?: (l: Landing) => void) {
       const res = await fetchLive(key);
       if (!alive) return;
       const s = res.state;
+      setSource(res.source);
 
       if (!res.ok) {
         // Lookup failed — say so rather than claiming the aircraft is silent.
@@ -235,7 +244,7 @@ export function useLivePosition(reg: string, onLanding?: (l: Landing) => void) {
     };
   }, [reg]);
 
-  return { state, status, track };
+  return { state, status, track, source };
 }
 
 /**

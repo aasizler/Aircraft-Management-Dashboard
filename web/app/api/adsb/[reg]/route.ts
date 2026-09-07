@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
 
 /**
- * Server-side proxy for adsb.lol, keyed on the registration.
+ * Server-side proxy for the live feed, keyed on the registration.
+ *
+ * ADS-B Exchange first, when ADSBX_RAPIDAPI_KEY is set: its receiver network is
+ * the densest of the feeds, and it saw an RV-12 on final into Venice at 125 ft
+ * that adsb.lol and adsb.fi never heard at all. adsb.lol is the fallback — no
+ * key, and what the app ran on before the key was wired in. Both answer in
+ * readsb's aircraft.json shape, so the client sees one format either way; the
+ * response says which feed answered so a silence can be attributed.
  *
  * The browser cannot call api.adsb.lol directly: it answers 200 with valid JSON
  * but sends no Access-Control-Allow-Origin header on ANY response — verified
@@ -19,16 +26,49 @@ import { NextResponse } from "next/server";
  * Returns { ac: [...] } on success and { error: "..." } when the upstream is
  * unreachable, so the client can tell "not transmitting" from "lookup failed".
  */
+type Ac = Record<string, unknown>;
+
+/** ADS-B Exchange via RapidAPI. Null when there is no key or the call failed. */
+async function fromAdsbx(reg: string): Promise<Ac[] | null> {
+  const key = process.env.ADSBX_RAPIDAPI_KEY;
+  if (!key) return null;
+  try {
+    const res = await fetch(
+      `https://adsbexchange-com1.p.rapidapi.com/v2/registration/${encodeURIComponent(reg)}/`,
+      {
+        headers: {
+          accept: "application/json",
+          "x-rapidapi-key": key,
+          "x-rapidapi-host": "adsbexchange-com1.p.rapidapi.com",
+        },
+        // Every call is metered against the plan. Ten seconds of edge caching
+        // matches the client's poll and collapses every viewer of one tail
+        // onto a single upstream request.
+        next: { revalidate: 10 },
+      },
+    );
+    if (!res.ok) return null;
+    const json = (await res.json()) as { ac?: Ac[] };
+    return json.ac ?? [];
+  } catch {
+    return null;
+  }
+}
+
 export async function GET(_req: Request, ctx: { params: Promise<{ reg: string }> }) {
-  const { reg } = await ctx.params;
+  const { reg: raw } = await ctx.params;
   // Registrations are letters, digits and hyphens. Anything else is not one,
   // and must not be passed upstream.
-  if (!/^[A-Z0-9-]{2,10}$/i.test(reg)) {
+  if (!/^[A-Z0-9-]{2,10}$/i.test(raw)) {
     return NextResponse.json({ error: "bad registration" }, { status: 400 });
   }
+  const reg = raw.toUpperCase();
+
+  const adsbx = await fromAdsbx(reg);
+  if (adsbx) return NextResponse.json({ ac: adsbx, source: "adsbx" });
 
   try {
-    const res = await fetch(`https://api.adsb.lol/v2/reg/${encodeURIComponent(reg.toUpperCase())}`, {
+    const res = await fetch(`https://api.adsb.lol/v2/reg/${encodeURIComponent(reg)}`, {
       headers: {
         accept: "application/json",
         // adsb.lol 403s the default Node fetch User-Agent ("node") and an empty
@@ -45,7 +85,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ reg: string }>
       return NextResponse.json({ error: `upstream ${res.status}` }, { status: 502 });
     }
     const json = await res.json();
-    return NextResponse.json({ ac: json.ac ?? [] });
+    return NextResponse.json({ ac: json.ac ?? [], source: "adsblol" });
   } catch {
     return NextResponse.json({ error: "upstream unreachable" }, { status: 502 });
   }

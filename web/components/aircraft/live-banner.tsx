@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Icon } from "@/components/ui/icon";
-import { nearestAirport, type Landing } from "@/lib/adsb";
+import { nearestAirport, SOURCE_NAME, type Landing } from "@/lib/adsb";
 import { pushLiveFlight } from "@/lib/flight-history";
 import { loadAirportDb } from "@/lib/airports";
 import { Modal } from "@/components/ui/modal";
@@ -195,7 +195,7 @@ export function LiveBanner({
         <div className="adsb-banner-main">
           <div className="adsb-banner-title">{reg} — Airborne</div>
           <div className="adsb-banner-detail">
-            {state?.callsign ? `${state.callsign} · ` : ""}live ADS-B
+            {state?.callsign ? `${state.callsign} · ` : ""}live via {live.source ? SOURCE_NAME[live.source] : "ADS-B"}
           </div>
         </div>
         <div className="adsb-banner-chips">
