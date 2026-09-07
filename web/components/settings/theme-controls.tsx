@@ -45,7 +45,8 @@ export function ThemeControls() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setTheme((localStorage.getItem("at_theme") as Theme) ?? "dark");
-    setAccent(localStorage.getItem("at_accent") ?? "blue");
+    const stored = localStorage.getItem("at_accent") ?? "blue";
+    setAccent(LEGACY[stored] ?? stored);
   }, []);
 
   function applyTheme(next: Theme) {
