@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CORE_INSP, CORE_INSP_TURBINE, makeLifeLimitedParts, METER_LABEL, intervalShort, type Insp, type OpsRules } from "@/lib/aircraft";
-import { applyProgram, applyRules, engineTbo, enginesFor, programsFor, PROGRAMS, RULES } from "@/lib/programs";
+import {
+  AAIP_ID, applyEngineSchedule, applyProgram, applyRules, ENGINE_SCHEDULES, engineSchedulesFor, engineTbo, enginesFor,
+  programsFor, PROGRAMS, RULES,
+} from "@/lib/programs";
 import type { TabProps } from "../detail-client";
 import { InspTable } from "../insp-table";
 import { LifeLimitedTab } from "./life-limited";
@@ -40,11 +43,16 @@ export function InspectionsTab(props: TabProps) {
   const cls = data.acClass ?? "piston";
   const typeName = aircraft.type ?? (data.type as string | null);
   const current = PROGRAMS.find((p) => p.id === data.maintProgram);
+  const isAaip = data.maintProgram === AAIP_ID;
   const [progOpen, setProgOpen] = useState(false);
-  const [progId, setProgId] = useState<string>(current?.id ?? programsFor(cls, typeName)[0]?.id ?? "part91-piston");
+  const [progId, setProgId] = useState<string>(data.maintProgram ?? programsFor(cls, typeName)[0]?.id ?? "part91-piston");
   const [applying, setApplying] = useState(false);
   const choices = programsFor(cls, typeName);
   const chosen = PROGRAMS.find((p) => p.id === progId) ?? choices[0];
+  // Engine schedule: the engine maker's intervals for the engine on file.
+  const engineChoices = engineSchedulesFor(cls, data.engineType as string | null);
+  const currentEngine = ENGINE_SCHEDULES.find((e) => e.id === data.engineProgram);
+  const [engineId, setEngineId] = useState<string>((data.engineProgram as string | undefined) ?? "");
   // Engine count comes from the type catalogue; nobody is asked.
   // The catalogue wins over a stored count: an earlier dialog could have
   // stored a guess, and the type does not change.
@@ -78,12 +86,21 @@ export function InspectionsTab(props: TabProps) {
   }, [rules, engines, cls, all, data, save, allow, withSeed]);
 
   async function applyOperations() {
-    if (!chosen) return;
     setApplying(true);
     try {
       const parts = withSeed(data.lifeLimitedParts as Insp[] | undefined);
-      const next = applyProgram(chosen, engines, { inspections: all, parts }, engineTbo(data.engineType as string | null), rulesSel);
-      await save({ ...data, inspections: next.inspections, lifeLimitedParts: next.parts, maintProgram: chosen.id, engines, opsRules: rulesSel });
+      const tbo = engineTbo(data.engineType as string | null);
+      // Airframe: a named programme applies its checks; AAIP keeps every row
+      // and leaves the intervals to the operator.
+      const framed = progId === AAIP_ID
+        ? applyRules(rulesSel, engines, cls, { inspections: all, parts })
+        : applyProgram(chosen, engines, { inspections: all, parts }, tbo, rulesSel);
+      const eng = ENGINE_SCHEDULES.find((e) => e.id === engineId);
+      const partsOut = eng ? applyEngineSchedule(eng, engines, framed.parts, tbo) : framed.parts;
+      await save({
+        ...data, inspections: framed.inspections, lifeLimitedParts: partsOut,
+        maintProgram: progId === AAIP_ID ? AAIP_ID : chosen.id, engineProgram: eng?.id ?? null, engines, opsRules: rulesSel,
+      });
       setProgOpen(false);
       toast("Operations updated", "ok");
     } finally {
@@ -92,8 +109,8 @@ export function InspectionsTab(props: TabProps) {
   }
 
   const programButton = allow("inspection") ? (
-    <button className="btn sm" onClick={() => { setRulesSel(rules); setProgOpen(true); }} title="Operating rules and maintenance program">
-      Part {rules}{choices.length > 1 ? ` · ${current ? current.name : "Program"}` : ""}
+    <button className="btn sm" onClick={() => { setRulesSel(rules); setProgId(data.maintProgram ?? choices[0]?.id ?? ""); setEngineId((data.engineProgram as string | undefined) ?? ""); setProgOpen(true); }} title="Operating rules, airframe and engine schedules">
+      Part {rules} · {isAaip ? "AAIP" : current ? current.name : "Program"}{currentEngine ? ` · ${currentEngine.name}` : ""}
     </button>
   ) : null;
 
@@ -111,29 +128,54 @@ export function InspectionsTab(props: TabProps) {
           </label>
         ))}
       </div>
-      {/* Only where the type has a named programme to choose over the standard
-          one; a single option is not a choice, so nothing is shown. */}
-      {choices.length > 1 && <div className="mono modal-kicker" style={{ marginTop: 16 }}>Maintenance program</div>}
-      {choices.length > 1 && (
-        <div className="radio-list">
-          {choices.map((p) => (
-            <label key={p.id} className="radio-row prog-row">
-              <span>
-                <span className="prog-name">{p.name}</span>
-                {p.checks.length > 0 && (
-                  <span className="prog-rows mono">
-                    {p.checks.map((i) => `${i.name} · ${intervalShort(i)}`).join("   ")}
-                  </span>
-                )}
+
+      <div className="mono modal-kicker" style={{ marginTop: 16 }}>Airframe schedule</div>
+      <div className="radio-list">
+        {choices.map((p) => (
+          <label key={p.id} className="radio-row prog-row">
+            <span>
+              <span className="prog-name">{p.name}</span>
+              {p.checks.length > 0 && (
+                <span className="prog-rows mono">{p.checks.map((i) => `${i.name} · ${intervalShort(i)}`).join("   ")}</span>
+              )}
+            </span>
+            <input type="radio" name="prog" checked={progId === p.id} onChange={() => setProgId(p.id)} />
+          </label>
+        ))}
+        <label className="radio-row prog-row">
+          <span>
+            <span className="prog-name">Approved program (AAIP) — custom intervals</span>
+            <span className="prog-rows mono">Rows stay; set each interval from Edit</span>
+          </span>
+          <input type="radio" name="prog" checked={progId === AAIP_ID} onChange={() => setProgId(AAIP_ID)} />
+        </label>
+      </div>
+
+      <div className="mono modal-kicker" style={{ marginTop: 16 }}>Engine schedule</div>
+      <div className="radio-list">
+        {engineChoices.map((e) => (
+          <label key={e.id} className="radio-row prog-row">
+            <span>
+              <span className="prog-name">{e.name}</span>
+              <span className="prog-rows mono">
+                {e.rows.map((i) => `${i.name.replace("{E} ", "")} · ${intervalShort(i)}`).join("   ")}
               </span>
-              <input type="radio" name="prog" checked={progId === p.id} onChange={() => setProgId(p.id)} />
-            </label>
-          ))}
-        </div>
-      )}
+            </span>
+            <input type="radio" name="eng" checked={engineId === e.id} onChange={() => setEngineId(e.id)} />
+          </label>
+        ))}
+        <label className="radio-row prog-row">
+          <span>
+            <span className="prog-name">Custom intervals</span>
+            <span className="prog-rows mono">Engine rows stay; set each interval from Edit</span>
+          </span>
+          <input type="radio" name="eng" checked={engineId === ""} onChange={() => setEngineId("")} />
+        </label>
+      </div>
+
       <div className="form-actions">
         <button className="btn-cancel" onClick={() => setProgOpen(false)}>Cancel</button>
-        <button className="btn-save" onClick={applyOperations} disabled={applying || !chosen}>{applying ? "Applying…" : "Apply"}</button>
+        <button className="btn-save" onClick={applyOperations} disabled={applying}>{applying ? "Applying…" : "Apply"}</button>
       </div>
     </Modal>
   );

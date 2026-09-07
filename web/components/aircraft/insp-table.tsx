@@ -275,7 +275,9 @@ export function InspTable({
       lastHobbs: form.hobbs === "" ? null : Number(form.hobbs),
       by: form.by.trim() || null,
       updatedOn: today(),
-      populated: true,
+      // A row added with an interval but no completion is an unset row to
+      // activate later — how an AAIP operator lays out their phases.
+      populated: !!(form.date || form.hobbs !== ""),
       group: preset?.group,
     };
     const existing = items.findIndex((x) => x.name === name);

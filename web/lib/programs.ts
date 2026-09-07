@@ -205,6 +205,82 @@ export function applyRules(
   };
 }
 
+// ── Engine schedules ────────────────────────────────────────────────────────
+// The engine maker's own intervals, by family. Where a family runs a named
+// inspection — Honeywell's MPI and CZI on the TFE731 — the rows carry that
+// name. The overhaul hour comes from the engine catalogue for the model on
+// file where it is known. Intervals vary by dash number and bulletin status;
+// every one is editable.
+export type EngineSchedule = {
+  id: string;
+  name: string;
+  /** Engine model ids this is written for. */
+  match: RegExp;
+  cls: AcClass[];
+  rows: Insp[];
+};
+
+export const ENGINE_SCHEDULES: EngineSchedule[] = [
+  { id: "pt6a", name: "Pratt & Whitney PT6A", match: /^PT6A/i, cls: ["turboprop"], rows: [
+    row("{E} Engine Hot Section Inspection", 1800, null, { group: "general" }),
+    row("{E} Engine Overhaul", 3600, null, { group: "general" }),
+  ] },
+  { id: "tpe331", name: "Honeywell TPE331", match: /^TPE331/i, cls: ["turboprop"], rows: [
+    row("{E} Engine Hot Section Inspection", 1800, null, { group: "general" }),
+    row("{E} Engine Overhaul", 5400, null, { group: "general" }),
+  ] },
+  { id: "tfe731", name: "Honeywell TFE731", match: /^TFE731/i, cls: ["jet"], rows: [
+    row("{E} Engine Major Periodic Inspection (MPI)", 2100, null, { group: "general" }),
+    row("{E} Engine Core Zone Inspection (CZI)", 4200, null, { group: "general" }),
+  ] },
+  { id: "jt15d", name: "Pratt & Whitney JT15D", match: /^JT15D/i, cls: ["jet"], rows: [
+    row("{E} Engine Hot Section Inspection", 1750, null, { group: "general" }),
+    row("{E} Engine Overhaul", 3500, null, { group: "general" }),
+  ] },
+  { id: "pw500", name: "Pratt & Whitney PW500 / PW600", match: /^PW[56]\d\d/i, cls: ["jet"], rows: [
+    row("{E} Engine Hot Section Inspection", null, null, { group: "general", intervalLabel: "Per engine program" }),
+    row("{E} Engine Overhaul", null, null, { group: "general", intervalLabel: "Per engine program" }),
+  ] },
+  { id: "williams", name: "Williams FJ33 / FJ44", match: /^FJ(33|44)/i, cls: ["jet"], rows: [
+    row("{E} Engine Hot Section Inspection", null, null, { group: "general", intervalLabel: "On condition" }),
+    row("{E} Engine Overhaul", null, null, { group: "general", intervalLabel: "Per engine program" }),
+  ] },
+  { id: "rr250", name: "Rolls-Royce M250", match: /^250-/i, cls: ["turboprop"], rows: [
+    row("{E} Engine Hot Section Inspection", 1750, null, { group: "general" }),
+    row("{E} Engine Overhaul", 3500, null, { group: "general" }),
+  ] },
+  { id: "piston", name: "Lycoming / Continental", match: /^(I?O|TS?IO|TIO|GTSIO|AEIO|HIO|IOF|TSIOF)-/i, cls: ["piston"], rows: [
+    row("{E} Engine (TBO)", 2000, Y(12), { group: "general" }),
+  ] },
+];
+
+/** The engine schedules that fit the engine on file, else the class's. */
+export function engineSchedulesFor(cls: AcClass, engineType: string | null | undefined): EngineSchedule[] {
+  const e = (engineType ?? "").trim();
+  const byEngine = e ? ENGINE_SCHEDULES.filter((s) => s.match.test(e)) : [];
+  return byEngine.length ? byEngine : ENGINE_SCHEDULES.filter((s) => s.cls.includes(cls));
+}
+
+const ENGINE_ROW = /Engine .*(Hot Section|Overhaul|MPI|CZI|TBO)|^Engine \(TBO\)$|^Engine (Hot Section|Overhaul)/;
+
+/**
+ * Apply an engine schedule: unrecorded engine rows are replaced by the
+ * schedule's, numbered per engine; recorded ones are kept. The overhaul hour
+ * takes the catalogue TBO for the engine on file where it is known.
+ */
+export function applyEngineSchedule(s: EngineSchedule, engines: 1 | 2, parts: Insp[], tbo: number | null): Insp[] {
+  const blank = (i: Insp) => !i.populated && !i.lastDate && i.lastHobbs == null;
+  const kept = parts.filter((i) => !(ENGINE_ROW.test(i.name) && blank(i)));
+  const have = new Set(kept.map((i) => i.name));
+  const add = s.rows.flatMap((t) => expand(t, engines))
+    .map((r) => (tbo && /Overhaul|\(TBO\)/.test(r.name) ? { ...r, intervalHrs: tbo } : r))
+    .filter((r) => !have.has(r.name));
+  return [...kept, ...add];
+}
+
+/** The airframe choice an operator on an approved programme makes: keep every row, own every interval. */
+export const AAIP_ID = "aaip";
+
 /**
  * The programmes for this aircraft. A type with a named programme gets that
  * and nothing else: the named programme IS the manufacturer's schedule, so

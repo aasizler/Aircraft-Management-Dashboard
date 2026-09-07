@@ -9,6 +9,7 @@ export type V1Aircraft = Record<string, unknown> & {
   lifeLimitedParts?: Insp[];
   opsRules?: OpsRules;
   maintProgram?: string;
+  engineProgram?: string | null;
   engines?: 1 | 2;
   oil?: OilEntry[];
   flights?: FlightEntry[];
