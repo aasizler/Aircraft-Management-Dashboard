@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { CORE_INSP, CORE_INSP_TURBINE, makeLifeLimitedParts, METER_LABEL, intervalShort, type Insp } from "@/lib/aircraft";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { CORE_INSP, CORE_INSP_TURBINE, makeLifeLimitedParts, METER_LABEL, intervalShort, type Insp, type OpsRules } from "@/lib/aircraft";
 import { applyProgram, applyRules, engineTbo, enginesFor, programsFor, PROGRAMS, RULES } from "@/lib/programs";
 import type { TabProps } from "../detail-client";
 import { InspTable } from "../insp-table";
@@ -16,7 +16,7 @@ import { useToast } from "@/components/ui/toast";
  */
 export function InspectionsTab(props: TabProps) {
   const { data, maintHrs, aircraft, save, consumeAction, allow, focusInsp, clearFocusInsp } = props;
-  const all = (data.inspections ?? []) as Insp[];
+  const all = useMemo(() => (data.inspections ?? []) as Insp[], [data.inspections]);
   const CORE =
     data.acClass === "jet" || data.acClass === "turboprop" ? CORE_INSP_TURBINE : CORE_INSP;
   // Life Limited Parts lives here as a sub-tab rather than beside the main
@@ -36,7 +36,9 @@ export function InspectionsTab(props: TabProps) {
   const choices = programsFor(cls, typeName);
   const chosen = PROGRAMS.find((p) => p.id === progId) ?? choices[0];
   const rules = data.opsRules ?? "91";
-  const rulesInfo = RULES.find((r) => r.id === rules);
+  // The dialog can change the rules too; Settings is not the only place.
+  const [rulesSel, setRulesSel] = useState<OpsRules>(rules);
+  const rulesSelInfo = RULES.find((r) => r.id === rulesSel);
 
   // The rules decide what is mandatory. When they say Part 135 or above and
   // the rows they require are not all present and flagged, apply them once.
@@ -56,18 +58,18 @@ export function InspectionsTab(props: TabProps) {
     setApplying(true);
     try {
       const parts = (data.lifeLimitedParts as Insp[] | undefined) ?? makeLifeLimitedParts(cls, typeName);
-      const next = applyProgram(chosen, engines, { inspections: all, parts }, engineTbo(data.engineType as string | null), rules);
-      await save({ ...data, inspections: next.inspections, lifeLimitedParts: next.parts, maintProgram: chosen.id, engines });
+      const next = applyProgram(chosen, engines, { inspections: all, parts }, engineTbo(data.engineType as string | null), rulesSel);
+      await save({ ...data, inspections: next.inspections, lifeLimitedParts: next.parts, maintProgram: chosen.id, engines, opsRules: rulesSel });
       setProgOpen(false);
-      toast(`${chosen.name} applied`, "ok");
+      toast(`${chosen.name} applied${rulesSel !== rules ? ` · Part ${rulesSel}` : ""}`, "ok");
     } finally {
       setApplying(false);
     }
   }
 
   const programButton = allow("inspection") ? (
-    <button className="btn sm" onClick={() => setProgOpen(true)} title="Maintenance programme">
-      {current ? current.name : "Program"}
+    <button className="btn sm" onClick={() => { setRulesSel(rules); setProgOpen(true); }} title="Operating rules and maintenance programme">
+      Part {rules} · {current ? current.name : "Program"}
     </button>
   ) : null;
 
@@ -77,9 +79,17 @@ export function InspectionsTab(props: TabProps) {
         A program adds its checks and part lives with default intervals. Rows you already have keep their records;
         every interval can be edited afterwards. The manual for this serial number is the authority.
       </p>
-      {rulesInfo && rules !== "91" && (
-        <p className="modal-sub rules-note"><b>{rulesInfo.name}.</b> {rulesInfo.hint}</p>
-      )}
+      <div className="form-row">
+        <label>Operated under</label>
+        <div className="sub-tabs">
+          {RULES.map((r) => (
+            <button key={r.id} type="button" className={`sub-tab${rulesSel === r.id ? " on" : ""}`} onClick={() => setRulesSel(r.id)}>
+              {r.name}
+            </button>
+          ))}
+        </div>
+        {rulesSelInfo && <div className="field-hint">{rulesSelInfo.hint}</div>}
+      </div>
       <div className="radio-list">
         {choices.map((p) => (
           <label key={p.id} className="radio-row prog-row">
