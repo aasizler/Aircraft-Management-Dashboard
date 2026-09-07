@@ -57,12 +57,21 @@ export function InspectionsTab(props: TabProps) {
 
   // When the rules say Part 135 or above and the rows they require are not
   // all present and flagged, apply them once.
+  // Stored parts plus any seed row the aircraft lacks — a list saved before a
+  // seed row existed is not left without it.
+  const withSeed = (stored: Insp[] | undefined): Insp[] => {
+    const seed = makeLifeLimitedParts(cls, typeName);
+    if (!stored) return seed;
+    const have = new Set(stored.map((i) => i.name));
+    return [...stored, ...seed.filter((i) => !have.has(i.name))];
+  };
+
   const applied = useRef(false);
   useEffect(() => {
     if (applied.current || rules === "91" || !allow("inspection")) return;
-    const parts = (data.lifeLimitedParts as Insp[] | undefined) ?? makeLifeLimitedParts(cls, typeName);
+    const parts = withSeed(data.lifeLimitedParts as Insp[] | undefined);
     const next = applyRules(rules, engines, cls, { inspections: all, parts });
-    const changed = JSON.stringify(next) !== JSON.stringify({ inspections: all, parts });
+    const changed = JSON.stringify(next) !== JSON.stringify({ inspections: all, parts: data.lifeLimitedParts ?? parts });
     if (!changed) return;
     applied.current = true;
     void save({ ...data, inspections: next.inspections, lifeLimitedParts: next.parts });
@@ -72,7 +81,7 @@ export function InspectionsTab(props: TabProps) {
     if (!chosen) return;
     setApplying(true);
     try {
-      const parts = (data.lifeLimitedParts as Insp[] | undefined) ?? makeLifeLimitedParts(cls, typeName);
+      const parts = withSeed(data.lifeLimitedParts as Insp[] | undefined);
       const next = applyProgram(chosen, engines, { inspections: all, parts }, engineTbo(data.engineType as string | null), rulesSel);
       await save({ ...data, inspections: next.inspections, lifeLimitedParts: next.parts, maintProgram: chosen.id, engines, opsRules: rulesSel });
       setProgOpen(false);
