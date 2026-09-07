@@ -326,8 +326,10 @@ export function InspTable({
     <thead>
       <tr>
         {mode && <th className="insp-check" />}
-        <th>{label}</th><th>Due In</th><th>Last Serviced</th><th>Next Service</th>
-        <th>Interval</th><th>Updated By</th><th>Updated On</th><th>Actions</th>
+        <th className="c-name">{label}</th><th className="c-due">Due In</th>
+        <th className="c-last">Last Serviced</th><th className="c-next">Next Service</th>
+        <th className="c-int">Interval</th><th className="c-by">Updated By</th>
+        <th className="c-on">Updated On</th><th className="c-act">Actions</th>
       </tr>
     </thead>
   );
