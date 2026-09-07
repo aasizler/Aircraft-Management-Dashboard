@@ -7,19 +7,29 @@ import { useEffect, useState } from "react";
 // raw hex — so an existing at_accent value no longer resolved.
 type Theme = "dark" | "light" | "system";
 
+// Five accents, none of which can be mistaken for a status. The status
+// colours own green (current), amber (due soon) and red (overdue), so an
+// accent in any of those bands made a highlighted control read as a state:
+// green, mint, red and amber are gone. Slate was too close to muted text to
+// read as an accent at all, and mint duplicated green. What is left is
+// distinct from the status set and from each other, and each is saturated
+// enough to carry a button.
 const ACCENTS: [string, string][] = [
   ["blue", "#3b9eff"],
   ["cyan", "#22d3ee"],
-  ["green", "#2dd4a0"],
-  ["mint", "#34d399"],
-  ["purple", "#a855f7"],
-  ["red", "#f04b4b"],
-  ["amber", "#f59e0b"],
-  ["slate", "#94a3b8"],
+  ["violet", "#8b5cf6"],
+  ["magenta", "#ec4899"],
+  ["silver", "#e2e8f0"],
 ];
 
+// Accents that existed before, mapped to the nearest survivor so a stored
+// preference still resolves.
+const LEGACY: Record<string, string> = {
+  green: "cyan", mint: "cyan", purple: "violet", red: "magenta", amber: "magenta", slate: "silver",
+};
+
 const hexOf = (name: string) =>
-  ACCENTS.find(([n]) => n === name)?.[1] ??
+  ACCENTS.find(([n]) => n === (LEGACY[name] ?? name))?.[1] ??
   (name.startsWith("#") ? name : ACCENTS[0][1]);
 
 export function ThemeControls() {
