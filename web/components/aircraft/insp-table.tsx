@@ -218,7 +218,8 @@ export function InspTable({
   const isUnset = (k: number) => items[k].inactive || ic(items[k], maintHrs).s === "none";
   const selUnset = sel.filter(isUnset);
   const selLive = sel.filter((k) => !isUnset(k));
-  const eligible = (k: number) => mode === "activate" ? isUnset(k) : mode ? !isUnset(k) : false;
+  const eligible = (k: number) =>
+    mode === "activate" ? isUnset(k) : mode === "deactivate" ? !isUnset(k) && !items[k].required : mode ? !isUnset(k) : false;
   const enterMode = (m: NonNullable<typeof mode>) => { setMode(m); setSelected(new Set()); };
   const leaveMode = () => { setMode(null); setSelected(new Set()); };
   async function doBulk() {
@@ -275,7 +276,8 @@ export function InspTable({
       : [
           { label: "Edit", onClick: () => openEdit(idx) },
           { label: hasReminder ? "Change reminder" : "Set reminder", onClick: () => openReminder(idx) },
-          { label: "Deactivate", onClick: () => setDeactivate(idx) },
+          // A row the operating rules make mandatory cannot be switched off.
+          ...(i.required ? [] : [{ label: "Deactivate", onClick: () => setDeactivate(idx) }]),
           ...(i.core ? [] : [{ label: "Delete row", onClick: () => setRemove(idx), danger: true }]),
         ];
     return (
@@ -290,6 +292,7 @@ export function InspTable({
         <td className="insp-name">
           {i.name}
           {i.inactive && <span className="insp-tag">INACTIVE</span>}
+          {i.required && <span className="insp-tag req" title={`Required under ${i.required}`}>REQ</span>}
           {hasReminder && !unset && <span className="insp-bell" title="Reminder set"><Icon name="bell" size={11} /></span>}
         </td>
         <td className="insp-due">

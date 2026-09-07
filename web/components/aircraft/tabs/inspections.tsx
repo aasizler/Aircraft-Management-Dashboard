@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CORE_INSP, CORE_INSP_TURBINE, makeLifeLimitedParts, METER_LABEL, intervalShort, type Insp } from "@/lib/aircraft";
-import { applyProgram, engineTbo, enginesFor, programsFor, PROGRAMS } from "@/lib/programs";
+import { applyProgram, applyRules, engineTbo, enginesFor, programsFor, PROGRAMS, RULES } from "@/lib/programs";
 import type { TabProps } from "../detail-client";
 import { InspTable } from "../insp-table";
 import { LifeLimitedTab } from "./life-limited";
@@ -35,13 +35,28 @@ export function InspectionsTab(props: TabProps) {
   const [applying, setApplying] = useState(false);
   const choices = programsFor(cls, typeName);
   const chosen = PROGRAMS.find((p) => p.id === progId) ?? choices[0];
+  const rules = data.opsRules ?? "91";
+  const rulesInfo = RULES.find((r) => r.id === rules);
+
+  // The rules decide what is mandatory. When they say Part 135 or above and
+  // the rows they require are not all present and flagged, apply them once.
+  const applied = useRef(false);
+  useEffect(() => {
+    if (applied.current || rules === "91" || !allow("inspection")) return;
+    const parts = (data.lifeLimitedParts as Insp[] | undefined) ?? makeLifeLimitedParts(cls, typeName);
+    const next = applyRules(rules, engines, cls, { inspections: all, parts });
+    const changed = JSON.stringify(next) !== JSON.stringify({ inspections: all, parts });
+    if (!changed) return;
+    applied.current = true;
+    void save({ ...data, inspections: next.inspections, lifeLimitedParts: next.parts });
+  }, [rules, engines, cls, typeName, all, data, save, allow]);
 
   async function applyChosen() {
     if (!chosen) return;
     setApplying(true);
     try {
       const parts = (data.lifeLimitedParts as Insp[] | undefined) ?? makeLifeLimitedParts(cls, typeName);
-      const next = applyProgram(chosen, engines, { inspections: all, parts }, engineTbo(data.engineType as string | null));
+      const next = applyProgram(chosen, engines, { inspections: all, parts }, engineTbo(data.engineType as string | null), rules);
       await save({ ...data, inspections: next.inspections, lifeLimitedParts: next.parts, maintProgram: chosen.id, engines });
       setProgOpen(false);
       toast(`${chosen.name} applied`, "ok");
@@ -62,6 +77,9 @@ export function InspectionsTab(props: TabProps) {
         A program adds its checks and part lives with default intervals. Rows you already have keep their records;
         every interval can be edited afterwards. The manual for this serial number is the authority.
       </p>
+      {rulesInfo && rules !== "91" && (
+        <p className="modal-sub rules-note"><b>{rulesInfo.name}.</b> {rulesInfo.hint}</p>
+      )}
       <div className="radio-list">
         {choices.map((p) => (
           <label key={p.id} className="radio-row prog-row">

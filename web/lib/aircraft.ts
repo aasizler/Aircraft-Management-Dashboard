@@ -6,6 +6,10 @@ import type { AcClass } from "./reference-data";
 // wrote is declared here so nothing in the imported blob is silently dropped.
 export type V1Aircraft = Record<string, unknown> & {
   inspections?: Insp[];
+  lifeLimitedParts?: Insp[];
+  opsRules?: OpsRules;
+  maintProgram?: string;
+  engines?: 1 | 2;
   oil?: OilEntry[];
   flights?: FlightEntry[];
   flightRoutes?: RouteEntry[];
@@ -60,7 +64,12 @@ export type Insp = {
   reminderDate?: string | null;
   /** Life-limited parts: which table the row belongs to. */
   group?: "airworthiness" | "general";
+  /** Set when the operating rules make the row mandatory: the regulation that does. */
+  required?: string | null;
 };
+
+/** The rules the aircraft is operated under; they decide what is mandatory. */
+export type OpsRules = "91" | "135" | "121" | "125";
 
 export type OilEntry = {
   date: string;
@@ -777,7 +786,13 @@ const LEVEL_LABEL: Record<AirworthinessLevel, string> = {
 };
 
 export function airworthiness(a: V1Aircraft, maintHrs: number): Airworthiness {
-  const all = (a.inspections ?? []) as Insp[];
+  // Under Part 135 and above, the manufacturer lives the rules make mandatory
+  // (135.421) count toward airworthiness like any inspection. They carry
+  // idx -1: they live in the parts table, so there is no inspection row to
+  // focus.
+  const requiredParts = ((a.lifeLimitedParts ?? []) as Insp[]).filter((i) => i.required && !i.inactive);
+  const all = [...((a.inspections ?? []) as Insp[]), ...requiredParts];
+  const inspCount = (a.inspections ?? []).length;
   // Soonest first, which needs one axis. Hours become days at the rate this
   // aeroplane has actually been flown lately; with nothing logged, fall back to
   // a nominal 0.3 hrs/day (about 110 hours a year) so an hours-based item still
@@ -793,7 +808,7 @@ export function airworthiness(a: V1Aircraft, maintHrs: number): Airworthiness {
   };
 
   const scored = all
-    .map((i, idx) => ({ i, idx }))
+    .map((i, idx) => ({ i, idx: idx < inspCount ? idx : -1 }))
     .filter((x) => !x.i.inactive)
     .map((x) => ({ ...x, st: ic(x.i, maintHrs) }))
     .sort((x, y) => {

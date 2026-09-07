@@ -16,6 +16,8 @@ import {
   orderKinds, profileFor, profileForClass, profileForTypeString, type MeterProfile,
 } from "@/lib/meters";
 import type { MeterKind } from "@/lib/types";
+import { applyRules, enginesFor, RULES } from "@/lib/programs";
+import type { Insp, OpsRules } from "@/lib/aircraft";
 
 const METERS: MeterKind[] = ["hobbs", "tach", "flight", "total"];
 
@@ -101,6 +103,7 @@ export function AircraftSettings({
 
   // Blobs written before the class existed are piston, which is what they were.
   const [cls, setCls] = useState<AcClass>(data.acClass ?? "piston");
+  const [rules, setRules] = useState<OpsRules>(data.opsRules ?? "91");
   const turbine = cls !== "piston";
   const [profile, setProfile] = useState<MeterProfile>(
     () => profileForTypeString(aircraft.type, data.acClass ?? "piston") ?? profileForClass(data.acClass ?? "piston"),
@@ -190,8 +193,17 @@ export function AircraftSettings({
       return;
     }
 
+    // A change of rules re-flags what is mandatory on both inspection tables.
+    const ruled = rules !== (data.opsRules ?? "91")
+      ? applyRules(rules, (data.engines as 1 | 2 | undefined) ?? enginesFor(aircraft.type) ?? 1, cls, {
+          inspections: (data.inspections ?? []) as Insp[],
+          parts: (data.lifeLimitedParts as Insp[] | undefined) ?? [],
+        })
+      : null;
     await save({
       ...data,
+      ...(ruled ? { inspections: ruled.inspections, lifeLimitedParts: ruled.parts } : {}),
+      opsRules: rules,
       engineType: f.engineType.trim() || null,
       acClass: cls,
       // Airframe total time follows the meters: the total-time clock where the
@@ -288,6 +300,15 @@ export function AircraftSettings({
           <div className="form-row">
             <label>Home Airport</label>
             <AirportAutocomplete value={f.airport} onChange={(v) => set("airport", v)} />
+          </div>
+
+          <div className="form-divider">Operating rules</div>
+          <div className="form-row">
+            <label>Operated under</label>
+            <select value={rules} onChange={(e) => setRules(e.target.value as OpsRules)}>
+              {RULES.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+            </select>
+            <div className="field-hint">{RULES.find((r) => r.id === rules)?.hint}</div>
           </div>
 
           {fleets.length > 0 && (

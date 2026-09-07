@@ -1,5 +1,5 @@
 import { AIRCRAFT_DB, ENGINE_DB, type AcClass } from "./reference-data";
-import { CORE_INSP, CORE_INSP_TURBINE, type Insp } from "./aircraft";
+import { CORE_INSP, CORE_INSP_TURBINE, type Insp, type OpsRules } from "./aircraft";
 
 /**
  * Maintenance programmes: a named schedule with its rows and default
@@ -120,6 +120,73 @@ export const PROGRAMS: Program[] = [
   },
 ];
 
+export const RULES: { id: OpsRules; name: string; hint: string }[] = [
+  { id: "91", name: "Part 91", hint: "Private operation. Manufacturer overhaul lives are advisory." },
+  { id: "135", name: "Part 135", hint: "Charter, nine seats or fewer. The 100-hour, emergency-equipment checks and manufacturer lives are required (135.411, 135.421). An approved inspection program (135.419) replaces the annual/100-hour: pick the type's program and edit it to the approved one." },
+  { id: "121", name: "Part 121", hint: "Scheduled air carrier. Continuous airworthiness program per your Ops Specs; every check here is required." },
+  { id: "125", name: "Part 125", hint: "Large aircraft, 20+ seats or 6,000 lb payload, non-common carriage. Continuous airworthiness program; every check here is required." },
+];
+
+const REQ_135 = "14 CFR 135.411(a)(1)";
+const REQ_135_LIVES = "14 CFR 135.421";
+const REQ_135_PROGRAM = "14 CFR 135.419";
+const REQ_CAMP: Record<string, string> = { "121": "14 CFR 121.367", "125": "14 CFR 125.245" };
+
+const isLife = (name: string) => /Engine|Propeller|Hot Section|Overhaul|CAPS|Reefing|Inflator|Rocket|Parachute/i.test(name);
+const isCheck = (name: string) => /Phase|Check|Hour/i.test(name) && !/ELT|VOR|Transponder|Pitot/i.test(name);
+
+/**
+ * Apply the operating rules: under Part 135 the 100-hour, emergency-equipment
+ * checks and manufacturer lives become required; under 121 and 125 everything
+ * on a continuous airworthiness program is. Under Part 91 the flags come off.
+ * Rows are added only when missing, and records are never touched.
+ */
+export function applyRules(
+  rules: OpsRules,
+  engines: 1 | 2,
+  cls: AcClass,
+  current: { inspections: Insp[]; parts: Insp[] },
+): { inspections: Insp[]; parts: Insp[] } {
+  const clear = (i: Insp): Insp => ({ ...i, required: null });
+  if (rules === "91") return { inspections: current.inspections.map(clear), parts: current.parts.map(clear) };
+
+  if (rules === "135") {
+    // An approved inspection programme (135.419) stands in for the annual and
+    // 100-hour, so where the aircraft carries programme checks those two are
+    // not locked as required.
+    const onProgram = current.inspections.some((i) => isCheck(i.name) && !/^(50|100)-Hour$/.test(i.name));
+    const need: Insp[] = [
+      row("Fire Extinguisher Inspection", null, M(12), { required: REQ_135 }),
+      row("First Aid Kit Inspection", null, M(12), { required: REQ_135 }),
+      ...(engines === 2 ? [row("Weight & Balance", null, M(36), { required: "14 CFR 135.185" })] : []),
+      ...(cls === "piston" && !onProgram && !current.inspections.some((i) => i.name === "100-Hour")
+        ? [row("100-Hour", 100, null, { required: REQ_135 })] : []),
+    ];
+    const have = new Set(current.inspections.map((i) => i.name));
+    const inspections = [
+      ...current.inspections.map((i) => {
+        if (i.name === "Annual Inspection" || i.name === "100-Hour")
+          return onProgram ? { ...i, required: null } : { ...i, required: REQ_135, inactive: false };
+        // The 50-hour oil change is the engine maker's programme, which 135.421 makes mandatory.
+        if (i.name === "50-Hour") return { ...i, required: REQ_135_LIVES, inactive: false };
+        if (isCheck(i.name)) return { ...i, required: REQ_135_PROGRAM, inactive: false };
+        if (/Fire Extinguisher|First Aid|Weight & Balance/.test(i.name)) return { ...i, required: REQ_135, inactive: false };
+        return { ...i, required: null };
+      }),
+      ...need.filter((i) => !have.has(i.name)),
+    ];
+    const parts = current.parts.map((i) => (isLife(i.name) ? { ...i, required: REQ_135_LIVES, inactive: false } : { ...i, required: null }));
+    return { inspections, parts };
+  }
+
+  // 121 / 125: a continuous airworthiness program — everything tracked is required.
+  const reg = REQ_CAMP[rules];
+  return {
+    inspections: current.inspections.map((i) => ({ ...i, required: reg, inactive: false })),
+    parts: current.parts.map((i) => (isLife(i.name) ? { ...i, required: reg, inactive: false } : { ...i, required: null })),
+  };
+}
+
 /** Programmes written for this aircraft first, then the class's standard. */
 export function programsFor(cls: AcClass, typeName: string | null | undefined): Program[] {
   const t = typeName ?? "";
@@ -163,6 +230,7 @@ export function applyProgram(
   engines: 1 | 2,
   current: { inspections: Insp[]; parts: Insp[] },
   tbo: number | null,
+  rules: OpsRules = "91",
 ): { inspections: Insp[]; parts: Insp[] } {
   // A row the aircraft has keeps its record; a never-recorded row that the
   // programme also supplies takes the programme's interval, so a seed
@@ -191,5 +259,5 @@ export function applyProgram(
   const partsHave = engines === 2
     ? current.parts.filter((i) => !(generic.has(i.name) && !i.populated && !i.lastDate && i.lastHobbs == null))
     : current.parts;
-  return { inspections: merge(inspHave, inspAdd), parts: merge(partsHave, partsAdd) };
+  return applyRules(rules, engines, p.cls[0], { inspections: merge(inspHave, inspAdd), parts: merge(partsHave, partsAdd) });
 }

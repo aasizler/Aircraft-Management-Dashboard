@@ -229,7 +229,7 @@ export function DashboardTab({
             </div>
             <div className="due-list">
               {upcoming.map((x) => (
-                <div className="due-row" key={x.i.name + x.idx} onClick={() => focusInspection(x.idx)}>
+                <div className="due-row" key={x.i.name + x.idx} onClick={() => (x.idx >= 0 ? focusInspection(x.idx) : go("Inspections"))}>
                   <div className="due-main">
                     <div className="due-name">
                       {x.i.name}

@@ -16,6 +16,8 @@ import { METER_LABEL } from "@/lib/aircraft";
 import type { AcClass, AcType } from "@/lib/reference-data";
 import { orderKinds, profileFor, profileForClass, type MeterProfile } from "@/lib/meters";
 import type { MeterKind } from "@/lib/types";
+import { applyRules, enginesFor, RULES } from "@/lib/programs";
+import type { OpsRules } from "@/lib/aircraft";
 
 const METERS: MeterKind[] = ["hobbs", "tach", "flight", "total"];
 
@@ -60,6 +62,7 @@ export function AddAircraftButton({
   // Piston until the catalogue says otherwise — that's what a free-typed
   // aircraft type has always been treated as.
   const [cls, setCls] = useState<AcClass>("piston");
+  const [rules, setRules] = useState<OpsRules>("91");
   const turbine = cls !== "piston";
   // What clocks the airframe carries. Drives the defaults and the ordering of
   // the two selects; every kind stays selectable underneath.
@@ -145,7 +148,7 @@ export function AddAircraftButton({
     // oil-interval defaults. The first port inserted `data: {}`, leaving a new
     // aircraft with no inspections and no way to add any.
     const data: V1Aircraft = {
-      inspections: makeCoreInspections(cls),
+      inspections: applyRules(rules, enginesFor(f.type) ?? 1, cls, { inspections: makeCoreInspections(cls), parts: [] }).inspections,
       oil: [],
       squawks: [],
       squawkArchive: [],
@@ -163,6 +166,7 @@ export function AddAircraftButton({
       },
       engineType: f.engineType.trim() || null,
       acClass: cls,
+      opsRules: rules,
       tt: hrs,
       overhaulAt: Number(f.overhaulAt) || 0,
       // Written too, so anything still reading the old field sees today's
@@ -312,6 +316,14 @@ export function AddAircraftButton({
           <div className="form-row">
             <label>Home Airport</label>
             <AirportAutocomplete value={f.airport} onChange={(v) => set("airport", v)} />
+          </div>
+
+          <div className="form-row">
+            <label>Operated under</label>
+            <select value={rules} onChange={(e) => setRules(e.target.value as OpsRules)}>
+              {RULES.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+            </select>
+            <div className="field-hint">{RULES.find((r) => r.id === rules)?.hint}</div>
           </div>
 
           {/* Filing it on creation. Without this a new aircraft always landed
