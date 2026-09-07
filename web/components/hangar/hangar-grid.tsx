@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { useFleetAirborne } from "@/lib/adsb";
+import { useFleetAirborne, type FleetItem } from "@/lib/adsb";
+import { apLookup, loadAirportDb, type AirportDb } from "@/lib/airports";
 import { airworthiness, meterValue, type AircraftRow, type Meter, type V1Aircraft } from "@/lib/aircraft";
 import { ManageAccess } from "@/components/aircraft/manage-access";
 import { AircraftSettings } from "@/components/aircraft/aircraft-settings";
@@ -130,7 +131,24 @@ export function HangarGrid({
   // and a plain click opens the aircraft rather than starting a drag.
   const [rearrange, setRearrange] = useState(false);
 
-  const airborne = useFleetAirborne(aircraft.map((a) => a.reg));
+  // Home-field coordinates group the paid backstop into one area query per
+  // field. The airport DB loads in the background; until it lands, the sweep
+  // runs on the free feed alone.
+  const [apDb, setApDb] = useState<AirportDb | null>(null);
+  useEffect(() => {
+    let on = true;
+    loadAirportDb().then((db) => { if (on) setApDb(db); });
+    return () => { on = false; };
+  }, []);
+  const fleet = useMemo<FleetItem[]>(
+    () => aircraft.map((a) => {
+      const code = (a.airport ?? "").trim().split(/[\s—-]+/)[0];
+      const ap = apDb && code ? apLookup(apDb, code) : null;
+      return { reg: a.reg, base: ap ? { lat: ap.lat, lon: ap.lon } : null };
+    }),
+    [aircraft, apDb],
+  );
+  const airborne = useFleetAirborne(fleet);
   // A grant or revocation elsewhere should reshape the hangar immediately.
 
   // Entered from the nav ⋮ "Rearrange Hangar" item.

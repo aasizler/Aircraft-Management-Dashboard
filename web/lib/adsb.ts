@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 /**
  * The FAA N-number → ICAO Mode-S hex conversion that used to live here has been
@@ -26,6 +26,8 @@ export type LiveState = {
   vspd: number | null; // fpm
   squawk: string | null;
   callsign: string | null;
+  /** Seconds since the feed last had a position for it. */
+  ageS: number | null;
 };
 
 type RawAc = {
@@ -39,6 +41,7 @@ type RawAc = {
   baro_rate?: number;
   squawk?: string;
   flight?: string;
+  seen_pos?: number;
 };
 
 function normalize(ac: RawAc): LiveState {
@@ -55,6 +58,7 @@ function normalize(ac: RawAc): LiveState {
     vspd: ac.baro_rate ?? null,
     squawk: ac.squawk ?? null,
     callsign: ac.flight?.trim() ?? null,
+    ageS: ac.seen_pos ?? null,
   };
 }
 
@@ -79,13 +83,18 @@ export type LiveResult =
   | { ok: true; state: LiveState | null; source: LiveSource | null }
   | { ok: false; state: null; source: null };
 
-async function fetchLive(reg: string): Promise<LiveResult> {
+/**
+ * @param paid Allow the proxy to fall through to ADS-B Exchange (metered)
+ *             when the free feed has nothing fresh. The proxy still asks the
+ *             free feed first either way.
+ */
+async function fetchLive(reg: string, paid = false): Promise<LiveResult> {
   const key = (reg ?? "").trim().toUpperCase();
   // Not a registration at all — say the lookup failed rather than reporting a
   // silence nobody listened for.
   if (!/^[A-Z0-9-]{2,10}$/.test(key)) return { ok: false, state: null, source: null };
   try {
-    const res = await fetch(`/api/adsb/${encodeURIComponent(key)}`);
+    const res = await fetch(`/api/adsb/${encodeURIComponent(key)}${paid ? "?paid=1" : ""}`);
     if (!res.ok) return { ok: false, state: null, source: null };
     const json = (await res.json()) as { ac?: RawAc[]; error?: string; source?: LiveSource };
     if (json.error) return { ok: false, state: null, source: null };
@@ -100,7 +109,11 @@ async function fetchLive(reg: string): Promise<LiveResult> {
 export type LiveStatus = "searching" | "airborne" | "ground" | "none" | "error";
 
 /** One recorded position along the current flight (v1 _adsbRecordTrack). */
-export type TrackPoint = { lat: number; lon: number; alt: number | null; t: number };
+export type TrackPoint = {
+  lat: number; lon: number; alt: number | null; t: number;
+  /** Groundspeed (kt) and true track (deg) at the fix, when the feed had them. */
+  gs?: number | null; track?: number | null;
+};
 
 /** Emitted when the aircraft transitions airborne → on-ground (v1 _adsbCheckLanding). */
 export type Landing = {
@@ -117,7 +130,10 @@ const _tracks = new Map<string, TrackPoint[]>();
 const MAX_POINTS = 4000; // a long day at the feed's cadence
 // When the feed's trace was last merged in, per registration.
 const _seeded = new Map<string, number>();
-const SEED_EVERY = 5 * 60_000;
+// Once a minute: wherever the free feed hears the aircraft, its trace carries a
+// point every half-second in turns, which is what makes the line read as a
+// curve. Five minutes left the last leg boxy for five minutes.
+const SEED_EVERY = 60_000;
 // A gap this long between trace points separates one flight from the next.
 const LEG_GAP_MS = 15 * 60_000;
 
@@ -131,13 +147,15 @@ async function seedTrack(key: string, hex: string): Promise<TrackPoint[] | null>
   try {
     const res = await fetch(`/api/adsb/trace/${hex}`);
     if (!res.ok) return null;
-    const { pts } = (await res.json()) as { pts?: [number, number, number, number | null, boolean][] };
+    const { pts } = (await res.json()) as {
+      pts?: [number, number, number, number | null, boolean, number | null, number | null][];
+    };
     if (!pts?.length) return null;
     let start = 0;
     for (let i = pts.length - 1; i > 0; i--) {
       if (pts[i][4] || pts[i][0] - pts[i - 1][0] > LEG_GAP_MS) { start = pts[i][4] ? i + 1 : i; break; }
     }
-    const leg: TrackPoint[] = pts.slice(start).map(([t, lat, lon, alt]) => ({ t, lat, lon, alt }));
+    const leg: TrackPoint[] = pts.slice(start).map(([t, lat, lon, alt, , gs, track]) => ({ t, lat, lon, alt, gs, track }));
     if (leg.length < 2) return null;
     // Keep any fix of our own that is newer than the trace, then sort and cap.
     const newest = leg[leg.length - 1].t;
@@ -151,10 +169,25 @@ async function seedTrack(key: string, hex: string): Promise<TrackPoint[] | null>
 }
 
 
+/** How the poller spends: which feed it may ask, and how often. */
+const RIBBON_MS = 10_000;       // aircraft page open, nothing on a map
+const MAP_FREE_MS = 2_000;      // live map on screen, free feed hears it
+const MAP_PAID_MS = 5_000;      // live map on screen, only the paid feed hears it
+const PAID_BACKSTOP_MS = 120_000; // silent aircraft: ask the paid feed this often
+const RECENT_AIR_MS = 15 * 60_000; // lost mid-flight: keep the paid feed allowed this long
+const MAX_BACKOFF_MS = 60_000;
+
 /**
- * Polls live position every 10s while mounted, records the flown track, and
- * reports a landing when the aircraft goes from airborne to on-ground — which
- * is what v1 used to offer "log this flight?".
+ * Polls the live position while mounted, records the flown track, and reports
+ * a landing when the aircraft goes from airborne to on-ground — which is what
+ * v1 used to offer "log this flight?".
+ *
+ * Cost first. Nothing polls while the tab is hidden. The free feed carries
+ * everything it can hear; ADS-B Exchange (metered) is allowed only when the
+ * last answer came from it, or the aircraft was airborne recently and the
+ * free feed has gone quiet, or as a two-minute backstop on a silent tail.
+ * The cadence follows what is on screen: ten seconds for the ribbon, two on
+ * a live map the free feed covers, five when only the paid feed does.
  */
 export function useLivePosition(reg: string, onLanding?: (l: Landing) => void) {
   const [state, setState] = useState<LiveState | null>(null);
@@ -166,39 +199,77 @@ export function useLivePosition(reg: string, onLanding?: (l: Landing) => void) {
   const landingRef = useRef(onLanding);
   useEffect(() => { landingRef.current = onLanding; }, [onLanding]);
 
+  // Whether a live map is on screen — set by the map from an
+  // IntersectionObserver. Re-plans the next poll when it changes.
+  const mapOnRef = useRef(false);
+  const replanRef = useRef<() => void>(() => {});
+  const setMapVisible = useCallback((on: boolean) => {
+    if (mapOnRef.current === on) return;
+    mapOnRef.current = on;
+    replanRef.current();
+  }, []);
+
   useEffect(() => {
     if (!reg) return;
     const key = reg.toUpperCase();
     let alive = true;
     let wasAirborne = false;
+    let cur: LiveStatus = "searching";
+    let lastSource: LiveSource | null = null;
+    let lastPaidAt = 0;
+    let lastAirAt = 0;
+    let fails = 0;
+    let timer: number | undefined;
+    let inFlight = false;
 
-    async function poll() {
-      const res = await fetchLive(key);
+    function plan(): { ms: number; paid: boolean } {
+      const now = Date.now();
+      const blind = lastSource === "adsbx";
+      if (cur === "airborne") {
+        if (blind) return { ms: mapOnRef.current ? MAP_PAID_MS : RIBBON_MS, paid: true };
+        return { ms: mapOnRef.current ? MAP_FREE_MS : RIBBON_MS, paid: false };
+      }
+      const paid =
+        blind || now - lastAirAt < RECENT_AIR_MS || now - lastPaidAt >= PAID_BACKSTOP_MS;
+      const ms = fails ? Math.min(MAX_BACKOFF_MS, RIBBON_MS * 2 ** fails) : RIBBON_MS;
+      return { ms, paid };
+    }
+
+    async function poll(paid: boolean) {
+      if (inFlight) return;
+      inFlight = true;
+      if (paid) lastPaidAt = Date.now();
+      const res = await fetchLive(key, paid);
+      inFlight = false;
       if (!alive) return;
       const s = res.state;
       setSource(res.source);
+      lastSource = res.source;
 
       if (!res.ok) {
         // Lookup failed — say so rather than claiming the aircraft is silent.
+        fails++;
         setState(null);
-        setStatus("error");
+        setStatus((cur = "error"));
         return;
       }
+      fails = 0;
 
       if (!s || s.lat == null) {
         setState(null);
-        setStatus("none");
+        setStatus((cur = "none"));
         return;
       }
 
       setState(s);
       const airborne = !s.onGround;
-      setStatus(airborne ? "airborne" : "ground");
+      setStatus((cur = airborne ? "airborne" : "ground"));
 
       if (airborne) {
+        lastAirAt = Date.now();
         // Pull the leg flown so far from the feed's trace: once on the first
-        // airborne fix, then every few minutes to fill any gap left while a
-        // background tab's timers were throttled.
+        // airborne fix, then every minute to densify the line and to fill any
+        // gap left while the tab was hidden.
         const seededAt = _seeded.get(key) ?? 0;
         if (s.hex && Date.now() - seededAt > SEED_EVERY) {
           _seeded.set(key, Date.now());
@@ -211,7 +282,10 @@ export function useLivePosition(reg: string, onLanding?: (l: Landing) => void) {
         // Skip duplicate fixes so a parked-but-transmitting aircraft doesn't
         // accumulate thousands of identical points.
         if (!last || last.lat !== s.lat || last.lon !== s.lon) {
-          const next = [...pts, { lat: s.lat, lon: s.lon!, alt: s.alt, t: Date.now() }];
+          const next = [...pts, {
+            lat: s.lat, lon: s.lon!, alt: s.alt, t: Date.now() - (s.ageS ?? 0) * 1000,
+            gs: s.gspd, track: s.track,
+          }];
           _tracks.set(key, next.slice(-MAX_POINTS));
           setTrack(_tracks.get(key)!);
         }
@@ -233,52 +307,130 @@ export function useLivePosition(reg: string, onLanding?: (l: Landing) => void) {
       }
     }
 
+    function schedule() {
+      window.clearTimeout(timer);
+      if (!alive || document.visibilityState === "hidden") return;
+      const { ms, paid } = plan();
+      timer = window.setTimeout(() => run(paid), ms);
+    }
+    async function run(paid: boolean) {
+      await poll(paid);
+      schedule();
+    }
+    // Hidden tab: stop. Visible again: poll now, and let the next airborne
+    // fix re-seed the trace to cover whatever was missed.
+    const onVisibility = () => {
+      window.clearTimeout(timer);
+      if (document.visibilityState === "visible") {
+        _seeded.set(key, 0);
+        run(plan().paid);
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    replanRef.current = schedule;
+
     setTrack(_tracks.get(key) ?? []);
-    poll();
-    const timer = setInterval(poll, 10_000);
+    run(plan().paid);
     return () => {
       alive = false;
-      clearInterval(timer);
+      window.clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisibility);
+      replanRef.current = () => {};
     };
   }, [reg]);
 
-  return { state, status, track, source };
+  return { state, status, track, source, setMapVisible };
 }
 
+export type FleetItem = { reg: string; base: { lat: number; lon: number } | null };
+
+const FLEET_FREE_MS = 60_000;
+const FLEET_PAID_MS = 5 * 60_000;
+const FLEET_LONE_PAID_MS = 10 * 60_000;
+
 /**
- * Airborne check for a whole fleet, driving the hangar's LIVE badges
- * (v1 _checkHangarAdsb / _applyTileAirborne). Polls every 60s — the hangar
- * doesn't need the detail view's cadence.
+ * Airborne check for a whole fleet, driving the hangar's tile glyphs
+ * (v1 _checkHangarAdsb / _applyTileAirborne).
+ *
+ * The free feed is asked per aircraft every minute. The paid feed is one
+ * area query per home field every five minutes — everything ADS-B Exchange
+ * hears within 250 nm of the field, whatever the fleet's size — and a lone
+ * registration check every ten minutes for aircraft whose base could not be
+ * resolved. Nothing runs while the tab is hidden.
  */
-export function useFleetAirborne(regs: string[]) {
+export function useFleetAirborne(items: FleetItem[]) {
   const [airborne, setAirborne] = useState<Record<string, boolean>>({});
-  const key = regs.join(",");
+  const key = JSON.stringify(
+    items.map((i) => [i.reg, i.base ? [+i.base.lat.toFixed(2), +i.base.lon.toFixed(2)] : null]),
+  );
 
   useEffect(() => {
-    if (!key) return;
-    const list = key.split(",").filter(Boolean);
+    const list = (JSON.parse(key) as [string, [number, number] | null][]).filter(([r]) => r);
+    if (!list.length) return;
     let alive = true;
-
-    async function poll() {
-      const results = await Promise.all(
-        list.map(async (r) => [r, await fetchLive(r)] as const),
-      );
+    const free: Record<string, boolean> = {};
+    const paid: Record<string, boolean> = {};
+    const publish = () => {
       if (!alive) return;
-      setAirborne(
-        Object.fromEntries(
-          results.map(([r, res]) => [
-            r,
-            res.ok && !!res.state && res.state.lat != null && !res.state.onGround,
-          ]),
-        ),
-      );
+      setAirborne(Object.fromEntries(list.map(([r]) => [r, !!(free[r] || paid[r])])));
+    };
+    const up = (res: LiveResult) =>
+      res.ok && !!res.state && res.state.lat != null && !res.state.onGround;
+
+    async function pollFree() {
+      const results = await Promise.all(list.map(async ([r]) => [r, await fetchLive(r)] as const));
+      if (!alive) return;
+      for (const [r, res] of results) free[r] = up(res);
+      publish();
     }
 
-    poll();
-    const timer = setInterval(poll, 60_000);
+    async function pollPaid() {
+      const bases = new Map<string, string[]>();
+      const lone: string[] = [];
+      for (const [r, b] of list) {
+        if (b) bases.set(b.join(","), [...(bases.get(b.join(",")) ?? []), r]);
+        else lone.push(r);
+      }
+      await Promise.all([
+        ...[...bases].map(async ([b, regs]) => {
+          try {
+            const res = await fetch(`/api/adsb/near/${b.replace(",", "/")}`);
+            if (!res.ok) return;
+            const { ac } = (await res.json()) as {
+              ac?: { r: string; alt_baro: number | "ground" | null; seen_pos: number | null }[];
+            };
+            const seen = new Map((ac ?? []).map((a) => [a.r, a]));
+            for (const r of regs) {
+              const a = seen.get(r.toUpperCase());
+              paid[r] = !!a && a.alt_baro !== "ground" && (a.seen_pos ?? 0) < 120;
+            }
+          } catch { /* keep the last answer */ }
+        }),
+        ...lone.map(async (r) => {
+          if (Date.now() - (lonePaidAt.get(r) ?? 0) < FLEET_LONE_PAID_MS) return;
+          lonePaidAt.set(r, Date.now());
+          paid[r] = up(await fetchLive(r, true));
+        }),
+      ]);
+      publish();
+    }
+    const lonePaidAt = new Map<string, number>();
+
+    let freeTimer: number | undefined, paidTimer: number | undefined;
+    const start = () => {
+      window.clearInterval(freeTimer); window.clearInterval(paidTimer);
+      pollFree(); pollPaid();
+      freeTimer = window.setInterval(pollFree, FLEET_FREE_MS);
+      paidTimer = window.setInterval(pollPaid, FLEET_PAID_MS);
+    };
+    const stop = () => { window.clearInterval(freeTimer); window.clearInterval(paidTimer); };
+    const onVisibility = () => (document.visibilityState === "visible" ? start() : stop());
+    document.addEventListener("visibilitychange", onVisibility);
+    if (document.visibilityState === "visible") start();
     return () => {
       alive = false;
-      clearInterval(timer);
+      stop();
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [key]);
 

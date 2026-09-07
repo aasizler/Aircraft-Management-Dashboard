@@ -127,7 +127,7 @@ export function FlightMap({
   const [replay, setReplay] = useState<TrackPoint[] | null>(null);
   const [replayBusy, setReplayBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
-  const { live: { state: live, track } } = useAircraft();
+  const { live: { state: live, track, setMapVisible } } = useAircraft();
   // The live aircraft marker (v1 _mlAcMarker): a DOM marker, not a layer, so
   // the glyph can rotate to track and the ring can animate in CSS.
   const acRef = useRef<maplibregl.Marker | null>(null);
@@ -236,6 +236,16 @@ export function FlightMap({
     () => (basemap === "satellite" ? LABELS.satellite : isLight() ? LABELS.mapLight : LABELS.map),
     [basemap],
   );
+
+  // Tell the poller when the map is actually on screen: that is when a
+  // faster cadence buys anything. Off screen or unmounted, it drops back.
+  useEffect(() => {
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+    const io = new IntersectionObserver(([e]) => setMapVisible(e.isIntersecting), { threshold: 0.2 });
+    io.observe(wrap);
+    return () => { io.disconnect(); setMapVisible(false); };
+  }, [setMapVisible]);
 
   // Track the wrapper's width and derive the map height from it.
   useEffect(() => {

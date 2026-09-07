@@ -85,7 +85,11 @@ type Ctx = {
    * aeroplane, which is how an app gets rate-limited off a free feed. Poll here,
    * read everywhere.
    */
-  live: { status: LiveStatus; state: LiveState | null; track: TrackPoint[]; source: LiveSource | null };
+  live: {
+    status: LiveStatus; state: LiveState | null; track: TrackPoint[]; source: LiveSource | null;
+    /** The map reports whether it is on screen; the poller spends accordingly. */
+    setMapVisible: (on: boolean) => void;
+  };
   /**
    * Register the landing handler. Only the live row wants one — it is what
    * offers to log the flight — so it registers on mount and clears on unmount

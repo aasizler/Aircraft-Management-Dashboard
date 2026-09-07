@@ -8,12 +8,13 @@ import { NextResponse } from "next/server";
  * trace at /data/traces/{last two hex digits}/trace_full_{hex}.json — each
  * point is [seconds after `timestamp`, lat, lon, alt_baro | "ground", gs,
  * track, flags, vert_rate, ...]. This trims it to what the map draws:
- * [ms, lat, lon, alt | null, onGround].
+ * [ms, lat, lon, alt | null, onGround, gs | null, track | null] — speed and
+ * track ride along so the drawn line can bend to the velocity at each fix.
  *
  * The response is gzip; fetch inflates it. The hex comes from the live
  * lookup's `hex` field, never from a registration conversion.
  */
-export type TracePoint = [number, number, number, number | null, boolean];
+export type TracePoint = [number, number, number, number | null, boolean, number | null, number | null];
 
 export async function GET(_req: Request, ctx: { params: Promise<{ hex: string }> }) {
   const { hex } = await ctx.params;
@@ -46,6 +47,8 @@ export async function GET(_req: Request, ctx: { params: Promise<{ hex: string }>
         p[2],
         typeof p[3] === "number" ? p[3] : null,
         p[3] === "ground",
+        typeof p[4] === "number" ? p[4] : null,
+        typeof p[5] === "number" ? p[5] : null,
       ]);
     return NextResponse.json({ ts, pts });
   } catch {
