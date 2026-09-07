@@ -932,8 +932,9 @@ canvas.chart{display:block;width:100%;height:150px}
 :root.light .alt-legend-ticks{color:rgba(0,0,0,.6)}
 
 /* INSPECTIONS TABLE — Cirrus IQ layout: due-in bar leads, rows as cards, pills */
-.insp-meter{font-size:11px;color:var(--muted);padding:14px 0 6px}
-.insp-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 0 12px;flex-wrap:wrap}
+.insp-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 0 12px;flex-wrap:wrap}
+.insp-toolbar .bulk.on{gap:10px}
+.insp-toolbar .bulk.on .bulk-lbl{color:var(--accent)}
 .insp-toolbar .bulk{display:flex;align-items:center;gap:4px;font-size:12px}
 .bulk-lbl{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-right:6px}
 .bulk-btn{background:none;border:none;color:var(--accent);font-family:var(--body);font-size:12px;font-weight:600;padding:4px 8px;border-radius:var(--ctl-r);cursor:pointer}
@@ -955,7 +956,10 @@ canvas.chart{display:block;width:100%;height:150px}
 .insp-table th:nth-child(6){width:13%}
 .insp-table th:nth-child(7){width:11%}
 .insp-table th:nth-child(8){width:10%}
+.insp-table th:last-child{width:150px}
 .insp-table td{overflow:hidden;text-overflow:ellipsis}
+.insp-table td.insp-actions{overflow:visible;padding-left:8px;padding-right:12px}
+.insp-table td.insp-check{padding-left:12px}
 .insp-table thead tr{background:var(--bg3)}
 .insp-table th{border-bottom:none}
 .insp-table th:first-child{border-radius:var(--r) 0 0 var(--r)}
@@ -986,10 +990,10 @@ tr.overdue .due-text{color:var(--danger);font-weight:700}
 .insp-by,.insp-on{color:var(--muted3)}
 .insp-table .dash{color:var(--muted)}
 .insp-empty{color:var(--muted2);text-align:center;padding:18px!important}
-.pill{display:inline-flex;align-items:center;justify-content:center;height:26px;min-width:78px;padding:0 14px;border-radius:13px;font-family:var(--body);font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:#f2f4f7;color:#0b1220;border:1px solid transparent;cursor:pointer;transition:transform .12s,box-shadow .12s}
+.pill{display:inline-flex;align-items:center;justify-content:center;height:var(--ctl-h-sm);min-width:0;padding:0 13px;border-radius:13px;font-family:var(--body);font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:#f2f4f7;color:#0b1220;border:1px solid transparent;cursor:pointer;transition:transform .12s,box-shadow .12s}
 .pill:hover{transform:scale(1.03);box-shadow:0 0 0 1px var(--accent)}
 .pill.activate{background:var(--accent);color:#fff}
-.action-cell.even > .pill{min-width:86px}
+.action-cell.even > .pill{min-width:74px}
 .modal-sub{font-size:13px;color:var(--muted3);line-height:1.6;margin:0 0 14px}
 .modal-kicker{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:4px 0 8px}
 .radio-list{border:1px solid var(--border2);border-radius:var(--r);overflow:hidden}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { makeLifeLimitedParts, METER_LABEL, type Insp } from "@/lib/aircraft";
+import { makeLifeLimitedParts, type Insp } from "@/lib/aircraft";
 import type { TabProps } from "../detail-client";
 import { InspTable } from "../insp-table";
 
@@ -25,9 +25,6 @@ export function LifeLimitedTab({ data, maintHrs, aircraft, save, allow }: TabPro
 
   return (
     <>
-      <div className="insp-meter mono">
-        measured against {METER_LABEL[aircraft.maint_basis].toLowerCase()} · {maintHrs.toFixed(1)} hrs
-      </div>
       <InspTable
         items={items}
         presets={presets}

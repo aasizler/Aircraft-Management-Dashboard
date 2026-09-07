@@ -28,9 +28,6 @@ export function InspectionsTab({
           the meter you actually track — in Aircraft Settings.
         </div>
       )}
-      <div className="insp-meter mono">
-        measured against {METER_LABEL[aircraft.maint_basis].toLowerCase()} · {maintHrs.toFixed(1)} hrs
-      </div>
       <InspTable
         items={all}
         presets={CORE}

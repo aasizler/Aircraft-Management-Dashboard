@@ -62,6 +62,9 @@ export function InspTable({
   const [sort, setSort] = useState<Sort>("default");
   const [filterOpen, setFilterOpen] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
+  // Bulk selection mode: checkboxes appear only after a bulk action is chosen,
+  // and only on the rows that action applies to, as Cirrus IQ does it.
+  const [mode, setMode] = useState<null | "activate" | "update" | "deactivate">(null);
   const [busy, setBusy] = useState(false);
 
   // Dialogs, keyed by row index where they apply.
@@ -208,8 +211,12 @@ export function InspTable({
 
   // ── Bulk ───────────────────────────────────────────────────────────────
   const sel = [...selected].filter((k) => items[k]);
-  const selUnset = sel.filter((k) => items[k].inactive || ic(items[k], maintHrs).s === "none");
-  const selLive = sel.filter((k) => !items[k].inactive && ic(items[k], maintHrs).s !== "none");
+  const isUnset = (k: number) => items[k].inactive || ic(items[k], maintHrs).s === "none";
+  const selUnset = sel.filter(isUnset);
+  const selLive = sel.filter((k) => !isUnset(k));
+  const eligible = (k: number) => mode === "activate" ? isUnset(k) : mode ? !isUnset(k) : false;
+  const enterMode = (m: NonNullable<typeof mode>) => { setMode(m); setSelected(new Set()); };
+  const leaveMode = () => { setMode(null); setSelected(new Set()); };
   async function doBulk() {
     if (!bulk) return;
     const t = today();
@@ -221,7 +228,7 @@ export function InspTable({
       return stamp(x, { lastDate: t, lastHobbs: h, populated: true, inactive: false });
     });
     setBulk(null);
-    setSelected(new Set());
+    leaveMode();
     await commit(next, `${set.size} ${set.size === 1 ? noun : noun + "s"} ${bulk === "deactivate" ? "deactivated" : bulk === "activate" ? "activated" : "updated"}`);
   }
 
@@ -269,9 +276,11 @@ export function InspTable({
         ];
     return (
       <tr key={idx} className={`insp-row ${cls}${focus === idx ? " row-focus" : ""}${selected.has(idx) ? " selected" : ""}`}>
-        {canEdit && (
+        {mode && (
           <td className="insp-check">
-            <input type="checkbox" checked={selected.has(idx)} onChange={() => toggle(idx)} aria-label={`Select ${i.name}`} />
+            {eligible(idx) && (
+              <input type="checkbox" checked={selected.has(idx)} onChange={() => toggle(idx)} aria-label={`Select ${i.name}`} />
+            )}
           </td>
         )}
         <td className="insp-name">
@@ -316,7 +325,7 @@ export function InspTable({
   const head = (label: string) => (
     <thead>
       <tr>
-        {canEdit && <th className="insp-check" />}
+        {mode && <th className="insp-check" />}
         <th>{label}</th><th>Due In</th><th>Last Serviced</th><th>Next Service</th>
         <th>Interval</th><th>Updated By</th><th>Updated On</th><th>Actions</th>
       </tr>
@@ -329,7 +338,7 @@ export function InspTable({
         {head(label)}
         <tbody>
           {list.length === 0
-            ? <tr><td colSpan={canEdit ? 9 : 8} className="insp-empty">Nothing here{view !== "all" ? " for this filter" : ""}.</td></tr>
+            ? <tr><td colSpan={mode ? 9 : 8} className="insp-empty">Nothing here{view !== "all" ? " for this filter" : ""}.</td></tr>
             : list.map(renderRow)}
         </tbody>
       </table>
@@ -346,13 +355,22 @@ export function InspTable({
   return (
     <>
       <div className="insp-toolbar">
-        {canEdit && (
+        {canEdit && !mode && (
           <div className="bulk">
             <span className="bulk-lbl"><Icon name="info" size={12} /> Bulk actions</span>
-            <button className="bulk-btn" disabled={!selUnset.length || busy} onClick={() => setBulk("activate")}>Activate</button>
-            <button className="bulk-btn" disabled={!selLive.length || busy} onClick={() => setBulk("update")}>Update</button>
-            <button className="bulk-btn" disabled={!selLive.length || busy} onClick={() => setBulk("deactivate")}>Deactivate</button>
-            {sel.length > 0 && <span className="bulk-count">{sel.length} selected</span>}
+            <button className="bulk-btn" disabled={busy} onClick={() => enterMode("activate")}>Activate</button>
+            <button className="bulk-btn" disabled={busy} onClick={() => enterMode("update")}>Update</button>
+            <button className="bulk-btn" disabled={busy} onClick={() => enterMode("deactivate")}>Deactivate</button>
+          </div>
+        )}
+        {canEdit && mode && (
+          <div className="bulk on">
+            <span className="bulk-lbl">
+              {mode === "activate" ? "Activate" : mode === "update" ? "Update" : "Deactivate"} · select rows
+            </span>
+            <span className="bulk-count">{sel.length} selected</span>
+            <button className="btn sm primary" disabled={!sel.length || busy} onClick={() => setBulk(mode)}>Apply</button>
+            <button className="btn sm" onClick={leaveMode}>Cancel</button>
           </div>
         )}
         <div className="insp-tools">
