@@ -945,7 +945,17 @@ canvas.chart{display:block;width:100%;height:150px}
 .insp-group+.insp-group{margin-top:22px}
 .insp-group-hd{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:0 2px 8px}
 .insp-scroll{border:none;border-radius:0}
-.insp-table{border-collapse:separate;border-spacing:0 8px;min-width:900px}
+.insp-table{border-collapse:separate;border-spacing:0 8px;min-width:900px;table-layout:fixed}
+/* Fixed widths so the two Life Limited Parts tables line up column for column. */
+.insp-table th.insp-check{width:28px}
+.insp-table th:nth-child(2){width:27%}
+.insp-table th:nth-child(3){width:10%}
+.insp-table th:nth-child(4){width:13%}
+.insp-table th:nth-child(5){width:12%}
+.insp-table th:nth-child(6){width:13%}
+.insp-table th:nth-child(7){width:11%}
+.insp-table th:nth-child(8){width:10%}
+.insp-table td{overflow:hidden;text-overflow:ellipsis}
 .insp-table thead tr{background:var(--bg3)}
 .insp-table th{border-bottom:none}
 .insp-table th:first-child{border-radius:var(--r) 0 0 var(--r)}
