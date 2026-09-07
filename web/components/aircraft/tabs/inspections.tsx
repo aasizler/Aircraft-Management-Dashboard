@@ -46,7 +46,9 @@ export function InspectionsTab(props: TabProps) {
   const choices = programsFor(cls, typeName);
   const chosen = PROGRAMS.find((p) => p.id === progId) ?? choices[0];
   // Engine count comes from the type catalogue; nobody is asked.
-  const engines: 1 | 2 = (data.engines as 1 | 2 | undefined) ?? enginesFor(typeName) ?? 1;
+  // The catalogue wins over a stored count: an earlier dialog could have
+  // stored a guess, and the type does not change.
+  const engines: 1 | 2 = enginesFor(typeName) ?? (data.engines as 1 | 2 | undefined) ?? 1;
 
   // Operating rules are a separate fact from the programme: they decide what
   // on the schedule is mandatory. Their own small dialog.

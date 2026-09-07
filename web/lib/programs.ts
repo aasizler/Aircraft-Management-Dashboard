@@ -163,8 +163,12 @@ export function applyRules(
         ? [row("100-Hour", 100, null, { required: REQ_135 })] : []),
     ];
     const have = new Set(current.inspections.map((i) => i.name));
+    // A single does not carry the twin's weight-and-balance row.
+    const base = engines === 2
+      ? current.inspections
+      : current.inspections.filter((i) => !(i.name === "Weight & Balance" && !i.populated && !i.lastDate && i.lastHobbs == null));
     const inspections = [
-      ...current.inspections.map((i) => {
+      ...base.map((i) => {
         if (i.name === "Annual Inspection" || i.name === "100-Hour")
           return onProgram ? { ...i, required: null } : { ...i, required: REQ_135, inactive: false };
         // The 50-hour oil change is the engine maker's programme, which 135.421 makes mandatory.
