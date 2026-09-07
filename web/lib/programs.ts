@@ -57,16 +57,16 @@ export const PROGRAMS: Program[] = [
   },
   {
     id: "part91-turbine",
-    name: "Manufacturer's program",
-    note: "The certificate items, with the engine and propeller lives. Add the airframe checks from the manufacturer's schedule or the program your provider manages.",
+    name: "Standard items",
+    note: "The certificate items, with the engine and propeller lives. No named programme is on file for this type; add its checks from the manufacturer's schedule.",
     cls: ["turboprop"],
     checks: [],
     parts: PT6_PARTS,
   },
   {
     id: "part91-jet",
-    name: "Manufacturer's program",
-    note: "The certificate items, with the engine lives. Add the airframe checks from the manufacturer's schedule or the program your provider manages.",
+    name: "Standard items",
+    note: "The certificate items, with the engine lives. No named programme is on file for this type; add its checks from the manufacturer's schedule.",
     cls: ["jet"],
     checks: [],
     parts: JET_PARTS,
@@ -205,11 +205,17 @@ export function applyRules(
   };
 }
 
-/** Programmes written for this aircraft first, then the class's standard. */
+/**
+ * The programmes for this aircraft. A type with a named programme gets that
+ * and nothing else: the named programme IS the manufacturer's schedule, so
+ * offering a generic entry beside it was offering the same thing twice. Only
+ * a type with no named programme falls back to the class's standard items.
+ */
 export function programsFor(cls: AcClass, typeName: string | null | undefined): Program[] {
   const t = typeName ?? "";
   const list = PROGRAMS.filter((p) => p.cls.includes(cls));
-  return [...list.filter((p) => p.match?.test(t)), ...list.filter((p) => !p.match)];
+  const named = list.filter((p) => p.match?.test(t));
+  return named.length ? named : list.filter((p) => !p.match);
 }
 
 /** 1 or 2, from the type catalogue's description or the name itself; null when unknown. */
