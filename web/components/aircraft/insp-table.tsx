@@ -291,7 +291,7 @@ export function InspTable({
         <td className="insp-due">
           {unset ? <span className="dash">—</span> : (
             <span className="due-wrap">
-              <i className={`due-bar ${cls}`} />
+              <i className={`due-mark ${cls}`} />
               <span className="due-text">{dueInShort(i, st)}</span>
             </span>
           )}

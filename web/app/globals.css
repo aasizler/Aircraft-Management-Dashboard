@@ -976,12 +976,14 @@ canvas.chart{display:block;width:100%;height:150px}
 .insp-name{font-weight:600;color:var(--text)}
 .insp-tag{display:inline-block;margin-left:8px;font-family:var(--mono);font-size:9px;letter-spacing:.08em;padding:2px 6px;border-radius:4px;background:var(--bg4);color:var(--muted);border:1px solid var(--border2);vertical-align:1px}
 .insp-bell{display:inline-flex;margin-left:7px;color:var(--accent);vertical-align:-1px}
-.due-wrap{display:inline-flex;align-items:center;gap:9px}
-.due-bar{display:inline-block;width:3px;height:22px;border-radius:2px;background:var(--accent)}
-.due-bar.warn{background:var(--warn)}
-.due-bar.overdue{background:var(--danger)}
-.due-bar.unknown{background:var(--muted2)}
-.due-text{font-family:var(--mono);font-size:12px;letter-spacing:.02em;white-space:nowrap}
+/* .due-mark, not .due-bar: the dashboard's progress bar owns that name and its
+   7px top margin was pushing this mark below the text's centre line. */
+.due-wrap{display:flex;align-items:center;gap:9px;height:22px}
+.due-mark{display:block;width:3px;height:22px;border-radius:2px;background:var(--accent);flex-shrink:0}
+.due-mark.warn{background:var(--warn)}
+.due-mark.overdue{background:var(--danger)}
+.due-mark.unknown{background:var(--muted2)}
+.due-text{font-family:var(--mono);font-size:12px;letter-spacing:.02em;white-space:nowrap;line-height:1}
 tr.warn .due-text{color:var(--warn)}
 tr.overdue .due-text{color:var(--danger);font-weight:700}
 .insp-last .sub,.insp-by,.insp-on,.insp-int,.insp-next{font-size:12.5px}
