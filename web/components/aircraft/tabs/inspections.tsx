@@ -69,7 +69,7 @@ export function InspectionsTab(props: TabProps) {
               <span className="prog-name">{p.name}</span>
               <span className="prog-note">{p.note}</span>
               <span className="prog-rows mono">
-                {p.inspections.filter((i) => /Phase|Check/.test(i.name)).map((i) => `${i.name} · ${intervalShort(i)}`).join("   ") || "Certificate items only"}
+                {p.checks.map((i) => `${i.name} · ${intervalShort(i)}`).join("   ") || "Certificate items only"}
               </span>
             </span>
             <input type="radio" name="prog" checked={progId === p.id} onChange={() => setProgId(p.id)} />

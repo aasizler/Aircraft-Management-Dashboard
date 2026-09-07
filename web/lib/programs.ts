@@ -19,7 +19,8 @@ export type Program = {
   cls: AcClass[];
   /** Type names or ICAO designators this is written for; unset = any of the class. */
   match?: RegExp;
-  inspections: Insp[];
+  /** The programme's own checks, on top of the class's certificate items. */
+  checks: Insp[];
   parts: Insp[];
 };
 
@@ -51,7 +52,7 @@ export const PROGRAMS: Program[] = [
     name: "Part 91 standard",
     note: "FAR 91.409 annual and 100-hour, with the 50-hour oil change and the certificate items. The default for any piston aircraft.",
     cls: ["piston"],
-    inspections: REG(false),
+    checks: [],
     parts: [row("{E} Engine (TBO)", 2000, Y(12), { group: "general" }), row("{E} Propeller", 2400, Y(6), { group: "general" })],
   },
   {
@@ -59,7 +60,7 @@ export const PROGRAMS: Program[] = [
     name: "Part 91 standard (turbine)",
     note: "The certificate items only. Use this when the aircraft runs a programme not listed here, and add its checks by hand.",
     cls: ["turboprop"],
-    inspections: REG(true),
+    checks: [],
     parts: PT6_PARTS,
   },
   {
@@ -67,7 +68,7 @@ export const PROGRAMS: Program[] = [
     name: "Part 91 standard (jet)",
     note: "The certificate items only. Use this when the aircraft runs a programme not listed here, and add its checks by hand.",
     cls: ["jet"],
-    inspections: REG(true),
+    checks: [],
     parts: JET_PARTS,
   },
   {
@@ -76,8 +77,7 @@ export const PROGRAMS: Program[] = [
     note: "Beechcraft's Phase 1–4, each at 200 hours, all four within 800 hours or 24 months. PT6A hot section and overhaul lives are typical values; verify against the engine's service bulletin.",
     cls: ["turboprop"],
     match: /king air|BE9|B350|B300|BE20|BE30/i,
-    inspections: [
-      ...REG(true),
+    checks: [
       row("Phase 1 Inspection", 200, M(24)),
       row("Phase 2 Inspection", 200, M(24)),
       row("Phase 3 Inspection", 200, M(24)),
@@ -91,7 +91,7 @@ export const PROGRAMS: Program[] = [
     note: "Daher's A check at 100 hours, B at 200, C at 600, alongside the annual. Verify the calendar limits against the current TBM maintenance manual.",
     cls: ["turboprop"],
     match: /TBM/i,
-    inspections: [...REG(true), row("A Check", 100, null), row("B Check", 200, null), row("C Check", 600, null)],
+    checks: [row("A Check", 100, null), row("B Check", 200, null), row("C Check", 600, null)],
     parts: PT6_PARTS,
   },
   {
@@ -100,7 +100,7 @@ export const PROGRAMS: Program[] = [
     note: "Pilatus's 100-hour / annual check and the 300-hour check. Longer-interval items vary by serial and service bulletin status; add them from the manual.",
     cls: ["turboprop"],
     match: /PC-?12|Pilatus/i,
-    inspections: [...REG(true), row("100 Hour / Annual Check", 100, Y(1)), row("300 Hour Check", 300, null)],
+    checks: [row("100 Hour / Annual Check", 100, Y(1)), row("300 Hour Check", 300, null)],
     parts: PT6_PARTS,
   },
   {
@@ -109,8 +109,7 @@ export const PROGRAMS: Program[] = [
     note: "Cessna's Phase 1–4 on a 12-month calendar and Phase 5 at 36 months; hour limits differ by model, so set them from the manual.",
     cls: ["jet"],
     match: /citation|C25|C510|C525|C55|C56X|C68|C700|C750|CJ/i,
-    inspections: [
-      ...REG(true),
+    checks: [
       row("Phase 1 Inspection", null, M(12)),
       row("Phase 2 Inspection", null, M(12)),
       row("Phase 3 Inspection", null, M(12)),
@@ -180,11 +179,10 @@ export function applyProgram(
     });
     return [...kept, ...byName.values()];
   };
-  const inspAdd = p.inspections;
+  const inspAdd = [...REG(p.cls[0] !== "piston"), ...p.checks];
   const partsAdd = p.parts.flatMap((t) => expand(t, engines)).map((r) =>
     tbo && /Engine Overhaul|Engine \(TBO\)/.test(r.name) ? { ...r, intervalHrs: tbo } : r);
-  const hasPhases = inspAdd.some((i) => /Phase|Check/.test(i.name));
-  const inspHave = hasPhases
+  const inspHave = p.checks.length
     ? current.inspections.filter((i) => !(i.name === "Scheduled / Phase Inspection" && !i.populated))
     : current.inspections;
   // On a twin, the programme's Left/Right rows supersede the seed's single
