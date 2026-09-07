@@ -93,7 +93,7 @@ export function InspectionsTab(props: TabProps) {
 
   const programButton = allow("inspection") ? (
     <button className="btn sm" onClick={() => { setRulesSel(rules); setProgOpen(true); }} title="Operating rules and maintenance program">
-      Part {rules} · {current ? current.name : "Program"}
+      Part {rules}{choices.length > 1 ? ` · ${current ? current.name : "Program"}` : ""}
     </button>
   ) : null;
 
@@ -111,8 +111,10 @@ export function InspectionsTab(props: TabProps) {
           </label>
         ))}
       </div>
-      <div className="mono modal-kicker" style={{ marginTop: 16 }}>Maintenance program</div>
-      {choices.length > 1 ? (
+      {/* Only where the type has a named programme to choose over the standard
+          one; a single option is not a choice, so nothing is shown. */}
+      {choices.length > 1 && <div className="mono modal-kicker" style={{ marginTop: 16 }}>Maintenance program</div>}
+      {choices.length > 1 && (
         <div className="radio-list">
           {choices.map((p) => (
             <label key={p.id} className="radio-row prog-row">
@@ -128,8 +130,6 @@ export function InspectionsTab(props: TabProps) {
             </label>
           ))}
         </div>
-      ) : (
-        <div className="field-hint">{chosen?.name}. No named program on file for this type; add its checks with Log Inspection.</div>
       )}
       <div className="form-actions">
         <button className="btn-cancel" onClick={() => setProgOpen(false)}>Cancel</button>

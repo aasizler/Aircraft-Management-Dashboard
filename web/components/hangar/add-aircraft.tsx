@@ -16,8 +16,8 @@ import { METER_LABEL } from "@/lib/aircraft";
 import type { AcClass, AcType } from "@/lib/reference-data";
 import { orderKinds, profileFor, profileForClass, type MeterProfile } from "@/lib/meters";
 import type { MeterKind } from "@/lib/types";
-import { applyRules, enginesFor, RULES } from "@/lib/programs";
-import type { OpsRules } from "@/lib/aircraft";
+import { applyProgram, enginesFor, programsFor, RULES } from "@/lib/programs";
+import { makeLifeLimitedParts, type Insp, type OpsRules } from "@/lib/aircraft";
 
 const METERS: MeterKind[] = ["hobbs", "tach", "flight", "total"];
 
@@ -148,7 +148,15 @@ export function AddAircraftButton({
     // oil-interval defaults. The first port inserted `data: {}`, leaving a new
     // aircraft with no inspections and no way to add any.
     const data: V1Aircraft = {
-      inspections: applyRules(rules, enginesFor(f.type) ?? 1, cls, { inspections: makeCoreInspections(cls), parts: [] }).inspections,
+      // The type's programme — King Air phases, TBM checks — and the rules
+      // are applied on creation, so the aircraft arrives with its schedule.
+      ...((): { inspections: Insp[]; lifeLimitedParts: Insp[]; maintProgram?: string } => {
+        const eng = enginesFor(f.type) ?? 1;
+        const prog = programsFor(cls, f.type)[0];
+        const seeded = { inspections: makeCoreInspections(cls), parts: makeLifeLimitedParts(cls, f.type) };
+        const out = prog ? applyProgram(prog, eng, seeded, null, rules) : seeded;
+        return { inspections: out.inspections, lifeLimitedParts: out.parts, maintProgram: prog?.id };
+      })(),
       oil: [],
       squawks: [],
       squawkArchive: [],
