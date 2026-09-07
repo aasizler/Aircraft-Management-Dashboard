@@ -15,7 +15,7 @@ type Theme = "dark" | "light" | "system";
 // distinct from the status set and from each other, and each is saturated
 // enough to carry a button.
 const ACCENTS: [string, string][] = [
-  ["blue", "#3b9eff"],
+  ["blue", "#0e77d6"],
   ["cyan", "#22d3ee"],
   ["violet", "#8b5cf6"],
   ["magenta", "#ec4899"],

@@ -97,7 +97,7 @@ export function ScheduleTab({ aircraft, data, save }: TabProps) {
       <div className="tbl-toolbar" style={{ justifyContent: "space-between" }}>
         <span style={{ fontSize: 12, color: "var(--muted2)" }}>
           Upcoming events for{" "}
-          <span className="mono" style={{ color: "var(--accent)" }}>{aircraft.reg}</span>
+          <span className="mono" style={{ color: "var(--accent-text)" }}>{aircraft.reg}</span>
         </span>
         <button className="btn sm primary" onClick={openAdd}>Add Event</button>
       </div>

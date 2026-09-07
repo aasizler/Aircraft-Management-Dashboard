@@ -912,7 +912,7 @@ export function FlightMap({
     <>
       <div className="section-hd">
         <span className="section-label">
-          Flight Map — <span style={{ color: "var(--accent)" }}>{reg}</span>
+          Flight Map — <span style={{ color: "var(--accent-text)" }}>{reg}</span>
         </span>
         <div style={{ display: "flex", gap: 7, alignItems: "center", flexWrap: "wrap" }}>
           <span className="mono">{airports.length} airports · {routes.length} legs</span>

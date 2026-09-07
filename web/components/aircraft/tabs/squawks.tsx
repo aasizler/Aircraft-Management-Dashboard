@@ -222,7 +222,7 @@ export function SquawksTab({ aircraft, data, save, consumeAction, allow }: TabPr
                         {sq.resolutionNotes && <span style={{ display: "block", marginBottom: 3 }}>{sq.resolutionNotes}</span>}
                         {sq.attachment?.name && (
                           <>
-                            <span style={{ color: "var(--accent)", fontFamily: "var(--mono)", fontSize: 10 }}>
+                            <span style={{ color: "var(--accent-text)", fontFamily: "var(--mono)", fontSize: 10 }}>
                               <Icon name="paperclip" size={13} /> {sq.attachment.name}
                             </span>{" "}
                             <button
