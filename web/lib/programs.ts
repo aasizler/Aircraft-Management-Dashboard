@@ -244,15 +244,6 @@ const expand = (tpl: Insp, engines: 1 | 2): Insp[] =>
       : [{ ...tpl, name: tpl.name.replace("{E} ", "") }]
     : [tpl];
 
-/** Catalogue engines fitted to this type, for the picker. */
-export function enginesForType(typeName: string | null | undefined) {
-  const t = (typeName ?? "").toLowerCase();
-  const words = t.split(/[^a-z0-9]+/).filter((w) => w.length > 2 && !/^(the|jet|cirrus|cessna|beechcraft|piper|socata|daher|pilatus)$/.test(w));
-  return ENGINE_DB.filter((e) => {
-    const app = e.app.toLowerCase();
-    return words.some((w) => app.includes(w));
-  });
-}
 
 /**
  * Merge a programme into what the aircraft already has: rows it lacks are
