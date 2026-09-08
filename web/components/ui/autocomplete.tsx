@@ -115,7 +115,7 @@ export function TypeAutocomplete({
             a.model.toUpperCase().includes(u) ||
             a.mfr.toUpperCase().includes(u),
         )
-          .slice(0, 10)
+          .slice(0, 14)
           .map((a) => ({
             key: a.icao + a.model,
             code: a.icao,

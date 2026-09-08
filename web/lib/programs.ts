@@ -299,18 +299,27 @@ export function enginesFor(typeName: string | null | undefined): 1 | 2 | null {
   const t = (typeName ?? "").toLowerCase();
   if (!t) return null;
   if (/twin|baron|seneca|seminole|king air|conquest|navajo|aztec|duchess|340|402|414|421|310/.test(t)) return 2;
-  const hit = AIRCRAFT_DB.find((a) =>
+  // Longest model match wins, so "King Air C90GTx" beats "King Air C90".
+  const hits = AIRCRAFT_DB.filter((a) =>
     t.includes(a.icao.toLowerCase()) ||
     a.model.toLowerCase().split(/\s*\/\s*/).some((m) => m.length > 2 && t.includes(m)));
+  const hit = hits.sort((a, b) => b.model.length - a.model.length)[0];
   if (!hit) return null;
-  return /twin|× ?2|x ?2/i.test(hit.desc ?? "") ? 2 : 1;
+  return hit.engines ?? (/twin|× ?2|x ?2/i.test(hit.desc ?? "") ? 2 : 1);
 }
 
 /** The catalogue TBO for the aircraft's engine, when it is one we know. */
 export function engineTbo(engineType: string | null | undefined): number | null {
   const e = (engineType ?? "").toLowerCase();
   if (!e) return null;
-  return ENGINE_DB.find((x) => e.includes(x.id.toLowerCase()) || e.includes(x.model.toLowerCase()))?.tbo ?? null;
+  // Longest designation wins, so "PT6A-135A" resolves to itself and not to "PT6A-135".
+  let best: { len: number; tbo: number } | null = null;
+  for (const x of ENGINE_DB) {
+    const id = x.id.toLowerCase(), model = x.model.toLowerCase();
+    const hit = e.includes(id) ? id.length : e.includes(model) ? model.length : 0;
+    if (hit && (!best || hit > best.len)) best = { len: hit, tbo: x.tbo };
+  }
+  return best?.tbo ?? null;
 }
 
 // Twins number their engines 1 and 2, as the logbooks do: "{E} Engine

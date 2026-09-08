@@ -83,6 +83,8 @@ export function AddAircraftButton({
     setProfile(prof);
     setF((p) => ({
       ...p,
+      // The engine the variant left the factory with, unless one was typed.
+      engineType: p.engineType || t.eng || "",
       tbo: next === "piston" ? (p.tbo || "1700") : p.tbo === "1700" ? "" : p.tbo,
       oilInterval: next === "piston" ? (p.oilInterval || "50") : "",
       // Point the bases at the clocks this airframe actually has, rather than
