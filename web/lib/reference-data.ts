@@ -739,119 +739,6 @@ export const ENGINE_DB: Engine[] = [
 
 ];
 
-// ═══════════════════════════════════════════════════════════════════════════
-// COMMON MODIFICATIONS — the STCs an owner is likely to have on the airframe,
-// in the spirit of ForeFlight's aircraft-profile "modifications" list, kept
-// to the airframe and powerplant: no avionics, lights or cabin items. A mod
-// applies by ICAO designator (or a whole powerplant class). Engine conversions carry the engine they
-// fit, so picking one re-points the aircraft's engine and TBO.
-// ═══════════════════════════════════════════════════════════════════════════
-export type ModKind = "engine" | "prop" | "airframe";
-export type Mod = {
-  id: string;
-  name: string;
-  holder: string;
-  kind: ModKind;
-  /** Designators the STC covers; omit when `cls` says "every piston". */
-  icao?: string[];
-  cls?: AcClass;
-  /** Engine fitted by an engine conversion, as an ENGINE_DB id. */
-  eng?: string;
-  hp?: number;
-  note?: string;
-};
-
-export const MODS_DB: Mod[] = [
-  // ── Cirrus ───────────────────────────────────────────────────────────────
-  {id:"tat-tn-sr22",   name:"Turbonormalizing system",        holder:"Tornado Alley Turbo", kind:"engine", icao:["SR22"], note:"IO-550-N with twin turbonormalizers; the G3/G5 \"SR22TN\" factory option was this STC"},
-  {id:"gami-sr22",     name:"GAMIjectors balanced injectors",  holder:"GAMI",          kind:"engine", icao:["SR22","SR20"]},
-  {id:"hartzell-3b-sr22",name:"Hartzell 3-blade composite propeller",holder:"Hartzell", kind:"prop",   icao:["SR22","SR20"]},
-  {id:"tks-cirrus",    name:"TKS ice protection (FIKI/inadvertent)",holder:"CAV Ice Protection",kind:"airframe",icao:["SR22","SR20"]},
-
-  // ── Beech Bonanza / Baron ────────────────────────────────────────────────
-  {id:"tat-whirlwind", name:"Whirlwind II turbonormalizer",    holder:"Tornado Alley Turbo", kind:"engine", icao:["BE36","BE35","BE33"], note:"IO-550-B/N turbonormalized to 30\" to FL250"},
-  {id:"dshannon-tips", name:"Tip tanks (20 gal per side)",      holder:"D'Shannon Aviation", kind:"airframe", icao:["BE36","BE35","BE33","BE58","BE55"], note:"Gross-weight increase comes with the tanks"},
-  {id:"osborne-tips",  name:"Osborne tip tanks",               holder:"Osborne / D'Shannon", kind:"airframe", icao:["BE36","BE35","BE33","BE58","BE55"]},
-  {id:"dshannon-baffles",name:"Cooling baffle kit",            holder:"D'Shannon Aviation", kind:"engine", icao:["BE36","BE35","BE33"]},
-  {id:"dshannon-windshield",name:"Speed-slope windshield",     holder:"D'Shannon Aviation", kind:"airframe",   icao:["BE36","BE35","BE33"]},
-  {id:"bds-vg-bonanza",name:"Vortex generator kit",            holder:"BDS / Micro AeroDynamics", kind:"airframe", icao:["BE36","BE35","BE33"]},
-  {id:"colemill-foxstar",name:"Foxstar conversion (IO-550-C × 2)",holder:"Colemill Enterprises",kind:"engine",icao:["BE58"],eng:"IO-550-C",hp:300},
-  {id:"colemill-starfire",name:"Starfire conversion (IO-550-B)",holder:"Colemill Enterprises",kind:"engine",icao:["BE36","BE33"],eng:"IO-550-B",hp:300},
-  {id:"ram-baron",     name:"RAM engine upgrade",              holder:"RAM Aircraft",  kind:"engine", icao:["BE58","BE55"]},
-  {id:"micro-vg-baron",name:"Vortex generator kit",            holder:"Micro AeroDynamics", kind:"airframe", icao:["BE58","BE55"], note:"Lowers Vmc and stall speeds"},
-
-  // ── King Air ─────────────────────────────────────────────────────────────
-  {id:"blackhawk-xp135a",name:"XP135A engine upgrade (PT6A-135A × 2)",holder:"Blackhawk Aerospace",kind:"engine",icao:["BE9L"],eng:"PT6A-135A",hp:750, note:"For the C90/C90A/C90B/C90SE"},
-  {id:"blackhawk-xp52-90",name:"XP52 engine upgrade (PT6A-52 × 2)",holder:"Blackhawk Aerospace",kind:"engine",icao:["BE9L"],eng:"PT6A-52",hp:850},
-  {id:"blackhawk-xp42", name:"XP42 engine upgrade (PT6A-42 × 2)",holder:"Blackhawk Aerospace",kind:"engine",icao:["BE20"],eng:"PT6A-42",hp:850, note:"For the straight 200"},
-  {id:"blackhawk-xp52", name:"XP52 engine upgrade (PT6A-52 × 2)",holder:"Blackhawk Aerospace",kind:"engine",icao:["BE20"],eng:"PT6A-52",hp:850},
-  {id:"blackhawk-xp61", name:"XP61 engine upgrade (PT6A-61 × 2)",holder:"Blackhawk Aerospace",kind:"engine",icao:["BE20"],eng:"PT6A-61",hp:850},
-  {id:"blackhawk-xp67a",name:"XP67A engine upgrade (PT6A-67A × 2)",holder:"Blackhawk Aerospace",kind:"engine",icao:["B350"],eng:"PT6A-67A",hp:1050},
-  {id:"raisbeck-epic",  name:"EPIC Performance Package",       holder:"Raisbeck Engineering",kind:"airframe", icao:["BE9L","BE20","B350"], note:"Swept-blade props, ram-air recovery, dual aft strakes, enhanced leading edges, high-flotation gear doors"},
-  {id:"raisbeck-swept-prop",name:"Swept-blade propellers",     holder:"Raisbeck Engineering",kind:"prop", icao:["BE9L","BE20","B350"]},
-  {id:"raisbeck-lockers",name:"Wing lockers",                  holder:"Raisbeck Engineering",kind:"airframe",icao:["BE20","B350"]},
-  {id:"raisbeck-strakes",name:"Dual aft body strakes",         holder:"Raisbeck Engineering",kind:"airframe",  icao:["BE9L","BE20","B350"]},
-  {id:"blr-winglets",   name:"Winglet system",                 holder:"BLR Aerospace", kind:"airframe",   icao:["BE9L","BE20","B350"]},
-  {id:"mt-5blade-kingair",name:"MT 5-blade composite propellers",holder:"MT-Propeller",kind:"prop",   icao:["BE9L","BE20","B350"]},
-
-  // ── Cessna singles ───────────────────────────────────────────────────────
-  {id:"airplains-180",  name:"180 hp conversion (O-360-A4M)",  holder:"Air Plains Services",kind:"engine",icao:["C172"],eng:"O-360-A4M",hp:180},
-  {id:"pennyan-superhawk",name:"Superhawk 180 hp conversion",  holder:"Penn Yan Aero", kind:"engine", icao:["C172"],eng:"O-360-A4M",hp:180},
-  {id:"airplains-c182", name:"O-520/IO-550 upgrade",           holder:"Air Plains / Texas Skyways",kind:"engine",icao:["C182"], note:"260–300 hp; the profile engine should match the installed model"},
-  {id:"pponk-c182",     name:"P.Ponk O-470-50 conversion",     holder:"P.Ponk Aviation",kind:"engine",icao:["C182","C180","C185"],hp:275},
-  {id:"peterson-260se", name:"260SE / Katmai canard conversion",holder:"Peterson Aviation",kind:"airframe",icao:["C182"],eng:"IO-550-D",hp:260},
-  {id:"vitatoe-io550",  name:"IO-550 conversion",              holder:"Vitatoe Aviation",kind:"engine",icao:["C210","C206"],eng:"IO-550-P",hp:310},
-  {id:"atlantic-io550", name:"IO-550 conversion",              holder:"Atlantic Aero",  kind:"engine", icao:["C210"],eng:"IO-550-P",hp:310},
-  {id:"soloy-206",      name:"Soloy Mark II turbine conversion",holder:"Soloy Aviation Solutions",kind:"engine",icao:["C206","C207"],eng:"250-B17C",hp:420},
-  {id:"robertson-stol", name:"Robertson STOL kit",             holder:"Robertson / Sierra Industries",kind:"airframe",icao:["C172","C182","C206","C210","C185","C180","PA32","PA28"]},
-  {id:"horton-stol",    name:"Horton STOL kit",                holder:"Horton Inc.",    kind:"airframe",   icao:["C172","C182","C206","C177","C150"]},
-  {id:"sportsman-stol", name:"Sportsman STOL cuff",            holder:"Stene Aviation", kind:"airframe",   icao:["C172","C182","C206","C210","C180","C185"]},
-  {id:"flint-tips",     name:"Flint tip tanks",                holder:"Flint Aero",     kind:"airframe",icao:["C182","C206","C210","C180","C185"]},
-  {id:"micro-vg-cessna",name:"Vortex generator kit",           holder:"Micro AeroDynamics",kind:"airframe",icao:["C172","C182","C206","C210","C180","C185","C177"]},
-  {id:"powerflow-cessna",name:"Power Flow tuned exhaust",      holder:"Power Flow Systems",kind:"engine",icao:["C172","C177","C182"]},
-  {id:"hartzell-top-prop",name:"Top Prop 3-blade conversion",  holder:"Hartzell",       kind:"prop",   icao:["C182","C206","C210","C180","C185","BE36","BE35","BE33","PA32","P32R","PA46"]},
-  {id:"wipline-floats", name:"Wipline amphibious floats",      holder:"Wipaire",        kind:"airframe",icao:["C172","C182","C206","C185","C208","KODI","PC6","DHC2","DHC3"]},
-
-  // ── Caravan / Kodiak / PC-12 ─────────────────────────────────────────────
-  {id:"blackhawk-xp42a-208",name:"XP42A engine upgrade (PT6A-42A)",holder:"Blackhawk Aerospace",kind:"engine",icao:["C208"],eng:"PT6A-42A",hp:850},
-  {id:"supervan-900",   name:"Supervan 900 (TPE331-12JR)",      holder:"Texas Turbine Conversions",kind:"engine",icao:["C208"],eng:"TPE331-12JR",hp:900},
-  {id:"cav-tks-208",    name:"TKS ice protection",             holder:"CAV Ice Protection",kind:"airframe",icao:["C208","KODI","PA46","P46T","M20K","M20R","M20T","DA42","DA62","BE36","BE58"]},
-  {id:"cargo-pod-208",  name:"Belly cargo pod",                holder:"Cessna / Aviation Partners",kind:"airframe",icao:["C208","KODI"]},
-  {id:"finnoff-67p",    name:"PT6A-67P engine upgrade",         holder:"Finnoff Aviation",kind:"engine",icao:["PC12"],eng:"PT6A-67P",hp:1200, note:"For the PC-12/45 and /47"},
-  {id:"finnoff-mt5",    name:"MT 5-blade composite propeller",  holder:"Finnoff Aviation / MT",kind:"prop",icao:["PC12"]},
-
-  // ── Piper ────────────────────────────────────────────────────────────────
-  {id:"isham-180",      name:"180 hp conversion (O-360)",       holder:"Isham / Avcon",  kind:"engine", icao:["PA28"],eng:"O-360-A4M",hp:180, note:"Cherokee 140/150/160"},
-  {id:"powerflow-piper",name:"Power Flow tuned exhaust",        holder:"Power Flow Systems",kind:"engine",icao:["PA28","P28R","PA32","P32R","PA24"]},
-  {id:"knots2u-piper",  name:"Speed fairings and gap seals",    holder:"Knots 2U",       kind:"airframe",   icao:["PA28","P28R","PA32","P32R","PA24","PA34","PA44"]},
-  {id:"lopresti-piper", name:"LoPresti cowl / speed mods",      holder:"LoPresti Aviation",kind:"airframe", icao:["PA28","P28R","PA32","P32R","PA46","M20J"]},
-  {id:"jetprop-dlx",    name:"JetPROP DLX turbine conversion (PT6A-35)",holder:"Rocket Engineering",kind:"engine",icao:["PA46"],eng:"PT6A-35",hp:560, note:"Turns a Malibu/Mirage into a turboprop — its maintenance schedule changes with it"},
-  {id:"jetprop-dl",     name:"JetPROP DL turbine conversion (PT6A-21)",holder:"Rocket Engineering",kind:"engine",icao:["PA46"],eng:"PT6A-21",hp:550},
-  {id:"micro-vg-piper", name:"Vortex generator kit",            holder:"Micro AeroDynamics",kind:"airframe",icao:["PA28","PA32","PA34","PA44","PA31","PA46"]},
-  {id:"pa34-intercooler",name:"Intercooler kit",                holder:"Turboplus",      kind:"engine", icao:["PA34","P28T","PA46"]},
-
-  // ── Mooney ───────────────────────────────────────────────────────────────
-  {id:"rocket-305",     name:"Rocket 305 conversion (TSIO-520-NB)",holder:"Rocket Engineering",kind:"engine",icao:["M20K"],eng:"TSIO-520-NB",hp:305},
-  {id:"missile-300",    name:"Missile 300 conversion (IO-550-A)",holder:"Rocket Engineering",kind:"engine",icao:["M20J"],eng:"IO-550-A",hp:300},
-  {id:"lopresti-mooney",name:"LoPresti cowl",                   holder:"LoPresti Aviation",kind:"airframe", icao:["M20J","M20K"]},
-  {id:"powerflow-mooney",name:"Power Flow tuned exhaust",       holder:"Power Flow Systems",kind:"engine",icao:["M20J","M20P","M20K"]},
-  {id:"monroy-tanks",   name:"Long-range fuel tanks",           holder:"Monroy Aerospace",kind:"airframe",icao:["M20J","M20K","M20R","M20P","M20T"]},
-
-  // ── Diamond ──────────────────────────────────────────────────────────────
-  {id:"powerflow-da40", name:"Power Flow tuned exhaust",        holder:"Power Flow Systems",kind:"engine",icao:["DA40"]},
-  {id:"mt-prop-da40",   name:"MT 3-blade composite propeller",  holder:"MT-Propeller",   kind:"prop",   icao:["DA40","DA42"]},
-  {id:"cd155-da42",     name:"CD-155 re-engine (from TAE125)",  holder:"Continental Aerospace",kind:"engine",icao:["DA42"],eng:"CD-155",hp:155},
-
-  // ── Business jets ────────────────────────────────────────────────────────
-  {id:"tamarack-atlas", name:"ATLAS active winglets",           holder:"Tamarack Aerospace",kind:"airframe",icao:["C525","C25A","C25B"]},
-  {id:"sierra-eagle2",  name:"Eagle II conversion (FJ44-2A × 2)",holder:"Sierra Industries",kind:"engine",icao:["C500","C501"],eng:"FJ44-2A"},
-  {id:"sierra-super-s2",name:"Super S-II conversion (FJ44-3A × 2)",holder:"Sierra Industries",kind:"engine",icao:["C550"],eng:"FJ44-3A"},
-  {id:"raisbeck-zr-lite",name:"ZR Lite performance package",    holder:"Raisbeck Engineering",kind:"airframe",icao:["LJ35","LJ31","LJ55","LJ60"]},
-  {id:"api-winglets-hawker",name:"Blended winglets",            holder:"Aviation Partners",kind:"airframe",icao:["H25B","F900","F2TH"]},
-  {id:"tamarack-lear",  name:"Winglet / aft-body fairing",      holder:"Bombardier",     kind:"airframe",   icao:["LJ45"]},
-
-];
-
 /** The catalogue row a free-typed aircraft type resolves to: longest model match wins. */
 export function resolveType(typeName: string | null | undefined): AcType | null {
   const t = (typeName ?? "").toLowerCase();
@@ -862,16 +749,75 @@ export function resolveType(typeName: string | null | undefined): AcType | null 
   return hits.sort((a, b) => b.model.length - a.model.length)[0] ?? null;
 }
 
-/** Mods worth offering for this type: its designator's STCs, then the fleet-wide ones for its class. */
-export function modsFor(typeName: string | null | undefined, cls: AcClass = "piston"): Mod[] {
-  const hit = resolveType(typeName);
-  const icao = hit?.icao;
-  const c = hit?.cls ?? cls;
-  return MODS_DB.filter((m) =>
-    (icao && m.icao?.includes(icao)) ||
-    (!m.icao && m.cls === c));
-}
+// ═══════════════════════════════════════════════════════════════════════════
+// PROPELLERS — hub models an owner is likely to have, with the overhaul
+// period the manufacturer publishes for that series. Hartzell per
+// HC-SL-61-61Y Rev 14 (compact aluminum on pistons 2400/72; steel-hub turbine
+// 3000/60; lightweight turbine HC-D/E 4000/72); McCauley per SB137 (threadless
+// notes D 2000/72, E 2400/72, G 3500/72, I 4000/72, fixed pitch 2000/72);
+// MT per SB No. 1 (pistons 2400/72, MTV-27 five-blade 4000/72). The hub
+// change letter and the logbook govern — these are the series defaults.
+// ═══════════════════════════════════════════════════════════════════════════
+export type Prop = { id: string; mfr: string; model: string; blades: number; tbo: number; tboMo: number; app: string };
 
-export function modById(id: string): Mod | undefined {
-  return MODS_DB.find((m) => m.id === id);
+export const PROP_DB: Prop[] = [
+  // Hartzell — compact aluminum hub, piston
+  {id:'PHC-J3YF-1RF', mfr:'Hartzell',model:'PHC-J3YF-1RF', blades:3,tbo:2400,tboMo:72,app:'Cirrus SR22 (IO-550-N)'},
+  {id:'PHC-J3Y1F-1N', mfr:'Hartzell',model:'PHC-J3Y1F-1N', blades:3,tbo:2400,tboMo:72,app:'Cirrus SR22T / SR22 G5+'},
+  {id:'PHC-C3YF-1RF', mfr:'Hartzell',model:'PHC-C3YF-1RF', blades:3,tbo:2400,tboMo:72,app:'Cirrus SR20; Top Prop for Bonanza / C182 / C206'},
+  {id:'BHC-C2YF-1BF', mfr:'Hartzell',model:'BHC-C2YF-1BF', blades:2,tbo:2400,tboMo:72,app:'Bonanza / C182 2-blade (Continental)'},
+  {id:'HC-C2YK-1BF',  mfr:'Hartzell',model:'HC-C2YK-1BF',  blades:2,tbo:2400,tboMo:72,app:'Piper Arrow / Cherokee 2-blade (Lycoming O/IO-360)'},
+  {id:'HC-C2YR-1BF',  mfr:'Hartzell',model:'HC-C2YR-1BF',  blades:2,tbo:2400,tboMo:72,app:'Lycoming O/IO-360 2-blade (Arrow, RV, Grumman)'},
+  {id:'HC-C3YR-1RF',  mfr:'Hartzell',model:'HC-C3YR-1RF',  blades:3,tbo:2400,tboMo:72,app:'Piper Saratoga / Lance / Malibu 3-blade (Lycoming IO-540)'},
+  {id:'HC-C3YR-4BF',  mfr:'Hartzell',model:'HC-C3YR-4BF',  blades:3,tbo:2400,tboMo:72,app:'Bonanza / Baron 3-blade (Continental IO-520/550)'},
+  {id:'HC-C3YR-2UF',  mfr:'Hartzell',model:'HC-C3YR-2UF',  blades:3,tbo:2400,tboMo:72,app:'Baron 58 / Cessna 310 3-blade'},
+  {id:'HC-C2YR-4CF',  mfr:'Hartzell',model:'HC-C2YR-4CF',  blades:2,tbo:1000,tboMo:72,app:'Aerobatic (Extra, Pitts, Aviat) — aerobatic limit'},
+  // Hartzell — steel hub, turbine
+  {id:'HC-B3TN-3',    mfr:'Hartzell',model:'HC-B3TN-3',    blades:3,tbo:3000,tboMo:60,app:'King Air 90 / E90 / T-34C 3-blade'},
+  {id:'HC-B4TN-3',    mfr:'Hartzell',model:'HC-B4TN-3',    blades:4,tbo:3000,tboMo:60,app:'King Air C90B 4-blade'},
+  // Hartzell — lightweight aluminum hub, turbine
+  {id:'HC-E4N-3',     mfr:'Hartzell',model:'HC-E4N-3',     blades:4,tbo:4000,tboMo:72,app:'King Air 200 / B200 / 250 / 350 4-blade (-3G, -3N); Raisbeck swept -3Q'},
+  {id:'HC-E4A-3D',    mfr:'Hartzell',model:'HC-E4A-3D',    blades:4,tbo:4000,tboMo:72,app:'Pilatus PC-12/45, /47 4-blade'},
+  {id:'HC-E5A-3A',    mfr:'Hartzell',model:'HC-E5A-3A',    blades:5,tbo:4000,tboMo:72,app:'Pilatus PC-12 NGX 5-blade'},
+  {id:'HC-E5N-3',     mfr:'Hartzell',model:'HC-E5N-3',     blades:5,tbo:4000,tboMo:72,app:'TBM 900 / 930 / 940 / 960 5-blade'},
+  {id:'HC-E4N-3P',    mfr:'Hartzell',model:'HC-E4N-3P',    blades:4,tbo:4000,tboMo:72,app:'TBM 700 / 850 4-blade'},
+  {id:'HC-D4N-3P',    mfr:'Hartzell',model:'HC-D4N-3P',    blades:4,tbo:4000,tboMo:72,app:'Caravan 208 / Kodiak 4-blade'},
+  // McCauley — fixed pitch
+  {id:'1A170E/JHA7660',mfr:'McCauley',model:'1A170E/JHA7660',blades:2,tbo:2000,tboMo:72,app:'Cessna 172R / 172S fixed pitch'},
+  {id:'1C235/LFA7570', mfr:'McCauley',model:'1C235/LFA7570', blades:2,tbo:2000,tboMo:72,app:'Cessna 172N / 172P fixed pitch'},
+  {id:'1A103/TCM6958', mfr:'McCauley',model:'1A103/TCM6958', blades:2,tbo:1500,tboMo:72,app:'Cessna 150 / 152 fixed pitch'},
+  // McCauley — threadless constant speed
+  {id:'2A34C203',     mfr:'McCauley',model:'2A34C203',     blades:2,tbo:2400,tboMo:72,app:'Cessna 182 2-blade (-C or later; earlier 2000 HRS)'},
+  {id:'C2A34C204',    mfr:'McCauley',model:'C2A34C204',    blades:2,tbo:2400,tboMo:72,app:'Cessna 182 2-blade (-C or later; earlier 2000 HRS)'},
+  {id:'2A34C221',     mfr:'McCauley',model:'2A34C221',     blades:2,tbo:2000,tboMo:72,app:'Cessna 180 / 182 2-blade'},
+  {id:'3A32C406',     mfr:'McCauley',model:'3A32C406',     blades:3,tbo:2400,tboMo:72,app:'Cessna 182 3-blade'},
+  {id:'B3D36C432',    mfr:'McCauley',model:'B3D36C432',    blades:3,tbo:2400,tboMo:72,app:'Cessna 206H / T206H 3-blade'},
+  {id:'D3A34C402',    mfr:'McCauley',model:'D3A34C402',    blades:3,tbo:2000,tboMo:72,app:'Cessna 210 3-blade'},
+  {id:'B2D34C214',    mfr:'McCauley',model:'B2D34C214',    blades:2,tbo:2000,tboMo:72,app:'Mooney M20J 2-blade'},
+  {id:'B2D34C213',    mfr:'McCauley',model:'B2D34C213',    blades:2,tbo:2000,tboMo:72,app:'Cessna 177RG / Piper 2-blade'},
+  {id:'3GFR34C703',   mfr:'McCauley',model:'3GFR34C703',   blades:3,tbo:4000,tboMo:72,app:'Cessna Caravan 208B 3-blade'},
+  {id:'3GFR34C702',   mfr:'McCauley',model:'3GFR34C702',   blades:3,tbo:3500,tboMo:72,app:'Cessna Caravan 208 3-blade'},
+  {id:'4HFR34C778',   mfr:'McCauley',model:'4HFR34C778',   blades:4,tbo:3500,tboMo:72,app:'King Air / turboprop 4-blade'},
+  // MT-Propeller — natural composite
+  {id:'MTV-9-B',      mfr:'MT-Propeller',model:'MTV-9-B',  blades:3,tbo:2400,tboMo:72,app:'Cirrus SR22 / C182 / PA-46 3-blade (Continental)'},
+  {id:'MTV-12-B',     mfr:'MT-Propeller',model:'MTV-12-B', blades:3,tbo:2400,tboMo:72,app:'Bonanza / Saratoga 3-blade (IO-540/550)'},
+  {id:'MTV-14-B',     mfr:'MT-Propeller',model:'MTV-14-B', blades:3,tbo:2400,tboMo:72,app:'Baron / Aerostar 3-blade'},
+  {id:'MTV-6-A',      mfr:'MT-Propeller',model:'MTV-6-A',  blades:2,tbo:2400,tboMo:72,app:'Lycoming O/IO-360 2-blade'},
+  {id:'MTV-27-1',     mfr:'MT-Propeller',model:'MTV-27-1', blades:5,tbo:4000,tboMo:72,app:'King Air / PC-12 / Caravan / TBM 5-blade (Finnoff, Blackhawk, Raisbeck)'},
+  // Sensenich — fixed pitch, no published overhaul period
+  {id:'76EM8',        mfr:'Sensenich',model:'76EM8',       blades:2,tbo:0,tboMo:0,app:'Piper Archer / Warrior fixed pitch (on condition)'},
+  {id:'74DM6',        mfr:'Sensenich',model:'74DM6',       blades:2,tbo:0,tboMo:0,app:'Piper Cherokee 140/150 fixed pitch (on condition)'},
+];
+
+/** The published overhaul period for the propeller on file, when it is one we know. */
+export function propTbo(prop: string | null | undefined): { hrs: number; mo: number } | null {
+  const e = (prop ?? "").toLowerCase();
+  if (!e) return null;
+  let best: { len: number; hit: Prop } | null = null;
+  for (const x of PROP_DB) {
+    const id = x.id.toLowerCase(), model = x.model.toLowerCase();
+    const n = e.includes(id) ? id.length : e.includes(model) ? model.length : 0;
+    if (n && (!best || n > best.len)) best = { len: n, hit: x };
+  }
+  return best ? { hrs: best.hit.tbo, mo: best.hit.tboMo } : null;
 }

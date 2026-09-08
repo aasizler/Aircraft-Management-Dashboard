@@ -9,15 +9,13 @@ import { useToast } from "@/components/ui/toast";
 import {
   AirportAutocomplete,
   EngineAutocomplete,
-  TypeAutocomplete,
-} from "@/components/ui/autocomplete";
-import { ModsPicker } from "@/components/ui/mods-picker";
+  TypeAutocomplete, PropAutocomplete } from "@/components/ui/autocomplete";
 import { makeCoreInspections, type V1Aircraft } from "@/lib/aircraft";
 import { METER_LABEL } from "@/lib/aircraft";
-import type { AcClass, AcType } from "@/lib/reference-data";
+import { propTbo, type AcClass, type AcType } from "@/lib/reference-data";
 import { orderKinds, profileFor, profileForClass, type MeterProfile } from "@/lib/meters";
 import type { MeterKind } from "@/lib/types";
-import { applyProgram, enginesFor, programsFor, RULES } from "@/lib/programs";
+import { applyProgram, applyPropTbo, enginesFor, programsFor, RULES } from "@/lib/programs";
 import { makeLifeLimitedParts, type Insp, type OpsRules } from "@/lib/aircraft";
 
 const METERS: MeterKind[] = ["hobbs", "tach", "flight", "total"];
@@ -51,6 +49,7 @@ export function AddAircraftButton({
     serial: "",
     airport: "",
     engineType: "",
+    prop: "",
     maint_basis: "hobbs" as MeterKind,
     cost_basis: "hobbs" as MeterKind,
     maintHrs: "",
@@ -64,7 +63,6 @@ export function AddAircraftButton({
   // aircraft type has always been treated as.
   const [cls, setCls] = useState<AcClass>("piston");
   const [rules, setRules] = useState<OpsRules>("91");
-  const [mods, setMods] = useState<string[]>([]);
   const turbine = cls !== "piston";
   // What clocks the airframe carries. Drives the defaults and the ordering of
   // the two selects; every kind stays selectable underneath.
@@ -159,7 +157,7 @@ export function AddAircraftButton({
         const prog = programsFor(cls, f.type)[0];
         const seeded = { inspections: makeCoreInspections(cls), parts: makeLifeLimitedParts(cls, f.type) };
         const out = prog ? applyProgram(prog, eng, seeded, null, rules) : seeded;
-        return { inspections: out.inspections, lifeLimitedParts: out.parts, maintProgram: prog?.id };
+        return { inspections: out.inspections, lifeLimitedParts: applyPropTbo(out.parts, propTbo(f.prop)), maintProgram: prog?.id };
       })(),
       oil: [],
       squawks: [],
@@ -180,7 +178,7 @@ export function AddAircraftButton({
       acClass: cls,
       opsRules: rules,
       engines: enginesFor(f.type) ?? 1,
-      mods,
+      prop: f.prop.trim() || null,
       tt: hrs,
       overhaulAt: Number(f.overhaulAt) || 0,
       // Written too, so anything still reading the old field sees today's
@@ -249,7 +247,7 @@ export function AddAircraftButton({
     setBusy(false);
     setOpen(false);
     setF({
-      reg: "", type: "", serial: "", airport: "", engineType: "",
+      reg: "", type: "", serial: "", airport: "", engineType: "", prop: "",
       maint_basis: "hobbs", cost_basis: "hobbs", fleet_id: "",
       overhaulAt: "", tbo: "1700", oilInterval: "50",
       maintHrs: "", costHrs: "",
@@ -297,13 +295,10 @@ export function AddAircraftButton({
             />
           </div>
 
-          <ModsPicker
-            typeName={f.type}
-            cls={cls}
-            value={mods}
-            onChange={setMods}
-            onEngine={(eng) => set("engineType", eng)}
-          />
+          <div className="form-row">
+            <label>Propeller</label>
+            <PropAutocomplete value={f.prop} onChange={(v) => set("prop", v)} />
+          </div>
 
           {/* Airframe hours are not asked for here: they are a meter reading,
               and Meters below is where the readings live. */}

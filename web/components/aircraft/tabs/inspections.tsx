@@ -1,11 +1,11 @@
 "use client";
 
+import { propTbo } from "@/lib/reference-data";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CORE_INSP, CORE_INSP_TURBINE, makeLifeLimitedParts, METER_LABEL, intervalShort, type Insp, type OpsRules } from "@/lib/aircraft";
 import {
   AAIP_ID, applyEngineSchedule, applyProgram, applyRules, ENGINE_SCHEDULES, engineSchedulesFor, engineTbo, enginesFor,
-  programsFor, PROGRAMS, RULES,
-} from "@/lib/programs";
+  programsFor, PROGRAMS, RULES, applyPropTbo } from "@/lib/programs";
 import type { TabProps } from "../detail-client";
 import { InspTable } from "../insp-table";
 import { LifeLimitedTab } from "./life-limited";
@@ -96,7 +96,7 @@ export function InspectionsTab(props: TabProps) {
         ? applyRules(rulesSel, engines, cls, { inspections: all, parts })
         : applyProgram(chosen, engines, { inspections: all, parts }, tbo, rulesSel);
       const eng = ENGINE_SCHEDULES.find((e) => e.id === engineId);
-      const partsOut = eng ? applyEngineSchedule(eng, engines, framed.parts, tbo) : framed.parts;
+      const partsOut = applyPropTbo(eng ? applyEngineSchedule(eng, engines, framed.parts, tbo) : framed.parts, propTbo(data.prop as string | null));
       await save({
         ...data, inspections: framed.inspections, lifeLimitedParts: partsOut,
         maintProgram: progId === AAIP_ID ? AAIP_ID : chosen.id, engineProgram: eng?.id ?? null, engines, opsRules: rulesSel,

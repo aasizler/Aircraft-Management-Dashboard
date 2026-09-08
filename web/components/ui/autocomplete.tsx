@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
-  AIRCRAFT_DB, AP_FULL, ENGINE_DB, enginePower,
-  type AcType, type Engine,
+  AIRCRAFT_DB, AP_FULL, ENGINE_DB, PROP_DB, enginePower,
+  type AcType, type Engine, type Prop,
 } from "@/lib/reference-data";
 
 type Item = { key: string; code: string; label: string; value: string };
@@ -193,6 +193,52 @@ export function EngineAutocomplete({
       {info && (
         <div className="airport-resolved">
           {info.mfr} {info.model} · {enginePower(info)} · TBO {info.tbo.toLocaleString()} hrs
+        </div>
+      )}
+    </>
+  );
+}
+
+const propPeriod = (p: Prop) => (p.tbo ? `${p.tbo.toLocaleString()} hrs / ${p.tboMo} mo` : "on condition");
+
+export function PropAutocomplete({
+  value, onChange, onResolve,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onResolve?: (p: Prop) => void;
+}) {
+  const [info, setInfo] = useState<Prop | null>(null);
+  return (
+    <>
+      <Combo
+        value={value}
+        onChange={onChange}
+        placeholder="e.g. PHC-J3YF-1RF, 3A32C406, MTV-9"
+        search={(q) => {
+          const u = q.toUpperCase();
+          return PROP_DB.filter(
+            (p) =>
+              p.id.toUpperCase().includes(u) ||
+              p.mfr.toUpperCase().includes(u) ||
+              p.app.toUpperCase().includes(u),
+          )
+            .slice(0, 10)
+            .map((p) => ({
+              key: p.id,
+              code: p.model,
+              label: `${p.mfr} · ${p.blades}-blade · ${propPeriod(p)} · ${p.app}`,
+              value: p.model,
+            }));
+        }}
+        onPick={(it) => {
+          const p = PROP_DB.find((x) => x.id === it.key);
+          if (p) { setInfo(p); onResolve?.(p); }
+        }}
+      />
+      {info && (
+        <div className="airport-resolved">
+          {info.mfr} {info.model} · {info.blades}-blade · overhaul {propPeriod(info)}
         </div>
       )}
     </>

@@ -11,8 +11,8 @@ export type V1Aircraft = Record<string, unknown> & {
   maintProgram?: string;
   engineProgram?: string | null;
   engines?: 1 | 2;
-  /** Fitted STC modifications: MODS_DB ids, or free text for one we don't list. */
-  mods?: string[];
+  /** Propeller hub model, as a PROP_DB id where one exists. Sets the propeller overhaul period. */
+  prop?: string | null;
   oil?: OilEntry[];
   flights?: FlightEntry[];
   flightRoutes?: RouteEntry[];

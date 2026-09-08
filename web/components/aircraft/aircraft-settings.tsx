@@ -8,16 +8,14 @@ import { useToast } from "@/components/ui/toast";
 import {
   AirportAutocomplete,
   EngineAutocomplete,
-  TypeAutocomplete,
-} from "@/components/ui/autocomplete";
-import { ModsPicker } from "@/components/ui/mods-picker";
+  TypeAutocomplete, PropAutocomplete } from "@/components/ui/autocomplete";
 import { METER_LABEL, type AircraftRow, type Meter, type V1Aircraft } from "@/lib/aircraft";
-import type { AcClass } from "@/lib/reference-data";
+import { propTbo, type AcClass } from "@/lib/reference-data";
 import {
   orderKinds, profileFor, profileForClass, profileForTypeString, type MeterProfile,
 } from "@/lib/meters";
 import type { MeterKind } from "@/lib/types";
-import { applyRules, enginesFor, RULES } from "@/lib/programs";
+import { applyPropTbo, applyRules, enginesFor, RULES } from "@/lib/programs";
 import type { Insp, OpsRules } from "@/lib/aircraft";
 
 const METERS: MeterKind[] = ["hobbs", "tach", "flight", "total"];
@@ -77,6 +75,7 @@ export function AircraftSettings({
     type: aircraft.type ?? "",
     airport: aircraft.airport ?? "",
     engineType: (data.engineType as string) ?? "",
+    prop: (data.prop as string | null) ?? "",
     overhaulAt: data.overhaulAt != null ? String(data.overhaulAt) : "",
     tbo: data.tbo ? String(data.tbo) : "",
     oilInterval: data.oilInterval ? String(data.oilInterval) : "",
@@ -86,7 +85,6 @@ export function AircraftSettings({
     costHrs: String(meterOf(aircraft.cost_basis)),
     fleet_id: aircraft.fleet_id ?? "",
   });
-  const [mods, setMods] = useState<string[]>(((data.mods as string[] | undefined) ?? []).slice());
 
   // Fleets in this aircraft's org. Empty for a personal hangar that has never
   // made one, in which case the field stays hidden rather than offering a
@@ -204,11 +202,17 @@ export function AircraftSettings({
       : null;
     await save({
       ...data,
-      ...(ruled ? { inspections: ruled.inspections, lifeLimitedParts: ruled.parts } : {}),
+      ...(ruled ? { inspections: ruled.inspections } : {}),
+      // A different propeller carries its own overhaul period onto the
+      // placeholder propeller rows; recorded ones keep what they have.
+      lifeLimitedParts: applyPropTbo(
+        ruled ? ruled.parts : ((data.lifeLimitedParts as Insp[] | undefined) ?? []),
+        f.prop.trim() !== ((data.prop as string | null) ?? "") ? propTbo(f.prop) : null,
+      ),
       opsRules: rules,
       engines: enginesFor(aircraft.type) ?? (data.engines as 1 | 2 | undefined) ?? 1,
       engineType: f.engineType.trim() || null,
-      mods,
+      prop: f.prop.trim() || null,
       acClass: cls,
       // Airframe total time follows the meters: the total-time clock where the
       // aeroplane has one, otherwise the cost clock.
@@ -276,13 +280,10 @@ export function AircraftSettings({
             />
           </div>
 
-          <ModsPicker
-            typeName={f.type}
-            cls={cls}
-            value={mods}
-            onChange={setMods}
-            onEngine={(eng) => set("engineType", eng)}
-          />
+          <div className="form-row">
+            <label>Propeller</label>
+            <PropAutocomplete value={f.prop} onChange={(v) => set("prop", v)} />
+          </div>
 
           {/* Airframe hours are not asked for here: they are a meter reading,
               and Meters below is where the readings live. */}

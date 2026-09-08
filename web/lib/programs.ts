@@ -374,3 +374,16 @@ export function applyProgram(
     : current.parts;
   return applyRules(rules, engines, p.cls[0], { inspections: merge(inspHave, inspAdd), parts: merge(partsHave, partsAdd) });
 }
+
+/**
+ * Point the propeller rows at the published overhaul period for the
+ * propeller on file. Recorded rows keep what they have; a placeholder takes
+ * the hours and months, and a fixed-pitch prop with no period clears both.
+ */
+export function applyPropTbo(parts: Insp[], p: { hrs: number; mo: number } | null): Insp[] {
+  if (!p) return parts;
+  return parts.map((i) =>
+    /^Propeller( [12])?( Overhaul)?$/.test(i.name) && !i.populated && !i.lastDate && i.lastHobbs == null
+      ? { ...i, intervalHrs: p.hrs || null, intervalDays: p.mo ? Math.round(p.mo * 30.44) : null, intervalLabel: p.hrs ? undefined : "On condition" }
+      : i);
+}
