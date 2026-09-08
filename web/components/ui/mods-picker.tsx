@@ -6,10 +6,7 @@ import { modsFor, modById, type AcClass, type Mod, type ModKind } from "@/lib/re
 const KIND: Record<ModKind, string> = {
   engine: "Engine",
   prop: "Prop",
-  aero: "Aero",
-  avionics: "Avionics",
-  safety: "Safety",
-  utility: "Utility",
+  airframe: "Airframe",
 };
 
 /**
