@@ -441,28 +441,6 @@ export function ic(i: Insp, maintHrs: number) {
   return { p, s, nl, due, remNum, remUnit, remFoot, remHrs, remDays, hoursBlocked };
 }
 
-// Labels follow v1's _inspRow() — a healthy inspection reads CURRENT, not OK —
-// set in caps like the rest of the row so the badges read as one set.
-// "NO HOURS" is the one addition: v1 had no way to express an
-// hour-based interval with an unusable meter, and printed nonsense instead.
-export const INSP_BADGE: Record<InspStatus, { cls: string; label: string }> = {
-  none:    { cls: "",        label: "NOT SET" },
-  unknown: { cls: "info",    label: "NO HOURS" },
-  ok:      { cls: "ok",      label: "CURRENT" },
-  warn:    { cls: "warn",    label: "DUE SOON" },
-  overdue: { cls: "overdue", label: "OVERDUE" },
-};
-
-/** The interval as v1 printed it: "12 months" / "24 months", not "365 days". */
-export function intervalText(i: Insp): string {
-  const core = CORE_INSP.find((c) => c.name === i.name);
-  if (core?.intervalLabel) return core.intervalLabel;
-  if (i.intervalLabel) return i.intervalLabel;
-  if (i.intervalHrs) return `${i.intervalHrs} hrs`;
-  if (i.intervalDays) return `${i.intervalDays} days`;
-  return "—";
-}
-
 // Oil life, ported from oilLife(). Counts up from the last oil change against
 // the declared maintenance clock. `tracked` is false when there is nothing to
 // measure against, so the UI can show "—" instead of a confident 100%.
