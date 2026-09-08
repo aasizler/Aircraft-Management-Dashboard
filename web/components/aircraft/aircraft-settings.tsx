@@ -10,6 +10,7 @@ import {
   EngineAutocomplete,
   TypeAutocomplete,
 } from "@/components/ui/autocomplete";
+import { ModsPicker } from "@/components/ui/mods-picker";
 import { METER_LABEL, type AircraftRow, type Meter, type V1Aircraft } from "@/lib/aircraft";
 import type { AcClass } from "@/lib/reference-data";
 import {
@@ -85,6 +86,7 @@ export function AircraftSettings({
     costHrs: String(meterOf(aircraft.cost_basis)),
     fleet_id: aircraft.fleet_id ?? "",
   });
+  const [mods, setMods] = useState<string[]>(((data.mods as string[] | undefined) ?? []).slice());
 
   // Fleets in this aircraft's org. Empty for a personal hangar that has never
   // made one, in which case the field stays hidden rather than offering a
@@ -206,6 +208,7 @@ export function AircraftSettings({
       opsRules: rules,
       engines: enginesFor(aircraft.type) ?? (data.engines as 1 | 2 | undefined) ?? 1,
       engineType: f.engineType.trim() || null,
+      mods,
       acClass: cls,
       // Airframe total time follows the meters: the total-time clock where the
       // aeroplane has one, otherwise the cost clock.
@@ -272,6 +275,14 @@ export function AircraftSettings({
               onResolve={(e) => setF((p) => ({ ...p, tbo: String(e.tbo) }))}
             />
           </div>
+
+          <ModsPicker
+            typeName={f.type}
+            cls={cls}
+            value={mods}
+            onChange={setMods}
+            onEngine={(eng) => set("engineType", eng)}
+          />
 
           {/* Airframe hours are not asked for here: they are a meter reading,
               and Meters below is where the readings live. */}

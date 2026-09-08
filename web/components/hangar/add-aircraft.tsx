@@ -11,6 +11,7 @@ import {
   EngineAutocomplete,
   TypeAutocomplete,
 } from "@/components/ui/autocomplete";
+import { ModsPicker } from "@/components/ui/mods-picker";
 import { makeCoreInspections, type V1Aircraft } from "@/lib/aircraft";
 import { METER_LABEL } from "@/lib/aircraft";
 import type { AcClass, AcType } from "@/lib/reference-data";
@@ -63,6 +64,7 @@ export function AddAircraftButton({
   // aircraft type has always been treated as.
   const [cls, setCls] = useState<AcClass>("piston");
   const [rules, setRules] = useState<OpsRules>("91");
+  const [mods, setMods] = useState<string[]>([]);
   const turbine = cls !== "piston";
   // What clocks the airframe carries. Drives the defaults and the ordering of
   // the two selects; every kind stays selectable underneath.
@@ -178,6 +180,7 @@ export function AddAircraftButton({
       acClass: cls,
       opsRules: rules,
       engines: enginesFor(f.type) ?? 1,
+      mods,
       tt: hrs,
       overhaulAt: Number(f.overhaulAt) || 0,
       // Written too, so anything still reading the old field sees today's
@@ -293,6 +296,14 @@ export function AddAircraftButton({
               onResolve={(e) => setF((p) => ({ ...p, tbo: String(e.tbo) }))}
             />
           </div>
+
+          <ModsPicker
+            typeName={f.type}
+            cls={cls}
+            value={mods}
+            onChange={setMods}
+            onEngine={(eng) => set("engineType", eng)}
+          />
 
           {/* Airframe hours are not asked for here: they are a meter reading,
               and Meters below is where the readings live. */}

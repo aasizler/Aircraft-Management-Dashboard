@@ -1,4 +1,4 @@
-import { AIRCRAFT_DB, ENGINE_DB, type AcClass } from "./reference-data";
+import { ENGINE_DB, resolveType, type AcClass } from "./reference-data";
 import { CORE_INSP, CORE_INSP_TURBINE, type Insp, type OpsRules } from "./aircraft";
 
 /**
@@ -299,11 +299,7 @@ export function enginesFor(typeName: string | null | undefined): 1 | 2 | null {
   const t = (typeName ?? "").toLowerCase();
   if (!t) return null;
   if (/twin|baron|seneca|seminole|king air|conquest|navajo|aztec|duchess|340|402|414|421|310/.test(t)) return 2;
-  // Longest model match wins, so "King Air C90GTx" beats "King Air C90".
-  const hits = AIRCRAFT_DB.filter((a) =>
-    t.includes(a.icao.toLowerCase()) ||
-    a.model.toLowerCase().split(/\s*\/\s*/).some((m) => m.length > 2 && t.includes(m)));
-  const hit = hits.sort((a, b) => b.model.length - a.model.length)[0];
+  const hit = resolveType(typeName);
   if (!hit) return null;
   return hit.engines ?? (/twin|× ?2|x ?2/i.test(hit.desc ?? "") ? 2 : 1);
 }

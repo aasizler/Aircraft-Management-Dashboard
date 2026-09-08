@@ -1034,3 +1034,12 @@ tr.overdue .due-text{color:var(--danger);font-weight:700}
 .prog-note{font-size:12px;color:var(--muted3);line-height:1.5}
 .prog-rows{font-size:10.5px;color:var(--muted2);white-space:pre-wrap;margin-top:2px}
 :root.light .pill{background:#1f2937;color:#fff}
+
+/* Modifications picker (Add Aircraft / Settings) */
+.mod-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.mod-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:14px;border:1px solid var(--border2);background:var(--bg);color:var(--text);font-family:var(--body);font-size:12px;line-height:1.2;cursor:pointer;text-align:left;transition:border-color .12s,background .12s,color .12s}
+.mod-chip:hover{border-color:var(--accent)}
+.mod-chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.mod-kind{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.mod-chip.on .mod-kind{color:rgba(255,255,255,.75)}
+.mod-other input{font-size:12px}
