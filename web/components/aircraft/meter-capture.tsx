@@ -316,7 +316,7 @@ export function MeterCapture({ aircraft }: { aircraft: AircraftRow }) {
                 <input
                   ref={inputRef}
                   type="file"
-                  accept="image/*"
+                  accept="image/*,.heic,.heif"
                   capture="environment"
                   style={{ display: "none" }}
                   onChange={(e) => e.target.files?.[0] && scan(e.target.files[0])}

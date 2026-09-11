@@ -209,7 +209,7 @@ export function ReceiptScan({
             <input
               ref={fileRef}
               type="file"
-              accept="image/*,.pdf"
+              accept="image/*,.heic,.heif,.pdf"
               style={{ display: "none" }}
               onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
             />

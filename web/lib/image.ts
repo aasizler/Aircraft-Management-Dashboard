@@ -60,20 +60,60 @@ function base64Bytes(b64: string): number {
 
 type Decoded = { src: CanvasImageSource; width: number; height: number };
 
+/** iPhone photos AirDropped to a Mac arrive as HEIC, which Chrome and Firefox can't decode. */
+export const isHeicFile = (file: File) => /\.hei[cf]$/i.test(file.name) || /hei[cf]/i.test(file.type);
+
+// A meter scan decodes the same file twice — once downscaled for the confirm
+// view, once tiled for the model — and re-running libheif over a 12MP photo
+// costs a second and a half each time. Cache the conversion per File.
+const _heicJpeg = new WeakMap<File, Promise<Blob | null>>();
+
+/**
+ * Re-encode a HEIC as JPEG in the browser (libheif compiled to WASM, loaded
+ * only when a HEIC actually turns up — it is a 3MB chunk). Safari on iPhone
+ * hands the page a JPEG already; this is for the desktop browsers that don't,
+ * and for a .heic AirDropped to a Mac and picked from Finder.
+ * Returns null when the file isn't HEIC or the decoder can't read it.
+ */
+function heicToJpeg(file: File): Promise<Blob | null> {
+  const hit = _heicJpeg.get(file);
+  if (hit) return hit;
+  const job = (async () => {
+    try {
+      const { heicTo, isHeic } = await import("heic-to");
+      // Sniff the container rather than trusting the name: Finder hands over
+      // files with an empty type, and not every .heic is really one.
+      if (!(await isHeic(file))) return null;
+      return await heicTo({ blob: file, type: "image/jpeg", quality: QUALITY });
+    } catch {
+      return null;
+    }
+  })();
+  _heicJpeg.set(file, job);
+  return job;
+}
+
 /**
  * Decode to something drawable, preferring createImageBitmap so EXIF rotation
  * is applied. Falls back to an <img>, and returns null when neither can read
  * the file (HEIC in Chrome, mainly).
  */
 async function decode(file: File, dataUrl: string): Promise<Decoded | null> {
+  // A HEIC the browser can't open goes through the WASM decoder first; the
+  // JPEG it produces is already upright, so it takes the normal path below.
+  let src: Blob = file;
+  if (isHeicFile(file)) {
+    const jpeg = await heicToJpeg(file);
+    if (jpeg) src = jpeg;
+  }
   if (typeof createImageBitmap === "function") {
     try {
-      const bmp = await createImageBitmap(file, { imageOrientation: "from-image" });
+      const bmp = await createImageBitmap(src, { imageOrientation: "from-image" });
       return { src: bmp, width: bmp.width, height: bmp.height };
     } catch {
       // Older Safari rejects the options bag — retry bare before giving up.
       try {
-        const bmp = await createImageBitmap(file);
+        const bmp = await createImageBitmap(src);
         return { src: bmp, width: bmp.width, height: bmp.height };
       } catch {
         /* fall through to <img> */
@@ -83,9 +123,10 @@ async function decode(file: File, dataUrl: string): Promise<Decoded | null> {
 
   return new Promise((resolve) => {
     const img = new Image();
+    const url = src === file ? dataUrl : URL.createObjectURL(src);
     img.onload = () => resolve({ src: img, width: img.naturalWidth, height: img.naturalHeight });
     img.onerror = () => resolve(null);
-    img.src = dataUrl;
+    img.src = url;
   });
 }
 
