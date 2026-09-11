@@ -145,8 +145,40 @@ const _seeded = new Map<string, number>();
 // point every half-second in turns, which is what makes the line read as a
 // curve. Five minutes left the last leg boxy for five minutes.
 const SEED_EVERY = 60_000;
-// A gap this long between trace points separates one flight from the next.
+// A gap this long between trace points separates one flight from the next —
+// unless the aircraft was clearly still flying across it. Over the Gulf of
+// Mexico or open country the free feed hears nothing for half an hour at a
+// time, and treating that as a landing threw away the whole leg behind the
+// hole.
 const LEG_GAP_MS = 15 * 60_000;
+const LOW_ALT_FT = 3000;      // below this, a long silence is probably a stop
+const MIN_GAP_KT = 80;        // slower than this across the gap, it stopped somewhere
+
+type RawPt = [number, number, number, number | null, boolean, number | null, number | null];
+
+const nmBetween = (a: RawPt, b: RawPt) => {
+  const r = Math.PI / 180;
+  const dLat = (b[1] - a[1]) * r, dLon = (b[2] - a[2]) * r;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a[1] * r) * Math.cos(b[1] * r) * Math.sin(dLon / 2) ** 2;
+  return 3440.065 * 2 * Math.asin(Math.sqrt(h));
+};
+
+/** Does the silence between two fixes look like a landing rather than a coverage hole? */
+const isStop = (a: RawPt, b: RawPt) => {
+  if (a[4] || b[4]) return true;
+  if ((a[3] ?? 0) < LOW_ALT_FT || (b[3] ?? 0) < LOW_ALT_FT) return true;
+  const hrs = (b[0] - a[0]) / 3_600_000;
+  return nmBetween(a, b) / hrs < MIN_GAP_KT;
+};
+
+/** Index where the current leg begins: after the last on-ground point or the last gap that reads as a stop. */
+export function legStart(pts: RawPt[]): number {
+  for (let i = pts.length - 1; i > 0; i--) {
+    if (pts[i][4]) return i + 1;
+    if (pts[i][0] - pts[i - 1][0] > LEG_GAP_MS && isStop(pts[i - 1], pts[i])) return i;
+  }
+  return 0;
+}
 
 /**
  * Merge the current flight's leg from the feed's recorded trace into the
@@ -158,15 +190,9 @@ async function seedTrack(key: string, hex: string): Promise<TrackPoint[] | null>
   try {
     const res = await fetch(`/api/adsb/trace/${hex}`);
     if (!res.ok) return null;
-    const { pts } = (await res.json()) as {
-      pts?: [number, number, number, number | null, boolean, number | null, number | null][];
-    };
+    const { pts } = (await res.json()) as { pts?: RawPt[] };
     if (!pts?.length) return null;
-    let start = 0;
-    for (let i = pts.length - 1; i > 0; i--) {
-      if (pts[i][4] || pts[i][0] - pts[i - 1][0] > LEG_GAP_MS) { start = pts[i][4] ? i + 1 : i; break; }
-    }
-    const leg: TrackPoint[] = pts.slice(start).map(([t, lat, lon, alt, , gs, track]) => ({ t, lat, lon, alt, gs, track }));
+    const leg: TrackPoint[] = pts.slice(legStart(pts)).map(([t, lat, lon, alt, , gs, track]) => ({ t, lat, lon, alt, gs, track }));
     if (leg.length < 2) return null;
     // Keep any fix of our own that is newer than the trace, then sort and cap.
     const newest = leg[leg.length - 1].t;
