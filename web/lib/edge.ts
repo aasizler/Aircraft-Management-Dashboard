@@ -17,6 +17,31 @@ const VISION_TIMEOUT_MS = 45_000;
 
 export type EdgeResult<T> = { data: T; error: null } | { data: null; error: string };
 
+/**
+ * Turn a relayed upstream failure into something a pilot can act on.
+ *
+ * The vision functions pass Anthropic's status straight through as
+ * "anthropic 401", which reads like the user's own sign-in expired when it is
+ * really the vendor key in Supabase's Edge Function secrets being rejected.
+ * That distinction matters: one is "log in again", the other is "nobody can
+ * scan anything until the key is replaced".
+ */
+function humanise(msg: string): string {
+  if (/anthropic 401|authentication_error|API key is invalid/i.test(msg)) {
+    return "The scanning service rejected its API key — set a valid ANTHROPIC_API_KEY in the Supabase Edge Function secrets. This is a server setting, not your sign-in.";
+  }
+  if (/ANTHROPIC_API_KEY not configured/i.test(msg)) {
+    return "The scanning service has no API key configured — set ANTHROPIC_API_KEY in the Supabase Edge Function secrets.";
+  }
+  if (/anthropic 429|rate_limit/i.test(msg)) {
+    return "The scanning service is rate limited right now — wait a moment and try again.";
+  }
+  if (/anthropic 5\d\d|overloaded/i.test(msg)) {
+    return "The scanning service is temporarily unavailable — try again in a minute.";
+  }
+  return msg;
+}
+
 export async function invokeEdge<T>(
   name: string,
   body: unknown,
@@ -59,10 +84,10 @@ export async function invokeEdge<T>(
       const msg =
         (parsed as { error?: string } | null)?.error ??
         (text ? text.slice(0, 300) : `Request failed (${res.status})`);
-      return { data: null, error: msg };
+      return { data: null, error: humanise(msg) };
     }
     if (parsed && typeof parsed === "object" && "error" in parsed) {
-      return { data: null, error: String((parsed as { error: unknown }).error) };
+      return { data: null, error: humanise(String((parsed as { error: unknown }).error)) };
     }
     return { data: parsed as T, error: null };
   } catch (e) {

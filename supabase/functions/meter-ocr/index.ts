@@ -124,7 +124,13 @@ Deno.serve(async (req) => {
   });
 
   if (!resp.ok) {
-    return json({ error: `anthropic ${resp.status}`, detail: await resp.text() }, 502);
+    const detail = await resp.text();
+    // 401/403 here is the vendor key in this function's secrets, not the
+    // caller's session. Say so, or the client reports it as a sign-in problem.
+    if (resp.status === 401 || resp.status === 403) {
+      return json({ error: "ANTHROPIC_API_KEY is invalid or revoked — replace it in this project's Edge Function secrets", detail }, 502);
+    }
+    return json({ error: `anthropic ${resp.status}`, detail }, 502);
   }
 
   const data = await resp.json();

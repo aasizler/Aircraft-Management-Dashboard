@@ -137,7 +137,14 @@ Deno.serve(async (req) => {
       headers: { ...CORS, "Content-Type": "application/json" },
     });
   } catch (e) {
-    return new Response(JSON.stringify({ error: (e as Error).message }), {
+    // A rejected key is this function's own secret, not the caller's session;
+    // saying "401" alone sends the user off to re-authenticate for nothing.
+    const status = (e as { status?: number }).status;
+    const error =
+      status === 401 || status === 403
+        ? "ANTHROPIC_API_KEY is invalid or revoked — replace it in this project's Edge Function secrets"
+        : (e as Error).message;
+    return new Response(JSON.stringify({ error }), {
       status: 500,
       headers: { ...CORS, "Content-Type": "application/json" },
     });
